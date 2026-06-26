@@ -33,6 +33,22 @@ export async function logout(): Promise<void> {
   }
 }
 
+export async function forgotPassword(email: string): Promise<void> {
+  await request<void>('/auth/forgot-password', {
+    method: 'POST',
+    auth: false,
+    body: { email },
+  });
+}
+ 
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await request<void>('/auth/reset-password', {
+    method: 'POST',
+    auth: false,
+    body: { token, password },
+  });
+}
+
 export async function getSession(): Promise<AuthSession | null> {
   const token = getStoredToken();
   if (!token) return null;

@@ -57,6 +57,8 @@ export const apiClient = {
   login: auth.login,
   register: auth.register,
   logout: auth.logout,
+  forgotPassword: auth.forgotPassword,
+  resetPassword: auth.resetPassword,
   getSession: auth.getSession,
   setAccessToken: auth.setAccessToken,
   getAccessToken: auth.getAccessToken,

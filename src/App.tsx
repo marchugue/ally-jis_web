@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import WelcomePage from "@/pages/WelcomePage";
 import LoginPage from "@/pages/LoginPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import NewsfeedPage from "@/pages/NewsfeedPage";
 import DiscoverPage from "@/pages/DiscoverPage";
@@ -36,7 +37,13 @@ function App() {
               <LoginPage />
             </PageTransition>
           } />
-          
+
+          <Route path="/forgot-password" element={
+            <PageTransition>
+              <ForgotPasswordPage />
+            </PageTransition>
+          } />
+
           <Route path="/onboarding" element={
             <PageTransition>
               <OnboardingPage />
@@ -74,7 +81,7 @@ function App() {
               </PageTransition>
             } />
           </Route>
-          
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
