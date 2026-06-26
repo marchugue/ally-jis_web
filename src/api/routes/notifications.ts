@@ -3,8 +3,9 @@
 import { request } from '../http';
 import type { NotificationRow } from '../types';
 
-export function listNotifications() {
-  return request<NotificationRow[]>('/notifications');
+export function listNotifications(limit?: number) {
+  const query = typeof limit === 'number' ? `?limit=${limit}` : '';
+  return request<NotificationRow[]>(`/notifications${query}`);
 }
 
 export function listFriendRequestNotifications() {
