@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ally-jis Operational Framework</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        background: #f7f4ef;
+        color: #1f2a24;
+        margin: 0;
+        padding: 24px;
+      }
+      .card {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid rgba(26, 107, 60, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgba(20, 37, 28, 0.08);
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: #4a5a52;
+        font-size: 14px;
+      }
+      .mermaid {
+        background: #fbfaf7;
+        border: 1px dashed rgba(26, 107, 60, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Operational Framework</h1>
+      <p>Ally-jis Friend Finding Platform for CHMSU.</p>
+      <div class="mermaid">
+        flowchart LR
+          User[Student/User]
+          App[Web App (React/Vite)]
+          Auth[Supabase Auth]
+          DB[(Supabase Postgres)]
+          Storage[(Supabase Storage)]
+          Realtime[Realtime Channels]
+
+          subgraph Core[Ally-jis Core Operations]
+            direction TB
+            P1([Onboarding & Profile Setup])
+            P2([Matching & Interactions])
+            P3([Messaging])
+            P4([Notifications])
+          end
+
+          User -->|Use app| App
+          App -->|Sign up / Sign in| Auth
+          Auth -->|Session| App
+
+          App -->|Create/update profile| P1
+          P1 -->|Profiles| DB
+          App -->|Upload avatar| Storage
+          Storage -->|Avatar URL| App
+
+          App -->|Discover, like/reject| P2
+          P2 -->|User interactions| DB
+
+          App -->|Send/receive messages| P3
+          P3 -->|Messages + Conversations| DB
+          DB -->|Message data| P3
+
+          P3 -->|New message events| Realtime
+          P2 -->|Match events| P4
+          P3 -->|Message events| P4
+          P4 -->|Notifications| DB
+          DB -->|Notification data| App
+
+          Realtime -->|Live updates| App
+      </div>
+    </div>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </body>
+</html>

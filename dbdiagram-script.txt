@@ -1,0 +1,63 @@
+// Ally-jis Friend Finding Platform - DBDiagram.io Script
+// Copy and paste this into dbdiagram.io
+
+Table profiles {
+  id uuid [primary key]
+  email text [not null, unique]
+  username text [unique]
+  full_name text
+  avatar_url text
+  bio text
+  department text
+  course text
+  year_level text
+  interests text[]
+  organizations text[]
+  created_at timestamptz [default: 'now()']
+  updated_at timestamptz [default: 'now()']
+}
+
+Table conversations {
+  id uuid [primary key, default: 'gen_random_uuid()']
+  created_at timestamptz [default: 'now()']
+  updated_at timestamptz [default: 'now()']
+}
+
+Table conversation_members {
+  conversation_id uuid [primary key, ref: > conversations.id]
+  user_id uuid [primary key, ref: > profiles.id]
+  last_read_at timestamptz
+  created_at timestamptz [default: 'now()']
+}
+
+Table messages {
+  id uuid [primary key, default: 'gen_random_uuid()']
+  conversation_id uuid [not null, ref: > conversations.id]
+  sender_id uuid [not null, ref: > profiles.id]
+  content text
+  image_url text
+  created_at timestamptz [default: 'now()']
+  Note: 'content or image_url must be not null'
+}
+
+Table user_interactions {
+  id uuid [primary key, default: 'gen_random_uuid()']
+  user_id uuid [not null, ref: > profiles.id]
+  target_user_id uuid [not null, ref: > profiles.id]
+  status text [not null, note: 'pending, accepted, or rejected']
+  created_at timestamptz [default: 'now()']
+  indexes {
+    (user_id, target_user_id) [unique]
+  }
+}
+
+Table notifications {
+  id uuid [primary key, default: 'gen_random_uuid()']
+  user_id uuid [not null, ref: > profiles.id]
+  type text [not null]
+  title text [not null]
+  description text
+  from_user_id uuid [ref: > profiles.id]
+  is_read boolean [default: false]
+  created_at timestamptz [default: 'now()']
+}
