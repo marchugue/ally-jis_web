@@ -10,6 +10,7 @@ import DiscoverPage from "@/pages/DiscoverPage";
 import MessagesPage from "@/pages/MessagesPage";
 import ProfilePage from "@/pages/ProfilePage";
 import RequestsPage from "@/pages/RequestsPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
@@ -78,6 +79,11 @@ function App() {
             <Route path="/profile" element={
               <PageTransition>
                 <ProfilePage />
+              </PageTransition>
+            } />
+            <Route path="/notifications" element={
+              <PageTransition>
+                <NotificationsPage />
               </PageTransition>
             } />
           </Route>

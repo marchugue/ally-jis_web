@@ -5,6 +5,9 @@ import { notificationService } from '../lib/services/notificationService';
 
 const POLL_INTERVAL_MS = 10000;
 
+// Exclude chat/message notifications from the notification bell
+const EXCLUDED_NOTIFICATION_TYPES: Notification['type'][] = ['message'];
+
 export function useRealtimeNotifications(userId: string | null) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -13,8 +16,12 @@ export function useRealtimeNotifications(userId: string | null) {
     if (!userId || !isApiConfigured) return;
 
     const data = await notificationService.list(20);
-    setNotifications(data);
-    setUnreadCount(data.filter((n) => !n.isRead).length);
+    const filtered = data.filter(
+      (n) => !EXCLUDED_NOTIFICATION_TYPES.includes(n.type)
+    );
+
+    setNotifications(filtered);
+    setUnreadCount(filtered.filter((n) => !n.isRead).length);
   }, [userId]);
 
   useEffect(() => {

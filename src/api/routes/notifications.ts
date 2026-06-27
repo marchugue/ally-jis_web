@@ -19,3 +19,7 @@ export function markNotificationRead(id: string) {
 export function markAllNotificationsRead() {
   return request<void>('/notifications/read-all', { method: 'PATCH' });
 }
+
+export function deleteAllNotifications(): Promise<void> {  // ← fixed typo + completed
+  return request<void>('/notifications', { method: 'DELETE' });
+}

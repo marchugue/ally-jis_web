@@ -17,6 +17,7 @@ interface TopNavProps {
 
 const POLL_INTERVAL_MS = 15000;
 
+
 export default function TopNav({ onNotificationClick, hideBottomNav = false }: TopNavProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -128,30 +129,35 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
 
     await notificationService.markAsRead(notifId);
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+    setShowNotifs(false);
 
     if (type === 'friend_request') {
       navigate('/requests');
     } else if (type === 'accepted') {
       if (fromUserId) {
         const { conversationId } = await apiClient.findConversationWithUser(fromUserId);
-        if (conversationId) {
-          navigate('/messages', { state: { conversationId } });
-        } else {
-          navigate('/messages');
-        }
+        navigate(conversationId ? '/messages' : '/messages', {
+          state: conversationId ? { conversationId } : undefined,
+        });
       } else {
         navigate('/messages');
       }
-    } else if (type === 'message') {
-      navigate('/messages');
+    } else if (type === 'match') {
+      // TODO: navigate to fromUserId's profile once profile route is set up
+      // navigate(`/profile/${fromUserId}`);
+      navigate('/discover');
     }
-    setShowNotifs(false);
   };
 
   const markAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     if (!useBackend || !user) return;
     await notificationService.markAllAsRead();
+  };
+
+  const clearAll = async () => {
+    setNotifications([]);
+    if (useBackend) await notificationService.clearAll();
   };
 
   const handleSignOut = async () => {
@@ -165,11 +171,59 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
     }
   };
 
+  function NotifItem({ notif, onClick }: { notif: Notification; onClick: () => void }) {
+    const iconMap: Record<Notification['type'], React.ReactNode> = {
+      friend_request: <UserPlus size={15} />,
+      accepted: <span className="text-base">🤝</span>,
+      match: <span className="text-base">✨</span>,
+      message: <MessageCircle size={15} />,
+    };
+
+    const colorMap: Record<Notification['type'], string> = {
+      friend_request: 'bg-blue-50 text-blue-500',
+      accepted: 'bg-green-50 text-green-600',
+      match: 'bg-amber-50 text-amber-500',
+      message: 'bg-[#1A6B3C]/10 text-[#1A6B3C]',
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0',
+          !notif.isRead && 'bg-[#1A6B3C]/[0.03]'
+        )}
+      >
+        <div className={cn(
+          'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0',
+          colorMap[notif.type]
+        )}>
+          {iconMap[notif.type]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-jakarta font-semibold text-sm text-gray-900 leading-snug">{notif.title}</p>
+          <p className="font-jakarta text-xs text-gray-500 mt-0.5 leading-snug">{notif.description}</p>
+          <p className="font-jakarta text-[10px] text-[#3B8C7E] mt-1">{notif.timestamp}</p>
+        </div>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {!notif.isRead && (
+            <div className="w-2 h-2 bg-[#1A6B3C] rounded-full mt-1.5" />
+          )}
+          <ArrowRight size={13} className="text-gray-300 mt-1" />
+        </div>
+      </button>
+    );
+  }
+
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#1A6B3C]/10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <Link to="/dashboard" className="flex items-center gap-2 group">
+      {/* ── Top bar: full-width, generous horizontal padding ── */}
+      <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-[#1A6B3C]/10 shadow-sm">
+        <div className="w-full px-6 sm:px-10 flex items-center justify-between h-16">
+
+          {/* Logo */}
+          <Link to="/dashboard" className="flex items-center gap-3 group flex-shrink-0">
             <div className="w-9 h-9 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
               <span className="text-white font-fraunces font-bold text-lg leading-none">A</span>
             </div>
@@ -178,13 +232,14 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop nav links — centred with wider gaps */}
+          <div className="hidden md:flex items-center gap-2">
             {navLinks.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
                 to={path}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl font-jakarta font-medium text-sm transition-all',
+                  'flex items-center gap-2 px-5 py-2 rounded-xl font-jakarta font-medium text-sm transition-all',
                   location.pathname === path
                     ? 'bg-[#1A6B3C] text-white shadow-sm'
                     : 'text-[#1A6B3C]/70 hover:bg-[#1A6B3C]/8 hover:text-[#1A6B3C]'
@@ -196,7 +251,10 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right-side actions */}
+          <div className="flex items-center gap-3">
+
+            {/* Bell */}
             <div className="relative">
               <button
                 onClick={() => { setShowNotifs(!showNotifs); setShowProfile(false); }}
@@ -205,72 +263,146 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                 <Bell size={20} className="text-[#1A6B3C]" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#E8A838] text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                    {unreadCount}
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifs && (
-                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-80 bg-white rounded-2xl shadow-xl border border-[#1A6B3C]/10 overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 bg-white rounded-2xl shadow-xl border border-[#1A6B3C]/10 overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-200">
+                  
+                  {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-[#1A6B3C]/5">
-                    <span className="font-jakarta font-semibold text-sm text-[#1A6B3C]">Notifications</span>
-                    <button onClick={markAllRead} className="text-xs text-[#3B8C7E] hover:underline font-jakarta font-medium">
-                      Mark all read
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="font-jakarta font-semibold text-sm text-[#1A6B3C]">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="bg-[#E8A838] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={clearAll}
+                          className="text-xs text-red-400 hover:text-red-600 hover:underline font-jakarta font-medium transition-colors"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                      <span className="text-gray-200 text-xs">|</span>
+                      <button
+                        onClick={markAllRead}
+                        className="text-xs text-[#3B8C7E] hover:underline font-jakarta font-medium"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
+
+                  <div className="max-h-[420px] overflow-y-auto">
                     {loadingNotifs ? (
-                      <div className="px-4 py-3 text-xs text-gray-400 font-jakarta text-center">Loading...</div>
+                      /* Skeleton loader */
+                      <div className="divide-y divide-gray-50">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-start gap-3 px-4 py-3 animate-pulse">
+                            <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
+                            <div className="flex-1 space-y-2 pt-1">
+                              <div className="h-3 bg-gray-200 rounded-full w-2/3" />
+                              <div className="h-2.5 bg-gray-100 rounded-full w-1/2" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     ) : notifications.length === 0 ? (
                       <div className="px-4 py-10 text-center">
-                        <Bell size={32} className="text-[#1A6B3C]/10 mx-auto mb-2" />
-                        <p className="text-xs text-gray-400 font-jakarta">No notifications yet.</p>
+                        <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/8 flex items-center justify-center mx-auto mb-3">
+                          <Bell size={22} className="text-[#1A6B3C]/30" />
+                        </div>
+                        <p className="font-jakarta font-semibold text-sm text-gray-600 mb-1">You're all caught up!</p>
+                        <p className="text-xs text-gray-400 font-jakarta">New likes, comments, and requests will show up here.</p>
                       </div>
-                    ) : notifications.map((notif) => (
-                      <button
-                        key={notif.id}
-                        type="button"
-                        onClick={() => handleNotificationClick(notif.id, notif.type, notif.fromUserId)}
-                        className={cn(
-                          'w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0',
-                          !notif.isRead && 'bg-[#1A6B3C]/4',
-                          notif.type === 'friend_request' && 'cursor-pointer'
-                        )}
-                      >
-                        <div className="w-9 h-9 rounded-full bg-[#1A6B3C]/10 text-[#1A6B3C] flex items-center justify-center text-xs font-bold flex-shrink-0">
-                          {notif.type === 'friend_request' ? <UserPlus size={16} /> : notif.title.slice(0, 1).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-jakarta font-semibold text-sm text-gray-900">{notif.title}</p>
-                          <p className="font-jakarta text-xs text-gray-500 mt-0.5">{notif.description}</p>
-                          <p className="font-jakarta text-[10px] text-[#3B8C7E] mt-1">{notif.timestamp}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {!notif.isRead && (
-                            <div className="w-2 h-2 bg-[#1A6B3C] rounded-full flex-shrink-0 mt-1.5" />
-                          )}
-                          {notif.type === 'friend_request' && (
-                            <ArrowRight size={16} className="text-[#1A6B3C]/70" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                    ) : (
+                      <>
+                        {/* Group: Today */}
+                        {(() => {
+                          const todayNotifs = notifications.filter(n => {
+                            const d = new Date(n.timestamp);
+                            const now = new Date();
+                            return d.toDateString() === now.toDateString();
+                          });
+                          const earlierNotifs = notifications.filter(n => {
+                            const d = new Date(n.timestamp);
+                            const now = new Date();
+                            return d.toDateString() !== now.toDateString();
+                          });
+                          const PREVIEW_LIMIT = 5;
+                          const allGrouped = [
+                            ...(todayNotifs.length > 0 ? [{ label: 'Today', items: todayNotifs }] : []),
+                            ...(earlierNotifs.length > 0 ? [{ label: 'Earlier', items: earlierNotifs }] : []),
+                          ];
+                          const totalShown = notifications.slice(0, PREVIEW_LIMIT);
+
+                          return allGrouped.map(({ label, items }) => {
+                            const visibleItems = label === 'Today'
+                              ? items
+                              : notifications.slice(0, PREVIEW_LIMIT).filter(n => {
+                                  const d = new Date(n.timestamp);
+                                  const now = new Date();
+                                  return d.toDateString() !== now.toDateString();
+                                });
+
+                            if (visibleItems.length === 0) return null;
+
+                            return (
+                              <div key={label}>
+                                <div className="px-4 py-1.5 bg-gray-50 border-y border-gray-100 sticky top-0">
+                                  <span className="font-jakarta text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
+                                </div>
+                                {visibleItems.map((notif) => (
+                                  <NotifItem
+                                    key={notif.id}
+                                    notif={notif}
+                                    onClick={() => handleNotificationClick(notif.id, notif.type, notif.fromUserId)}
+                                  />
+                                ))}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </>
+                    )}
                   </div>
+
+                  {/* Footer: See all */}
+                  {notifications.length >= 5 && (
+                    <div className="border-t border-gray-100 bg-white">
+                      <Link
+                        to="/notifications"
+                        onClick={() => setShowNotifs(false)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 hover:bg-[#1A6B3C]/5 transition-colors group"
+                      >
+                        <span className="font-jakarta text-sm font-semibold text-[#1A6B3C]">See all notifications</span>
+                        <ArrowRight size={14} className="text-[#1A6B3C] group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
+            {/* Profile dropdown */}
             <div className="relative">
               <button
                 onClick={() => { setShowProfile(!showProfile); setShowNotifs(false); }}
-                className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-[#1A6B3C]/8 transition-colors"
+                className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-[#1A6B3C]/8 transition-colors"
               >
                 <AvatarDisplay
                   src={profile?.avatarUrl}
                   name={profile?.name}
                   className="w-8 h-8 rounded-xl object-cover"
                 />
-                <span className="font-jakarta font-medium text-sm text-[#1A6B3C] hidden sm:block max-w-[100px] truncate">
+                <span className="font-jakarta font-medium text-sm text-[#1A6B3C] hidden sm:block max-w-[120px] truncate">
                   {(profile?.name ?? 'Guest').split(' ')[0]}
                 </span>
                 <ChevronDown size={14} className="text-[#1A6B3C]/60 hidden sm:block" />
@@ -311,9 +443,10 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
         </div>
       </nav>
 
+      {/* ── Bottom mobile nav: full width, evenly spread ── */}
       {!shouldHideBottomNav && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#1A6B3C]/10 z-50 px-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-around py-3">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 backdrop-blur-md border-t border-[#1A6B3C]/10 z-50 px-4 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+          <div className="flex items-center justify-between py-3">
             {navLinks.map(({ path, label, icon: Icon }) => {
               const isActive = location.pathname === path;
               return (
@@ -321,7 +454,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                   key={path}
                   to={path}
                   className={cn(
-                    'flex flex-col items-center gap-1 transition-all relative min-w-[64px]',
+                    'flex flex-col items-center gap-1 transition-all relative flex-1',
                     isActive ? 'text-[#1A6B3C]' : 'text-gray-400'
                   )}
                 >

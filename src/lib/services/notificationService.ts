@@ -1,6 +1,8 @@
 import { apiClient, NotificationRow } from '@/api/client';
 import { Notification } from '@/types/ally';
 
+const EXCLUDED_TYPES: Notification['type'][] = ['message'];
+
 export const mapNotification = (row: NotificationRow): Notification => ({
   id: row.id,
   type: row.type as Notification['type'],
@@ -14,7 +16,9 @@ export const mapNotification = (row: NotificationRow): Notification => ({
 export const notificationService = {
   async list(limit = 20) {
     const data = await apiClient.listNotifications(limit);
-    return (data ?? []).map(mapNotification);
+    return (data ?? [])
+      .map(mapNotification)
+      .filter((n) => !EXCLUDED_TYPES.includes(n.type));
   },
 
   async listFriendRequests() {
@@ -28,5 +32,8 @@ export const notificationService = {
 
   async markAllAsRead() {
     await apiClient.markAllNotificationsRead();
+  },
+  async clearAll() {
+    await apiClient.deleteAllNotifications(); // use whatever your apiClient method is called
   },
 };

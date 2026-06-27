@@ -100,6 +100,7 @@ export const apiClient = {
   listFriendRequestNotifications: notifications.listFriendRequestNotifications,
   markNotificationRead: notifications.markNotificationRead,
   markAllNotificationsRead: notifications.markAllNotificationsRead,
+  deleteAllNotifications: notifications.deleteAllNotifications,
 
   // ─── Media ───────────────────────────────────────────────────────────────
   uploadChatMedia: media.uploadChatMedia,
