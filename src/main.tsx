@@ -5,6 +5,7 @@ import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { PresenceProvider } from "@/context/PresenceContext";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 
 const basename = import.meta.env.BASE_URL;
 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter basename={basename}>
       <AuthProvider>
         <PresenceProvider>
-          <App />
+          <NotificationsProvider>
+            <App />
+          </NotificationsProvider>
         </PresenceProvider>
       </AuthProvider>
     </BrowserRouter>

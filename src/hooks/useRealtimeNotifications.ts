@@ -5,44 +5,62 @@ import { notificationService } from '../lib/services/notificationService';
 
 const POLL_INTERVAL_MS = 10000;
 
-// Exclude chat/message notifications from the notification bell
 const EXCLUDED_NOTIFICATION_TYPES: Notification['type'][] = ['message'];
 
 export function useRealtimeNotifications(userId: string | null) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true); // ← new
 
-  const loadNotifications = useCallback(async () => {
-    if (!userId || !isApiConfigured) return;
+  const loadNotifications = useCallback(async (isInitial = false) => {
+    if (!userId || !isApiConfigured) {
+      setLoading(false);
+      return;
+    }
 
-    const data = await notificationService.list(20);
-    const filtered = data.filter(
-      (n) => !EXCLUDED_NOTIFICATION_TYPES.includes(n.type)
-    );
-
-    setNotifications(filtered);
-    setUnreadCount(filtered.filter((n) => !n.isRead).length);
+    if (isInitial) setLoading(true);
+    try {
+      const data = await notificationService.list(20);
+      const filtered = data.filter(
+        (n) => !EXCLUDED_NOTIFICATION_TYPES.includes(n.type),
+      );
+      setNotifications(filtered);
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {
-    if (!userId || !isApiConfigured) return;
+    if (!userId || !isApiConfigured) {
+      setLoading(false);
+      return;
+    }
 
-    void loadNotifications();
-    const interval = setInterval(() => {
-      void loadNotifications();
-    }, POLL_INTERVAL_MS);
-
+    void loadNotifications(true); // first load shows the skeleton
+    const interval = setInterval(() => void loadNotifications(false), POLL_INTERVAL_MS); // background polls don't
     return () => clearInterval(interval);
   }, [userId, loadNotifications]);
 
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   const markAsRead = async (notificationId: string) => {
     if (!isApiConfigured) return;
-    await notificationService.markAsRead(notificationId);
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
     );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+    await notificationService.markAsRead(notificationId);
   };
 
-  return { notifications, unreadCount, markAsRead };
+  const markAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    if (!isApiConfigured) return;
+    await notificationService.markAllAsRead();
+  };
+
+  const clearAll = async () => {
+    setNotifications([]);
+    if (!isApiConfigured) return;
+    await notificationService.clearAll();
+  };
+
+  return { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAll };
 }

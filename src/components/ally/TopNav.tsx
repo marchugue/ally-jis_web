@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Bell, Home, Compass, MessageCircle, User, ChevronDown, LogOut, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { apiClient, isApiConfigured } from '@/api/client';
-import { notificationService } from '@/lib/services/notificationService';
+import { useNotifications } from '@/context/NotificationsContext';
+import { apiClient } from '@/api/client';
 import { profileService } from '@/lib/services/profileService';
 import type { Notification } from '@/types/ally';
 
@@ -15,27 +15,27 @@ interface TopNavProps {
   hideBottomNav?: boolean;
 }
 
-const POLL_INTERVAL_MS = 15000;
-
-
 export default function TopNav({ onNotificationClick, hideBottomNav = false }: TopNavProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [profile, setProfile] = useState<{ name: string; avatarUrl: string | null; course: string | null } | null>(null);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const useBackend = Boolean(isApiConfigured && user);
+  const {
+    notifications,
+    unreadCount,
+    loading: loadingNotifs,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+  } = useNotifications();
 
   const isMessagesPage = location.pathname === '/messages';
   const shouldHideBottomNav = hideBottomNav || (isMessagesPage && isMobile && isInputFocused);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const navLinks = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
@@ -45,22 +45,8 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
     { path: '/profile', label: 'Profile', icon: User },
   ];
 
-  const fetchNotifications = async () => {
-    if (!useBackend || !user) return;
-    setLoadingNotifs(true);
-
-    try {
-      const mapped = await notificationService.list(20);
-      setNotifications(mapped);
-    } catch {
-      setNotifications([]);
-    } finally {
-      setLoadingNotifs(false);
-    }
-  };
-
   useEffect(() => {
-    if (!useBackend || !user) {
+    if (!user) {
       setProfile(null);
       return;
     }
@@ -77,15 +63,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
       .catch(() => {
         setProfile(null);
       });
-
-    void fetchNotifications();
-
-    const interval = setInterval(() => {
-      void fetchNotifications();
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [useBackend, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     const updateMobile = () => setIsMobile(window.innerWidth < 768);
@@ -125,11 +103,11 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
   }, []);
 
   const handleNotificationClick = async (notifId: string, type: Notification['type'], fromUserId?: string) => {
-    if (!user || !useBackend) return;
+    if (!user) return;
 
-    await notificationService.markAsRead(notifId);
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+    await markAsRead(notifId);
     setShowNotifs(false);
+    onNotificationClick?.();
 
     if (type === 'friend_request') {
       navigate('/requests');
@@ -149,15 +127,12 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
     }
   };
 
-  const markAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    if (!useBackend || !user) return;
-    await notificationService.markAllAsRead();
+  const handleMarkAllRead = async () => {
+    await markAllAsRead();
   };
 
-  const clearAll = async () => {
-    setNotifications([]);
-    if (useBackend) await notificationService.clearAll();
+  const handleClearAll = async () => {
+    await clearAll();
   };
 
   const handleSignOut = async () => {
@@ -220,20 +195,22 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
     <>
       {/* ── Top bar: full-width, generous horizontal padding ── */}
       <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-[#1A6B3C]/10 shadow-sm">
-        <div className="w-full px-6 sm:px-10 flex items-center justify-between h-16">
+        <div className="w-full px-6 sm:px-10 grid grid-cols-[1fr_auto_1fr] items-center h-16">
 
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-3 group flex-shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-              <span className="text-white font-fraunces font-bold text-lg leading-none">A</span>
-            </div>
-            <span className="font-fraunces font-semibold text-xl text-[#1A6B3C] hidden sm:block">
-              lly<span className="text-[#E8A838]">-jis</span>
-            </span>
-          </Link>
+          {/* Left panel: logo */}
+          <div className="flex items-center justify-start">
+            <Link to="/dashboard" className="flex items-center gap-3 group flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                <span className="text-white font-fraunces font-bold text-lg leading-none">A</span>
+              </div>
+              <span className="font-fraunces font-semibold text-xl text-[#1A6B3C] hidden sm:block">
+                lly<span className="text-[#E8A838]">-jis</span>
+              </span>
+            </Link>
+          </div>
 
-          {/* Desktop nav links — centred with wider gaps */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Middle panel: desktop nav links — centred against the full nav width */}
+          <div className="hidden md:flex items-center justify-center gap-2">
             {navLinks.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
@@ -251,8 +228,8 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
             ))}
           </div>
 
-          {/* Right-side actions */}
-          <div className="flex items-center gap-3">
+          {/* Right panel: actions */}
+          <div className="flex items-center justify-end gap-3">
 
             {/* Bell */}
             <div className="relative">
@@ -270,7 +247,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
 
               {showNotifs && (
                 <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 bg-white rounded-2xl shadow-xl border border-[#1A6B3C]/10 overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-200">
-                  
+
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-[#1A6B3C]/5">
                     <div className="flex items-center gap-2">
@@ -284,7 +261,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                     <div className="flex items-center gap-2">
                       {notifications.length > 0 && (
                         <button
-                          onClick={clearAll}
+                          onClick={handleClearAll}
                           className="text-xs text-red-400 hover:text-red-600 hover:underline font-jakarta font-medium transition-colors"
                         >
                           Clear all
@@ -292,7 +269,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                       )}
                       <span className="text-gray-200 text-xs">|</span>
                       <button
-                        onClick={markAllRead}
+                        onClick={handleMarkAllRead}
                         className="text-xs text-[#3B8C7E] hover:underline font-jakarta font-medium"
                       >
                         Mark all read
@@ -341,7 +318,6 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                             ...(todayNotifs.length > 0 ? [{ label: 'Today', items: todayNotifs }] : []),
                             ...(earlierNotifs.length > 0 ? [{ label: 'Earlier', items: earlierNotifs }] : []),
                           ];
-                          const totalShown = notifications.slice(0, PREVIEW_LIMIT);
 
                           return allGrouped.map(({ label, items }) => {
                             const visibleItems = label === 'Today'

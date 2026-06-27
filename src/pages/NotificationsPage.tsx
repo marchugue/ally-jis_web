@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ArrowRight, UserPlus, MessageCircle, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
-import { apiClient, isApiConfigured } from '@/api/client';
-import { notificationService } from '@/lib/services/notificationService';
+import { apiClient } from '@/api/client';
+import { useNotifications } from '@/context/NotificationsContext';
 import { PageTransition } from '@/components/PageTransition';
 import type { Notification } from '@/types/ally';
 
@@ -70,32 +68,12 @@ function NotifRow({ notif, onClick }: { notif: Notification; onClick: () => void
 }
 
 export default function NotificationsPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const useBackend = Boolean(isApiConfigured && user);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!useBackend) return;
-    setLoading(true);
-    notificationService.list(50)
-      .then(setNotifications)
-      .catch(() => setNotifications([]))
-      .finally(() => setLoading(false));
-  }, [useBackend]);
-
-  const markAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    if (useBackend) await notificationService.markAllAsRead();
-  };
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
 
   const handleClick = async (notif: Notification) => {
-    if (useBackend) {
-      await notificationService.markAsRead(notif.id);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
-    }
+    await markAsRead(notif.id);
 
     if (notif.type === 'friend_request') {
       navigate('/requests');
@@ -113,7 +91,6 @@ export default function NotificationsPage() {
   };
 
   const { today, earlier } = groupByDate(notifications);
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <PageTransition>
@@ -130,7 +107,7 @@ export default function NotificationsPage() {
             </div>
             {unreadCount > 0 && (
               <button
-                onClick={markAllRead}
+                onClick={markAllAsRead}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1A6B3C]/8 hover:bg-[#1A6B3C]/15 transition-colors"
               >
                 <CheckCheck size={15} className="text-[#1A6B3C]" />
