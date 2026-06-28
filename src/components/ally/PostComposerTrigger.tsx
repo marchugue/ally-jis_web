@@ -13,7 +13,7 @@ export default function PostComposerTrigger({ currentUser, onClick }: PostCompos
   return (
     <button
       onClick={onClick}
-      className="w-full bg-white rounded-2xl border border-[#1A6B3C]/6 card-shadow p-4 mb-6 flex items-center gap-3 hover:card-shadow-hover transition-shadow"
+      className="w-full bg-white border-b border-[#1A6B3C]/6 lg:rounded-2xl lg:border lg:card-shadow p-4 mb-6 flex items-center gap-3 hover:lg:card-shadow-hover transition-shadow"
     >
       <AvatarDisplay src={currentUser.avatar} name={currentUser.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
       <span className="flex-1 text-left font-jakarta text-sm text-gray-400 bg-gray-50 rounded-full px-4 py-2.5">

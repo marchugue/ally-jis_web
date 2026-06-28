@@ -195,10 +195,10 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
     <>
       {/* ── Top bar: full-width, generous horizontal padding ── */}
       <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-[#1A6B3C]/10 shadow-sm">
-        <div className="w-full px-6 sm:px-10 grid grid-cols-[1fr_auto_1fr] items-center h-16">
+        <div className="w-full px-4 sm:px-10 flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between h-16">
 
-          {/* Left panel: logo */}
-          <div className="flex items-center justify-start">
+          {/* Left panel: logo + (mobile only) bell/profile live here too */}
+          <div className="flex items-center justify-start gap-2">
             <Link to="/dashboard" className="flex items-center gap-3 group flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
                 <span className="text-white font-fraunces font-bold text-lg leading-none">A</span>
@@ -229,7 +229,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
           </div>
 
           {/* Right panel: actions */}
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center justify-start md:justify-end gap-3 order-2 md:order-none">
 
             {/* Bell */}
             <div className="relative">

@@ -91,11 +91,13 @@ export default function NewsfeedPage() {
   return (
     <PageTransition>
       <div className="flex-1 overflow-y-auto pb-24 md:pb-8">
-        <div className="max-w-2xl mx-auto px-4 pt-5">
+        {/* Mobile: edge-to-edge, no horizontal padding.
+            Desktop (lg+): contained column with padding, as before. */}
+        <div className="max-w-2xl mx-auto lg:px-4 pt-5">
 
           {/* Error banner */}
           {banner && (
-            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 rounded-2xl px-4 py-3">
+            <div className="mb-4 mx-4 lg:mx-0 flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 rounded-2xl px-4 py-3">
               <AlertCircle size={15} className="flex-shrink-0" />
               <p className="font-jakarta text-sm flex-1">{banner}</p>
               <button
@@ -118,9 +120,9 @@ export default function NewsfeedPage() {
 
           {/* Feed */}
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-2 lg:space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-2xl border border-[#1A6B3C]/6 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
+                <div key={i} className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-2xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-200 rounded-xl" />
                     <div className="flex-1 space-y-2">
@@ -136,7 +138,7 @@ export default function NewsfeedPage() {
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-16 px-4">
               <div className="w-16 h-16 bg-[#1A6B3C]/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <RefreshCw size={28} className="text-[#1A6B3C]/40" />
               </div>
@@ -146,7 +148,7 @@ export default function NewsfeedPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2 lg:space-y-4">
               {posts.map((post) => (
                 <FeedPostCard
                   key={post.id}

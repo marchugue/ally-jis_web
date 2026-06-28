@@ -6,7 +6,7 @@ import {
   Pencil, Check, X, Plus, Building2, GraduationCap,
   Shield, Users, LogOut, ImageIcon,
   Heart, MessageCircle, UserPlus, MoreHorizontal,
-  AlertCircle, RefreshCw,
+  AlertCircle, RefreshCw, Info,
 } from 'lucide-react';
 import { CURRENT_USER } from '@/data/mockData';
 import { Student } from '@/types/ally';
@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const { organizations, departments, coursesByDept, interestsByCategory, yearLevels } = useLookupOptions();
 
   // ── own posts ─────────────────────────────────────────────────────────────
@@ -327,13 +328,209 @@ export default function ProfilePage() {
 
   const currentUser = profile ?? CURRENT_USER;
 
+  // ── shared "profile details" content (Intro + People you may know) ────────
+  // Rendered inline on desktop (lg+) in the right column, and inside the
+  // mobile-only "Profile details" modal on small screens.
+  const profileDetailsContent = (
+    <>
+      {/* Intro card */}
+      <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
+        <h2 className="font-fraunces text-base font-bold text-gray-900 mb-4">Intro</h2>
+
+        {profile?.bio
+          ? <p className="font-jakarta text-sm text-gray-600 leading-relaxed mb-4">{profile.bio}</p>
+          : <p className="font-jakarta text-sm text-gray-400 italic mb-4">No bio yet. Click "Edit profile" to add one.</p>
+        }
+
+        <div className="space-y-2.5 text-sm font-jakarta">
+          <div className="flex items-center gap-2.5 text-gray-600">
+            <div className="w-7 h-7 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+              <GraduationCap size={13} className="text-[#1A6B3C]" />
+            </div>
+            <span>{profile?.course} · {profile?.yearLevel}</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-gray-600">
+            <div className="w-7 h-7 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+              <Building2 size={13} className="text-[#1A6B3C]" />
+            </div>
+            <span>{(profile?.department || '').replace('College of ', '')}</span>
+          </div>
+        </div>
+
+        {/* Interests */}
+        {(profile?.interests?.length ?? 0) > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-2.5">Interests</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(profile?.interests || []).map(interest => (
+                <span key={interest} className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-jakarta text-xs font-medium border border-gray-200">
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Organizations */}
+        {(profile?.organizations?.length ?? 0) > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-2.5">Organizations</p>
+            <div className="flex flex-col gap-2">
+              {(profile?.organizations || []).map(org => (
+                <div key={org} className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+                    <Users size={11} className="text-[#1A6B3C]" />
+                  </div>
+                  <span className="font-jakarta text-xs text-gray-700">{org}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit mode: Interests & Orgs picker */}
+      {isEditing && (
+        <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
+          <div className="flex border-b border-gray-100 mb-4">
+            {(['interests', 'orgs'] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'flex-1 py-2.5 font-jakarta font-semibold text-xs uppercase tracking-wide transition-colors',
+                  activeTab === tab ? 'text-[#1A6B3C] border-b-2 border-[#1A6B3C]' : 'text-gray-400 hover:text-gray-600'
+                )}
+              >
+                {tab === 'interests' ? `Interests (${formData.interests?.length ?? 0})` : `Orgs (${formData.organizations?.length ?? 0})`}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'interests' && (
+            <div>
+              {(formData.interests?.length ?? 0) < 3 && (
+                <div className="mb-3 bg-[#E8A838]/10 border border-[#E8A838]/25 rounded-xl px-3 py-2">
+                  <p className="font-jakarta text-xs text-[#1A6B3C]">Add at least <strong>3 interests</strong> to get matches. ({formData.interests?.length ?? 0}/3)</p>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {(formData.interests || []).map(interest => (
+                  <div key={interest} className="relative group">
+                    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-jakarta text-xs font-medium border border-gray-200">{interest}</span>
+                    <button onClick={() => toggleInterest(interest)} className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs leading-none">×</button>
+                  </div>
+                ))}
+                {!showInterestPicker && (
+                  <button onClick={() => setShowInterestPicker(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-[#1A6B3C]/30 text-[#1A6B3C]/60 font-jakarta text-xs hover:border-[#1A6B3C]/60">
+                    <Plus size={11} /> Add
+                  </button>
+                )}
+              </div>
+              {showInterestPicker && (
+                <div className="border border-[#1A6B3C]/15 rounded-2xl p-3 bg-[#F7F4EF]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-jakarta font-semibold text-xs text-[#1A6B3C]">{formData.interests?.length ?? 0} selected</p>
+                    <button onClick={() => setShowInterestPicker(false)} className="text-gray-400 hover:text-gray-600 text-base leading-none">×</button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                    {Object.entries(interestsByCategory).map(([category, items]) => (
+                      <div key={category}>
+                        <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-1.5">{category}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {items.map(({ label }) => (
+                            <button key={label} onClick={() => toggleInterest(label)}
+                              className={cn(
+                                'px-2.5 py-1 rounded-full font-jakarta text-xs font-medium border transition-colors',
+                                formData.interests?.includes(label)
+                                  ? 'bg-[#1A6B3C] text-white border-[#1A6B3C]'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'orgs' && (
+            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+              {organizations.map(org => {
+                const selected = formData.organizations?.includes(org);
+                return (
+                  <div key={org} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 transition-all">
+                    <Checkbox
+                      id={`org-${org}`}
+                      checked={selected}
+                      onCheckedChange={() => toggleOrg(org)}
+                      className="border-gray-300 rounded-[4px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
+                    />
+                    <label htmlFor={`org-${org}`} className="flex-1 font-jakarta text-sm text-gray-700 cursor-pointer">{org}</label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* People you may know */}
+      {suggested.length > 0 && (
+        <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
+          <h2 className="font-fraunces text-base font-bold text-gray-900 mb-4">People you may know</h2>
+          <div className="flex flex-col gap-4">
+            {suggested.map(person => {
+              const status = connections[person.id] || 'none';
+              return (
+                <div key={person.id} className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/8 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">{person.avatar || '👤'}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-jakarta text-sm font-semibold text-gray-900 truncate">
+                        {person.username ? `@${person.username}` : person.name}
+                      </p>
+                      {person.isVerified && <Shield size={10} className="text-[#1A6B3C] flex-shrink-0" />}
+                    </div>
+                    <p className="font-jakarta text-xs text-gray-400 truncate">{person.course}</p>
+                    <p className="font-jakarta text-xs text-gray-400">{person.yearLevel}</p>
+                    <button
+                      onClick={() => toggleConnect(person.id)}
+                      disabled={status === 'accepted'}
+                      className={cn(
+                        'mt-2 flex items-center gap-1 px-3 py-1.5 rounded-lg font-jakarta text-xs font-semibold transition-all disabled:cursor-default',
+                        status === 'none' && 'border border-gray-200 text-gray-600 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] hover:bg-[#1A6B3C]/5',
+                        status === 'pending' && 'bg-[#E8A838]/10 text-[#E8A838] border border-[#E8A838]/30',
+                        status === 'accepted' && 'bg-[#1A6B3C]/10 text-[#1A6B3C] border border-[#1A6B3C]/20',
+                      )}
+                    >
+                      <UserPlus size={11} />
+                      {status === 'none' && 'Connect'}
+                      {status === 'pending' && 'Requested'}
+                      {status === 'accepted' && 'Connected'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar bg-[#F7F4EF]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-0 pb-32 md:pb-12">
+    <div className="h-full overflow-y-auto custom-scrollbar bg-[#F7F4EF] lg:bg-[#F7F4EF]">
+      <div className="max-w-7xl mx-auto lg:px-6 py-0 pb-32 md:pb-12">
 
         {/* Error banner */}
         {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 mt-4">
+          <div className="mb-4 mx-4 lg:mx-0 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 mt-4">
             <AlertCircle size={14} className="flex-shrink-0 text-red-500" />
             <p className="font-jakarta text-sm text-red-600 flex-1">{error}</p>
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs font-jakarta font-semibold">Dismiss</button>
@@ -341,31 +538,44 @@ export default function ProfilePage() {
         )}
 
         {/* ══════════════════════════════════════════════════════════
-            PROFILE HEADER — FB-style
+            PROFILE HEADER — FB-style.
+            Mobile: full-bleed, square corners, no side border (edge-to-edge).
+            Desktop (lg+): rounded card with border, as before.
         ══════════════════════════════════════════════════════════ */}
-        <div className="bg-white rounded-b-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] mb-4 overflow-visible">
+        <div className="bg-white border-b border-[#1A6B3C]/8 lg:rounded-b-3xl lg:border lg:border-t-0 lg:shadow-[0_1px_6px_rgba(0,0,0,0.06)] mb-2 lg:mb-4 overflow-visible">
 
           {/* Cover + avatar positioned on top of it */}
           <div className="relative">
             {/* Cover */}
-            <div className="h-44 sm:h-52 bg-gradient-to-r from-[#1A6B3C] via-[#2d8a56] to-[#3B8C7E] rounded-t-3xl overflow-hidden">
+            <div className="h-44 sm:h-52 bg-gradient-to-r from-[#1A6B3C] via-[#2d8a56] to-[#3B8C7E] lg:rounded-t-3xl overflow-hidden">
               <div
                 className="absolute inset-0 opacity-20"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}
               />
             </div>
 
-            {/* Avatar — absolute, anchored to bottom-left of cover */}
-            <div className="absolute bottom-0 left-6 translate-y-1/2 z-10">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center">
+            {/* Avatar — absolute, anchored to bottom-left of cover.
+                On mobile, tapping it opens the "Profile details" modal. */}
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
+              className="absolute bottom-0 left-6 translate-y-1/2 z-10 lg:pointer-events-none lg:cursor-default"
+              aria-label="View profile details"
+            >
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center active:scale-95 lg:active:scale-100 transition-transform">
                 <span className="text-5xl sm:text-6xl">{displayProfile.avatar || '👤'}</span>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Name row — sits below the cover, leaves room for avatar overhang */}
           <div className="pt-16 sm:pt-18 pb-5 px-6 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
+              className="flex items-center gap-2.5 flex-wrap text-left lg:pointer-events-none lg:cursor-default"
+              aria-label="View profile details"
+            >
               <h1 className="font-fraunces text-2xl font-bold text-gray-900">
                 {profile?.username ? `@${profile.username}` : profile?.name}
               </h1>
@@ -375,9 +585,9 @@ export default function ProfilePage() {
                   <span className="font-jakarta text-xs font-semibold">CHMSU Verified</span>
                 </span>
               )}
-            </div>
+            </button>
 
-            {/* Edit / Save / Cancel */}
+            {/* Profile details (mobile) / Edit / Save / Cancel */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {isEditing ? (
                 <>
@@ -396,24 +606,35 @@ export default function ProfilePage() {
                   </button>
                 </>
               ) : (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button className="flex items-center gap-1.5 px-5 py-2 rounded-xl border-2 border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all">
-                      <Pencil size={13} /> Edit profile
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md rounded-3xl">
-                    <DialogHeader>
-                      <DialogTitle className="font-fraunces text-xl">Account actions</DialogTitle>
-                      <DialogDescription className="font-jakarta text-sm">Manage your profile and account.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-3 py-4">
-                      <button onClick={() => setIsEditing(true)} className="flex items-center justify-between rounded-xl border border-[#1A6B3C]/20 px-4 py-3 text-left font-jakarta text-sm font-semibold text-[#1A6B3C] hover:bg-[#1A6B3C]/5">Edit profile <Pencil size={14} /></button>
-                      <button onClick={handleSignOut} className="flex items-center justify-between rounded-xl border border-red-200 px-4 py-3 text-left font-jakarta text-sm font-semibold text-red-600 hover:bg-red-50">Log out <LogOut size={14} /></button>
-                      <button onClick={handleDeleteAccount} className="flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-left font-jakarta text-sm font-semibold text-white hover:bg-red-700">Delete account <X size={14} /></button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <>
+                  {/* Profile details trigger — mobile only */}
+                  <button
+                    onClick={() => setDetailsOpen(true)}
+                    className="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl border-2 border-[#1A6B3C]/20 text-[#1A6B3C] hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all flex-shrink-0"
+                    aria-label="Profile details"
+                  >
+                    <Info size={15} />
+                  </button>
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="flex items-center gap-1.5 px-5 py-2 rounded-xl border-2 border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all">
+                        <Pencil size={13} /> <span className="hidden sm:inline">Edit profile</span><span className="sm:hidden">Edit</span>
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md rounded-3xl">
+                      <DialogHeader>
+                        <DialogTitle className="font-fraunces text-xl">Account actions</DialogTitle>
+                        <DialogDescription className="font-jakarta text-sm">Manage your profile and account.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-3 py-4">
+                        <button onClick={() => setIsEditing(true)} className="flex items-center justify-between rounded-xl border border-[#1A6B3C]/20 px-4 py-3 text-left font-jakarta text-sm font-semibold text-[#1A6B3C] hover:bg-[#1A6B3C]/5">Edit profile <Pencil size={14} /></button>
+                        <button onClick={handleSignOut} className="flex items-center justify-between rounded-xl border border-red-200 px-4 py-3 text-left font-jakarta text-sm font-semibold text-red-600 hover:bg-red-50">Log out <LogOut size={14} /></button>
+                        <button onClick={handleDeleteAccount} className="flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-left font-jakarta text-sm font-semibold text-white hover:bg-red-700">Delete account <X size={14} /></button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
             </div>
           </div>
@@ -485,15 +706,19 @@ export default function ProfilePage() {
 
         {/* ══════════════════════════════════════════════════════════
             3-COLUMN GRID
+            On mobile (<lg): only the feed column shows. The Intro /
+            People-you-may-know content moves into the "Profile details"
+            modal triggered from the Info button or the avatar/name above.
+            On desktop (lg+): unchanged 3-column layout.
         ══════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-5 items-start">
 
-          {/* ── LEFT COLUMN (col-span-2) — feed ── */}
-          <div className="lg:col-span-2 flex flex-col gap-5">
+          {/* ── LEFT COLUMN (col-span-2 on desktop, full width on mobile) — feed ── */}
+          <div className="lg:col-span-2 flex flex-col gap-2 lg:gap-5">
 
             {/* Post composer trigger */}
             <div
-              className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-4 cursor-pointer hover:shadow-md transition-shadow"
+              className="bg-white border-b border-[#1A6B3C]/8 lg:rounded-3xl lg:border lg:shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-4 lg:px-5 py-4 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => setComposerOpen(true)}
             >
               <div className="flex items-center gap-3">
@@ -504,14 +729,14 @@ export default function ProfilePage() {
                   What's on your mind?
                 </div>
                 <button className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#1A6B3C]/8 text-[#1A6B3C] font-jakarta text-xs font-semibold">
-                  <ImageIcon size={13} /> Photo
+                  <ImageIcon size={13} /> <span className="hidden sm:inline">Photo</span>
                 </button>
               </div>
             </div>
 
             {/* Posts banner */}
             {postsBanner && (
-              <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+              <div className="flex items-center gap-2 mx-4 lg:mx-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
                 <AlertCircle size={14} className="text-red-500 flex-shrink-0" />
                 <p className="font-jakarta text-sm text-red-600 flex-1">{postsBanner}</p>
                 <button onClick={() => setPostsBanner(null)} className="text-red-400 hover:text-red-600 text-xs font-jakarta">Dismiss</button>
@@ -520,9 +745,9 @@ export default function ProfilePage() {
 
             {/* Posts */}
             {postsLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-2 lg:space-y-4">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white rounded-3xl border border-[#1A6B3C]/6 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
+                  <div key={i} className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-3xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 bg-gray-200 rounded-full" />
                       <div className="flex-1 space-y-2">
@@ -538,7 +763,7 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : posts.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-6 py-14 text-center">
+              <div className="bg-white border-b border-[#1A6B3C]/8 lg:rounded-3xl lg:border lg:shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-6 py-14 text-center">
                 <div className="w-12 h-12 bg-[#1A6B3C]/8 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <RefreshCw size={22} className="text-[#1A6B3C]/40" />
                 </div>
@@ -546,7 +771,7 @@ export default function ProfilePage() {
                 <p className="font-jakarta text-sm text-gray-400">Share something with your campus community.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2 lg:space-y-4">
                 {posts.map(post => (
                   <FeedPostCard
                     key={post.id}
@@ -573,201 +798,29 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── RIGHT COLUMN (col-span-1) ── */}
-          <div className="flex flex-col gap-5">
-
-            {/* Intro card */}
-            <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
-              <h2 className="font-fraunces text-base font-bold text-gray-900 mb-4">Intro</h2>
-
-              {profile?.bio
-                ? <p className="font-jakarta text-sm text-gray-600 leading-relaxed mb-4">{profile.bio}</p>
-                : <p className="font-jakarta text-sm text-gray-400 italic mb-4">No bio yet. Click "Edit profile" to add one.</p>
-              }
-
-              <div className="space-y-2.5 text-sm font-jakarta">
-                <div className="flex items-center gap-2.5 text-gray-600">
-                  <div className="w-7 h-7 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
-                    <GraduationCap size={13} className="text-[#1A6B3C]" />
-                  </div>
-                  <span>{profile?.course} · {profile?.yearLevel}</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-gray-600">
-                  <div className="w-7 h-7 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
-                    <Building2 size={13} className="text-[#1A6B3C]" />
-                  </div>
-                  <span>{(profile?.department || '').replace('College of ', '')}</span>
-                </div>
-              </div>
-
-              {/* Interests */}
-              {(profile?.interests?.length ?? 0) > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-2.5">Interests</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(profile?.interests || []).map(interest => (
-                      <span key={interest} className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-jakarta text-xs font-medium border border-gray-200">
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Organizations */}
-              {(profile?.organizations?.length ?? 0) > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-2.5">Organizations</p>
-                  <div className="flex flex-col gap-2">
-                    {(profile?.organizations || []).map(org => (
-                      <div key={org} className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
-                          <Users size={11} className="text-[#1A6B3C]" />
-                        </div>
-                        <span className="font-jakarta text-xs text-gray-700">{org}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Edit mode: Interests & Orgs picker */}
-            {isEditing && (
-              <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
-                <div className="flex border-b border-gray-100 mb-4">
-                  {(['interests', 'orgs'] as const).map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={cn(
-                        'flex-1 py-2.5 font-jakarta font-semibold text-xs uppercase tracking-wide transition-colors',
-                        activeTab === tab ? 'text-[#1A6B3C] border-b-2 border-[#1A6B3C]' : 'text-gray-400 hover:text-gray-600'
-                      )}
-                    >
-                      {tab === 'interests' ? `Interests (${formData.interests?.length ?? 0})` : `Orgs (${formData.organizations?.length ?? 0})`}
-                    </button>
-                  ))}
-                </div>
-
-                {activeTab === 'interests' && (
-                  <div>
-                    {(formData.interests?.length ?? 0) < 3 && (
-                      <div className="mb-3 bg-[#E8A838]/10 border border-[#E8A838]/25 rounded-xl px-3 py-2">
-                        <p className="font-jakarta text-xs text-[#1A6B3C]">Add at least <strong>3 interests</strong> to get matches. ({formData.interests?.length ?? 0}/3)</p>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {(formData.interests || []).map(interest => (
-                        <div key={interest} className="relative group">
-                          <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-jakarta text-xs font-medium border border-gray-200">{interest}</span>
-                          <button onClick={() => toggleInterest(interest)} className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs leading-none">×</button>
-                        </div>
-                      ))}
-                      {!showInterestPicker && (
-                        <button onClick={() => setShowInterestPicker(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-[#1A6B3C]/30 text-[#1A6B3C]/60 font-jakarta text-xs hover:border-[#1A6B3C]/60">
-                          <Plus size={11} /> Add
-                        </button>
-                      )}
-                    </div>
-                    {showInterestPicker && (
-                      <div className="border border-[#1A6B3C]/15 rounded-2xl p-3 bg-[#F7F4EF]">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-jakarta font-semibold text-xs text-[#1A6B3C]">{formData.interests?.length ?? 0} selected</p>
-                          <button onClick={() => setShowInterestPicker(false)} className="text-gray-400 hover:text-gray-600 text-base leading-none">×</button>
-                        </div>
-                        <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                          {Object.entries(interestsByCategory).map(([category, items]) => (
-                            <div key={category}>
-                              <p className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide mb-1.5">{category}</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {items.map(({ label }) => (
-                                  <button key={label} onClick={() => toggleInterest(label)}
-                                    className={cn(
-                                      'px-2.5 py-1 rounded-full font-jakarta text-xs font-medium border transition-colors',
-                                      formData.interests?.includes(label)
-                                        ? 'bg-[#1A6B3C] text-white border-[#1A6B3C]'
-                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                                    )}
-                                  >
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'orgs' && (
-                  <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-                    {organizations.map(org => {
-                      const selected = formData.organizations?.includes(org);
-                      return (
-                        <div key={org} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 transition-all">
-                          <Checkbox
-                            id={`org-${org}`}
-                            checked={selected}
-                            onCheckedChange={() => toggleOrg(org)}
-                            className="border-gray-300 rounded-[4px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
-                          />
-                          <label htmlFor={`org-${org}`} className="flex-1 font-jakarta text-sm text-gray-700 cursor-pointer">{org}</label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* People you may know */}
-            {suggested.length > 0 && (
-              <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] px-5 py-5">
-                <h2 className="font-fraunces text-base font-bold text-gray-900 mb-4">People you may know</h2>
-                <div className="flex flex-col gap-4">
-                  {suggested.map(person => {
-                    const status = connections[person.id] || 'none';
-                    return (
-                      <div key={person.id} className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/8 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xl">{person.avatar || '👤'}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-jakarta text-sm font-semibold text-gray-900 truncate">
-                              {person.username ? `@${person.username}` : person.name}
-                            </p>
-                            {person.isVerified && <Shield size={10} className="text-[#1A6B3C] flex-shrink-0" />}
-                          </div>
-                          <p className="font-jakarta text-xs text-gray-400 truncate">{person.course}</p>
-                          <p className="font-jakarta text-xs text-gray-400">{person.yearLevel}</p>
-                          <button
-                            onClick={() => toggleConnect(person.id)}
-                            disabled={status === 'accepted'}
-                            className={cn(
-                              'mt-2 flex items-center gap-1 px-3 py-1.5 rounded-lg font-jakarta text-xs font-semibold transition-all disabled:cursor-default',
-                              status === 'none' && 'border border-gray-200 text-gray-600 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] hover:bg-[#1A6B3C]/5',
-                              status === 'pending' && 'bg-[#E8A838]/10 text-[#E8A838] border border-[#E8A838]/30',
-                              status === 'accepted' && 'bg-[#1A6B3C]/10 text-[#1A6B3C] border border-[#1A6B3C]/20',
-                            )}
-                          >
-                            <UserPlus size={11} />
-                            {status === 'none' && 'Connect'}
-                            {status === 'pending' && 'Requested'}
-                            {status === 'accepted' && 'Connected'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
+          {/* ── RIGHT COLUMN — Intro + People you may know.
+                Desktop only (hidden below lg; shown inside the modal on mobile). ── */}
+          <div className="hidden lg:flex flex-col gap-5">
+            {profileDetailsContent}
           </div>
+
         </div>
       </div>
+
+      {/* Profile details modal — mobile only entry point */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="sm:max-w-lg rounded-3xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+          <DialogHeader>
+            <DialogTitle className="font-fraunces text-xl">Profile details</DialogTitle>
+            <DialogDescription className="font-jakarta text-sm">
+              Your bio, info, and people you may know.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-5 py-2">
+            {profileDetailsContent}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modals */}
       <PostComposerModal
@@ -787,4 +840,4 @@ export default function ProfilePage() {
       />
     </div>
   );
-} 
+}

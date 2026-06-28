@@ -22,7 +22,7 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 1) {
     return (
-      <div className="mt-3 rounded-2xl overflow-hidden border border-gray-100">
+      <div className="mt-3 lg:rounded-2xl overflow-hidden border-y lg:border border-gray-100 -mx-4 lg:mx-0">
         <img src={sorted[0].url} alt="" className="w-full object-cover max-h-[420px]" />
       </div>
     );
@@ -30,7 +30,7 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 2) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl overflow-hidden">
+      <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
         {sorted.map((m) => (
           <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
         ))}
@@ -40,7 +40,7 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 3) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl overflow-hidden">
+      <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
         <img src={sorted[0].url} alt="" className="w-full object-cover row-span-2 aspect-square" />
         <img src={sorted[1].url} alt="" className="w-full object-cover aspect-square" />
         <img src={sorted[2].url} alt="" className="w-full object-cover aspect-square" />
@@ -50,7 +50,7 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   // 4 images
   return (
-    <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl overflow-hidden">
+    <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
       {sorted.slice(0, 4).map((m) => (
         <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
       ))}
@@ -79,7 +79,7 @@ export default function FeedPostCard({
   })();
 
   return (
-    <article className="bg-white rounded-2xl border border-[#1A6B3C]/6 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4">
+    <article className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-2xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
