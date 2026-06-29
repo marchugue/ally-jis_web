@@ -3,7 +3,7 @@ import { ArrowLeft, Flag, Lightbulb, Flame, ShieldOff } from 'lucide-react';
 import { Conversation } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
-import { ReportModal } from '@/components/chat/reportModal';
+import { ReportModal } from '@/components/chat/ReportModal';
 
 interface ConversationInfoPanelProps {
   conversation: Conversation;
