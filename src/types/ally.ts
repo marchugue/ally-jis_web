@@ -23,6 +23,7 @@ export interface Message {
   timestamp: string;
   createdAt?: string;
   isRead: boolean;
+  status?: 'sending' | 'sent' | 'failed'; // client-only; undefined = sent (from server)
 }
 
 export interface Conversation {

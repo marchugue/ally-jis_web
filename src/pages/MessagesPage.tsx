@@ -6,6 +6,7 @@ import { useConversations } from '@/hooks/useConversations';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import { usePresence } from '@/context/PresenceContext';
 import { useIcebreakers } from '@/hooks/useIcebreakers';
+import { useChatView } from '@/context/ChatViewContext';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { MessageInput } from '@/components/chat/MessageInput';
@@ -24,10 +25,11 @@ export default function MessagesPage() {
   const { onlineUserIds } = usePresence();
   const location = useLocation();
   const navigate = useNavigate();
+  const { setChatFocused } = useChatView();
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [currentStudent, setCurrentStudent] = useState<Student>(CURRENT_USER);
   const { conversations, isLoading: loadingConvs, refresh: refreshConvs } = useConversations(user?.id ?? null);
-  const { messages, sendMessage, isLoading: loadingMessages } = useRealtimeMessages(activeConversation?.id ?? null);
+  const { messages, sendMessage, retrySend, isLoading: loadingMessages } = useRealtimeMessages(activeConversation?.id ?? null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +68,14 @@ export default function MessagesPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Tell TopNav whenever the mobile "focused on a single thread" state
+  // changes, so it can hide/show both nav bars accordingly. Always reset
+  // on unmount so navigating away never leaves the bars permanently hidden.
+  useEffect(() => {
+    setChatFocused(isMobileView && Boolean(activeConversation));
+    return () => setChatFocused(false);
+  }, [isMobileView, activeConversation, setChatFocused]);
 
   useEffect(() => {
     let isMounted = true;
@@ -201,7 +211,7 @@ export default function MessagesPage() {
         {/* Chat Area */}
         <div className={cn(
           "flex-1 bg-white flex flex-col overflow-hidden min-h-0",
-          isMobileView && activeConversation && "pb-20", // Prevent bottom nav overlap
+          
           !activeConversation && "hidden md:flex"
         )}>
           {activeConversation ? (
@@ -235,7 +245,7 @@ export default function MessagesPage() {
                 <button
                   onClick={() => setShowInfoPanel((prev) => !prev)}
                   className={cn(
-                    "hidden md:flex p-2 rounded-full transition-all",
+                    "flex p-2 rounded-full transition-all",
                     showInfoPanel ? "bg-[#1A6B3C]/10 text-[#1A6B3C]" : "text-gray-400 hover:bg-gray-100 hover:text-[#1A6B3C]"
                   )}
                   aria-label="Conversation info"
@@ -251,6 +261,7 @@ export default function MessagesPage() {
                   currentUserId={user?.id ?? CURRENT_USER.id}
                   participantAvatar={activeConversation.participantAvatar}
                   participantName={activeConversation.participantName}
+                  onRetry={retrySend}
                 />
               </div>
 
@@ -276,7 +287,7 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {/* Info Panel */}
+        {/* Info Panel — desktop side panel */}
         {activeConversation && showInfoPanel && (
           <div className="hidden md:flex w-[320px] bg-white border-l border-gray-100 flex-col overflow-y-auto flex-shrink-0">
             <div className="p-6 flex flex-col items-center text-center border-b border-gray-100">
@@ -298,6 +309,38 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
+
+      {/* Info Panel — mobile full-screen overlay */}
+      {activeConversation && showInfoPanel && isMobileView && (
+        <div className="md:hidden fixed inset-0 z-[70] bg-white flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => setShowInfoPanel(false)}
+              className="p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C]"
+              aria-label="Close conversation info"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h3 className="font-jakarta font-bold text-gray-900">Conversation Info</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col items-center text-center p-6">
+            <AvatarDisplay
+              src={activeConversation.participantAvatar}
+              name={activeConversation.participantName}
+              className="w-24 h-24 rounded-2xl object-cover mb-3"
+            />
+            <h3 className="font-jakarta font-bold text-lg text-gray-900">
+              {activeConversation.participantName}
+            </h3>
+            <span className={cn(
+              "mt-1 text-xs font-jakarta font-medium px-2.5 py-0.5 rounded-full",
+              isParticipantOnline ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
+            )}>
+              {isParticipantOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

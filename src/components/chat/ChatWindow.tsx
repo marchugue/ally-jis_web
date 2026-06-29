@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, memo } from 'react';
+import { Clock, AlertCircle } from 'lucide-react';
 import { Message } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -8,9 +9,96 @@ interface ChatWindowProps {
   currentUserId: string;
   participantAvatar?: string | null;
   participantName?: string | null;
+  onRetry?: (message: Message) => void;
 }
 
-export function ChatWindow({ messages, currentUserId, participantAvatar, participantName }: ChatWindowProps) {
+interface MessageBubbleProps {
+  msg: Message;
+  isMe: boolean;
+  showAvatar: boolean;
+  participantAvatar?: string | null;
+  participantName?: string | null;
+  onRetry?: (message: Message) => void;
+}
+
+// Memoized so a status change (sending -> sent) on one bubble doesn't
+// force every other bubble in the thread to re-render.
+const MessageBubble = memo(function MessageBubble({
+  msg,
+  isMe,
+  showAvatar,
+  participantAvatar,
+  participantName,
+  onRetry,
+}: MessageBubbleProps) {
+  const isSending = msg.status === 'sending';
+  const isFailed = msg.status === 'failed';
+
+  return (
+    <div
+      className={cn(
+        "flex items-end gap-2",
+        isMe ? "flex-row-reverse" : "flex-row"
+      )}
+    >
+      {!isMe && (
+        <div className="w-8 h-8 flex-shrink-0">
+          {showAvatar ? (
+            <AvatarDisplay
+              src={participantAvatar}
+              name={participantName}
+              className="w-8 h-8 rounded-lg overflow-hidden"
+              textClassName="text-[10px]"
+            />
+          ) : (
+            <div className="w-8 h-8" />
+          )}
+        </div>
+      )}
+      <div className="flex flex-col" style={{ maxWidth: '75%' }}>
+        <div
+          className={cn(
+            "max-w-full px-4 py-2 rounded-2xl text-sm font-jakarta transition-opacity",
+            isMe
+              ? "bg-[#1A6B3C] text-white rounded-br-none"
+              : "bg-gray-100 text-gray-800 rounded-bl-none",
+            isSending && "opacity-60",
+            isFailed && "opacity-80 ring-1 ring-red-400"
+          )}
+        >
+          {msg.imageUrl && (
+            <img src={msg.imageUrl} alt="" className="rounded-lg mb-2 max-w-full" />
+          )}
+          {msg.content && <p>{msg.content}</p>}
+          <span className={cn(
+            "text-[10px] flex items-center gap-1 mt-1",
+            isMe ? "text-white/60" : "text-gray-400"
+          )}>
+            {isSending && <Clock size={10} className="animate-pulse" />}
+            {isSending
+              ? 'Sending…'
+              : new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+
+        {isFailed && (
+          <button
+            onClick={() => onRetry?.(msg)}
+            className={cn(
+              "flex items-center gap-1 text-[11px] text-red-500 mt-1 hover:underline",
+              isMe ? "self-end" : "self-start"
+            )}
+          >
+            <AlertCircle size={11} />
+            Failed to send · Tap to retry
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+export function ChatWindow({ messages, currentUserId, participantAvatar, participantName, onRetry }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,47 +127,15 @@ export function ChatWindow({ messages, currentUserId, participantAvatar, partici
           const showAvatar = !isMe && (idx === 0 || messages[idx - 1].senderId !== msg.senderId);
 
           return (
-            <div
+            <MessageBubble
               key={msg.id}
-              className={cn(
-                "flex items-end gap-2",
-                isMe ? "flex-row-reverse" : "flex-row"
-              )}
-            >
-              {!isMe && (
-                <div className="w-8 h-8 flex-shrink-0">
-                  {showAvatar ? (
-                    <AvatarDisplay
-                      src={participantAvatar}
-                      name={participantName}
-                      className="w-8 h-8 rounded-lg overflow-hidden"
-                      textClassName="text-[10px]"
-                    />
-                  ) : (
-                    <div className="w-8 h-8" />
-                  )}
-                </div>
-              )}
-              <div
-                className={cn(
-                  "max-w-[75%] px-4 py-2 rounded-2xl text-sm font-jakarta",
-                  isMe
-                    ? "bg-[#1A6B3C] text-white rounded-br-none"
-                    : "bg-gray-100 text-gray-800 rounded-bl-none"
-                )}
-              >
-                {msg.imageUrl && (
-                  <img src={msg.imageUrl} alt="" className="rounded-lg mb-2 max-w-full" />
-                )}
-                {msg.content && <p>{msg.content}</p>}
-                <span className={cn(
-                  "text-[10px] block mt-1",
-                  isMe ? "text-white/60" : "text-gray-400"
-                )}>
-                  {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
+              msg={msg}
+              isMe={isMe}
+              showAvatar={showAvatar}
+              participantAvatar={participantAvatar}
+              participantName={participantName}
+              onRetry={onRetry}
+            />
           );
         })
       )}
