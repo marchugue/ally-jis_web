@@ -19,6 +19,7 @@ import { profileService } from '@/lib/services/profileService';
 import { chatService } from '@/lib/services/chatService';
 import { ConversationHeader } from '@/components/chat/ConversationHeader';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { ConversationInfoPanel } from '@/components/chat/ConversationInfoPanel';
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -287,59 +288,25 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {/* Info Panel — desktop side panel */}
+        {/* Info Panel — desktop */}
         {activeConversation && showInfoPanel && (
-          <div className="hidden md:flex w-[320px] bg-white border-l border-gray-100 flex-col overflow-y-auto flex-shrink-0">
-            <div className="p-6 flex flex-col items-center text-center border-b border-gray-100">
-              <AvatarDisplay
-                src={activeConversation.participantAvatar}
-                name={activeConversation.participantName}
-                className="w-20 h-20 rounded-2xl object-cover mb-3"
-              />
-              <h3 className="font-jakarta font-bold text-gray-900">
-                {activeConversation.participantName}
-              </h3>
-              <span className={cn(
-                "mt-1 text-xs font-jakarta font-medium px-2.5 py-0.5 rounded-full",
-                isParticipantOnline ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
-              )}>
-                {isParticipantOnline ? 'Online' : 'Offline'}
-              </span>
-            </div>
-          </div>
+          <ConversationInfoPanel
+            conversation={activeConversation}
+            isOnline={isParticipantOnline}
+            variant="desktop"
+            onClose={() => setShowInfoPanel(false)}
+          />
         )}
       </div>
 
-      {/* Info Panel — mobile full-screen overlay */}
+      {/* Info Panel — mobile */}
       {activeConversation && showInfoPanel && isMobileView && (
-        <div className="md:hidden fixed inset-0 z-[70] bg-white flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="p-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={() => setShowInfoPanel(false)}
-              className="p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C]"
-              aria-label="Close conversation info"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h3 className="font-jakarta font-bold text-gray-900">Conversation Info</h3>
-          </div>
-          <div className="flex-1 overflow-y-auto flex flex-col items-center text-center p-6">
-            <AvatarDisplay
-              src={activeConversation.participantAvatar}
-              name={activeConversation.participantName}
-              className="w-24 h-24 rounded-2xl object-cover mb-3"
-            />
-            <h3 className="font-jakarta font-bold text-lg text-gray-900">
-              {activeConversation.participantName}
-            </h3>
-            <span className={cn(
-              "mt-1 text-xs font-jakarta font-medium px-2.5 py-0.5 rounded-full",
-              isParticipantOnline ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
-            )}>
-              {isParticipantOnline ? 'Online' : 'Offline'}
-            </span>
-          </div>
-        </div>
+        <ConversationInfoPanel
+          conversation={activeConversation}
+          isOnline={isParticipantOnline}
+          variant="mobile"
+          onClose={() => setShowInfoPanel(false)}
+        />
       )}
     </div>
   );
