@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ally-jis Data Flow Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        background: #f7f4ef;
+        color: #1f2a24;
+        margin: 0;
+        padding: 24px;
+      }
+      .card {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid rgba(26, 107, 60, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgba(20, 37, 28, 0.08);
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: #4a5a52;
+        font-size: 14px;
+      }
+      .mermaid {
+        background: #fbfaf7;
+        border: 1px dashed rgba(26, 107, 60, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Ally-jis Data Flow Diagram (Level 1)</h1>
+      <p>Friend Finding Platform for CHMSU.</p>
+      <div class="mermaid">
+        flowchart LR
+          %% External entity
+          User[Student/User]
+
+          %% Processes
+          P1([1.0 Authenticate & Onboard])
+          P2([2.0 Manage Profile])
+          P3([3.0 Match & Interact])
+          P4([4.0 Messaging])
+          P5([5.0 Notifications])
+
+          %% Data stores
+          D1[(Profiles)]
+          D2[(User Interactions)]
+          D3[(Conversations)]
+          D4[(Messages)]
+          D5[(Notifications)]
+          D6[(Media Storage)]
+
+          %% Flows
+          User -->|Sign up / Sign in| P1
+          P1 -->|Create profile| D1
+          P1 -->|Account status| User
+
+          User -->|Edit profile, interests, orgs, avatar| P2
+          P2 -->|Profile updates| D1
+          P2 -->|Upload avatar| D6
+          D6 -->|Avatar URL| P2
+          P2 -->|Updated profile| User
+
+          User -->|Discover, like/reject| P3
+          P3 -->|Interaction records| D2
+          D1 -->|Profiles| P3
+          P3 -->|Match results| User
+
+          User -->|Send / read messages| P4
+          P4 -->|Conversations| D3
+          P4 -->|Message records| D4
+          D4 -->|Messages| P4
+          P4 -->|Chat updates| User
+
+          P3 -->|Match events| P5
+          P4 -->|Message events| P5
+          P5 -->|Notification records| D5
+          D5 -->|Notifications| P5
+          P5 -->|Alerts| User
+      </div>
+    </div>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Use Case Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        background: #f7f4ef;
+        color: #1f2a24;
+        margin: 0;
+        padding: 24px;
+      }
+      .card {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid rgba(26, 107, 60, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgba(20, 37, 28, 0.08);
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 22px;
+      }
+      h2 {
+        margin: 18px 0 8px 0;
+        font-size: 16px;
+        color: #2d3b33;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: #4a5a52;
+        font-size: 14px;
+      }
+      .mermaid {
+        background: #fbfaf7;
+        border: 1px dashed rgba(26, 107, 60, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      @media (min-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Use Case Diagram</h1>
+      <p>Ally-jis Friend Finding Platform for CHMSU.</p>
+
+      <div class="grid">
+        <div>
+          <h2>Student / User</h2>
+          <div class="mermaid">
+            flowchart LR
+              Student[Student/User]
+
+              subgraph SystemA[ALLY-JIS FRIEND FINDING PLATFORM FOR CHMSU]
+                direction TB
+                UC1([Sign up / Sign in])
+                UC2([Complete profile])
+                UC3([Set interests & organizations])
+                UC4([Discover matches])
+                UC5([Like / Reject users])
+                UC6([Start & manage chats])
+                UC7([View notifications])
+                UC8([Edit profile])
+                UC9([Report / Block user])
+              end
+
+              Student --- UC1
+              Student --- UC2
+              Student --- UC3
+              Student --- UC4
+              Student --- UC5
+              Student --- UC6
+              Student --- UC7
+              Student --- UC8
+              Student --- UC9
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </body>
+</html>

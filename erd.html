@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ally-jis ERD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        background: #f7f4ef;
+        color: #1f2a24;
+        margin: 0;
+        padding: 24px;
+      }
+      .card {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid rgba(26, 107, 60, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgba(20, 37, 28, 0.08);
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: #4a5a52;
+        font-size: 14px;
+      }
+      .mermaid {
+        background: #fbfaf7;
+        border: 1px dashed rgba(26, 107, 60, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Ally-jis Database ERD</h1>
+      <p>Generated from supabase/schema.sql (public schema only).</p>
+      <div class="mermaid">
+        erDiagram
+          AUTH_USERS {
+            uuid id PK
+          }
+
+          PROFILES {
+            uuid id PK
+            text email
+            text username
+            text full_name
+            text avatar_url
+            text bio
+            text department
+            text course
+            text year_level
+            text[] interests
+            text[] organizations
+            timestamptz created_at
+            timestamptz updated_at
+          }
+
+          CONVERSATIONS {
+            uuid id PK
+            timestamptz created_at
+            timestamptz updated_at
+          }
+
+          USER_INTERACTIONS {
+            uuid id PK
+            uuid user_id FK
+            uuid target_user_id FK
+            text status
+            timestamptz created_at
+          }
+
+          CONVERSATION_MEMBERS {
+            uuid conversation_id PK, FK
+            uuid user_id PK, FK
+            timestamptz last_read_at
+            timestamptz created_at
+          }
+
+          MESSAGES {
+            uuid id PK
+            uuid conversation_id FK
+            uuid sender_id FK
+            text content
+            text image_url
+            timestamptz created_at
+          }
+
+          NOTIFICATIONS {
+            uuid id PK
+            uuid user_id FK
+            text type
+            text title
+            text description
+            uuid from_user_id FK
+            boolean is_read
+            timestamptz created_at
+          }
+
+          AUTH_USERS ||--|| PROFILES : "auth user profile"
+          PROFILES ||--o{ USER_INTERACTIONS : "initiates"
+          PROFILES ||--o{ USER_INTERACTIONS : "targets"
+          PROFILES ||--o{ CONVERSATION_MEMBERS : "member"
+          PROFILES ||--o{ MESSAGES : "sends"
+          PROFILES ||--o{ NOTIFICATIONS : "receives"
+          PROFILES ||--o{ NOTIFICATIONS : "from_user"
+          CONVERSATIONS ||--o{ CONVERSATION_MEMBERS : "has"
+          CONVERSATIONS ||--o{ MESSAGES : "contains"
+      </div>
+    </div>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </body>
+</html>
