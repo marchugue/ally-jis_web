@@ -151,6 +151,8 @@ export interface MessageRow {
   reply_to_message_id?: string | null;
   replied_message?: MessageReplyRow | MessageReplyRow[] | null;
   reactions?: MessageReactionRow[];
+  /** True when the sender deleted this message for everyone (global tombstone). */
+  is_deleted?: boolean;
 }
 
 export interface ConversationMemberRow {
