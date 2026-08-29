@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiClient, AuthSession, AuthUser, isApiConfigured } from "@/api/client";
 import { AUTH_UNAUTHORIZED_EVENT } from "@/api/http";
-import { disconnectSocket } from "@/lib/socket";
+import { disconnectSocket, initSocket } from "@/lib/socket";
+
 import { clearRolePromptFlag } from "@/components/DashboardRoleGate";
 
 interface AuthContextValue {
@@ -57,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set both atomically so ProtectedRoute never sees an inconsistent state
         setVerified(emailStatus.isEmailVerified);
         setSession(nextSession);
+        // Eagerly connect socket so chat hooks can subscribe immediately.
+        initSocket();
+
       } catch (err) {
         console.error('AuthContext: session load error', err);
         setSession(null);
@@ -101,7 +105,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeLogin: (newSession: AuthSession, isVerified: boolean) => {
         setSession(newSession);
         setVerified(isVerified);
+        // Socket must be alive before MessagesPage mounts and tries to subscribe.
+        initSocket();
       },
+
       signOut: async () => {
         setMockUserState(null);
         setSession(null);

@@ -118,10 +118,14 @@ export function useConversations(userId: string | null) {
     const onMessageNew = () => {
       void loadConversations(true);
     };
+    // Also refresh on reconnect to pick up anything missed while disconnected.
+    const onConnect = () => void loadConversations(true);
 
     socket.on('conversation:message_new', onMessageNew);
+    socket.on('connect', onConnect);
     return () => {
       socket.off('conversation:message_new', onMessageNew);
+      socket.off('connect', onConnect);
     };
   }, [userId, loadConversations]);
 

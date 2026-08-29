@@ -119,6 +119,11 @@ export function useRealtimeMessages(conversationId: string | null) {
 
   useEffect(() => {
     if (!conversationId) return;
+
+    // getSocket() creates the connection on first call. If it returns null
+    // (token not in storage yet) we bail — the AuthContext initSocket() call
+    // will have already set up the socket before this runs under normal
+    // login flow, but guard here just in case.
     const socket = getSocket();
     if (!socket) return;
 
@@ -144,6 +149,14 @@ export function useRealtimeMessages(conversationId: string | null) {
     socket.on('conversation:message_new', onMessageNew);
     socket.on('conversation:typing', onTyping);
     socket.on('connect', onConnect);
+
+    // If the socket is already connected, fire an initial silent load
+    // to reconcile anything that may have arrived between page load and
+    // this effect running.
+    if (socket.connected) {
+      void loadMessages(true);
+    }
+
     return () => {
       socket.off('conversation:message_new', onMessageNew);
       socket.off('conversation:typing', onTyping);

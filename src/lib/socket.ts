@@ -1,11 +1,9 @@
 // src/lib/socket.ts
 //
-// Single shared socket.io connection for the matchmaking feature (queue
-// updates, match found, room ready, streak/typing/message relay — see
-// backend src/sockets/index.ts for the full event list). Not used by
-// regular chat, which stays on REST + polling (useRealtimeMessages.ts) —
-// this is scoped to matchmaking on purpose, see the Phase 1 notes in
-// hooks/useMatchmaking.ts.
+// Single shared socket.io connection for all real-time features:
+// matchmaking queue/events, conversation messages, typing indicators,
+// streak updates. Initialized eagerly after login via initSocket().
+// See backend src/sockets/index.ts for the full event list.
 
 import { io, Socket } from 'socket.io-client';
 import { getStoredToken } from '@/api/http';
@@ -38,6 +36,15 @@ export function getSocket(): Socket | null {
   });
 
   return socket;
+}
+
+/**
+ * Eagerly initialise the socket right after login so it's connected before
+ * any chat hook tries to subscribe. Safe to call multiple times — a no-op
+ * if the socket is already alive.
+ */
+export function initSocket(): Socket | null {
+  return getSocket();
 }
 
 /** Call on sign-out so a stale token isn't reused on the next getSocket(). */
