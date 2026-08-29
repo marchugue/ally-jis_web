@@ -106,6 +106,25 @@ export function useConversations(userId: string | null) {
     return () => clearInterval(interval);
   }, [userId, loadConversations]);
 
+  // ── Real-time new-message updates ─────────────────────────────────────────
+  // Listen for 'conversation:message_new' so the conversation list preview
+  // (last message, ordering, unread count) refreshes instantly when a message
+  // arrives from any device — no need to wait for the next 15-second poll.
+  useEffect(() => {
+    if (!userId) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onMessageNew = () => {
+      void loadConversations(true);
+    };
+
+    socket.on('conversation:message_new', onMessageNew);
+    return () => {
+      socket.off('conversation:message_new', onMessageNew);
+    };
+  }, [userId, loadConversations]);
+
   // ── Real-time streak updates ─────────────────────────────────────────────
   // Listen for 'conversation:streak_updated' so the badge reflects a new
   // streak day instantly — no need to wait for the next 15-second poll.
