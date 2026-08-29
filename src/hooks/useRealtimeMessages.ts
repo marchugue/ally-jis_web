@@ -1,11 +1,9 @@
 // src/hooks/useRealtimeMessages.ts
 //
-// Previously polled every 5s. Now subscribes to conversation:message_new /
-// conversation:typing over the shared socket connection (see lib/socket.ts)
-// — used for every conversation regardless of variant, which is what let
-// useMatchChat.ts (anonymous-only) go away. Falls back to a one-time
-// refetch on socket reconnect to reconcile anything missed while
-// disconnected, rather than continuous polling.
+// Subscribes to conversation:message_new / conversation:typing over Socket.io
+// when the backend supports it (local / Railway / Render). Also polls every
+// POLL_INTERVAL_MS while a conversation is open — required on Vercel because
+// serverless deploys cannot run persistent WebSocket connections.
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { isApiConfigured, ApiError } from '@/api/client';
@@ -16,6 +14,8 @@ import { getSocket } from '@/lib/socket';
 
 const TEMP_ID_PREFIX = 'temp-';
 const TYPING_IDLE_MS = 5000;
+/** Poll while a conversation is open — needed when backend can't run Socket.io (e.g. Vercel). */
+const POLL_INTERVAL_MS = 3000;
 
 function reactionsEqual(a?: MessageReaction[], b?: MessageReaction[]): boolean {
   const left = a ?? [];
@@ -162,6 +162,48 @@ export function useRealtimeMessages(conversationId: string | null) {
       socket.off('conversation:typing', onTyping);
       socket.off('connect', onConnect);
       if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    };
+  }, [conversationId, loadMessages]);
+
+  // Fallback poll while this conversation is open. Socket.io requires a
+  // persistent Node process — it does NOT work on Vercel serverless, so
+  // production (api.ally-jis.xyz) relies on this until the backend moves
+  // to Railway/Render/Fly or similar.
+  useEffect(() => {
+    if (!conversationId || !isApiConfigured) return;
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const poll = () => void loadMessages(true);
+
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(poll, POLL_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        poll();
+        startPolling();
+      }
+    };
+
+    poll();
+    startPolling();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [conversationId, loadMessages]);
 
