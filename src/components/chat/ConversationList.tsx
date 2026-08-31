@@ -13,6 +13,8 @@ interface ConversationListProps {
   isLoading: boolean;
   onlineUserIds?: Set<string>;
   currentUserId?: string;
+  /** When true, rows render without an inner scroll container (parent scrolls). */
+  embedded?: boolean;
 }
 
 interface ConversationRowProps {
@@ -90,7 +92,15 @@ const ConversationRow = memo(function ConversationRow({
   );
 });
 
-export function ConversationList({ conversations, activeId, onSelect, isLoading, onlineUserIds, currentUserId }: ConversationListProps) {
+export function ConversationList({
+  conversations,
+  activeId,
+  onSelect,
+  isLoading,
+  onlineUserIds,
+  currentUserId,
+  embedded = false,
+}: ConversationListProps) {
   // isLoading is now only ever true on the very first mount (see useConversations).
   // It will never flip back to true mid-session, so this skeleton can't
   // re-appear and blank out a list that's already showing data.
@@ -114,6 +124,7 @@ export function ConversationList({ conversations, activeId, onSelect, isLoading,
   }
 
   if (conversations.length === 0) {
+    if (embedded) return null;
     return (
       <div className="p-8 text-center">
         <p className="text-gray-500 text-sm">No conversations yet.</p>
@@ -122,18 +133,22 @@ export function ConversationList({ conversations, activeId, onSelect, isLoading,
     );
   }
 
+  const rows = conversations.map((conv) => (
+    <ConversationRow
+      key={conv.id}
+      conv={conv}
+      isActive={activeId === conv.id}
+      isOnline={Boolean(onlineUserIds?.has(conv.participantId))}
+      sentByMe={Boolean(currentUserId) && conv.lastMessageSenderId === currentUserId}
+      onSelect={onSelect}
+    />
+  ));
+
+  if (embedded) return <>{rows}</>;
+
   return (
     <div className="overflow-y-auto h-full">
-      {conversations.map((conv) => (
-        <ConversationRow
-          key={conv.id}
-          conv={conv}
-          isActive={activeId === conv.id}
-          isOnline={Boolean(onlineUserIds?.has(conv.participantId))}
-          sentByMe={Boolean(currentUserId) && conv.lastMessageSenderId === currentUserId}
-          onSelect={onSelect}
-        />
-      ))}
+      {rows}
     </div>
   );
 }

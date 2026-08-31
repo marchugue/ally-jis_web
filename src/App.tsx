@@ -24,6 +24,11 @@ import AdminActivityLogPage from "@/pages/admin/AdminActivityLogPage";
 import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
 import AdminAvatarsPage from "@/pages/admin/AdminAvatarsPage";
 import ConfirmPage from "@/pages/ConfirmPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
+import SupportPage from "@/pages/SupportPage";
+import AboutPage from "@/pages/AboutPage";
+import DownloadPage from "@/pages/DownloadPage";
 import { PageTransition } from "@/components/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/MainLayout";
@@ -77,6 +82,31 @@ function App() {
           <Route path="/confirmation-page" element={
               <PageTransition>
                 <ConfirmPage />
+              </PageTransition>
+            } />
+          <Route path="/privacy" element={
+              <PageTransition>
+                <PrivacyPage />
+              </PageTransition>
+            } />
+          <Route path="/terms" element={
+              <PageTransition>
+                <TermsPage />
+              </PageTransition>
+            } />
+          <Route path="/support" element={
+              <PageTransition>
+                <SupportPage />
+              </PageTransition>
+            } />
+          <Route path="/about" element={
+              <PageTransition>
+                <AboutPage />
+              </PageTransition>
+            } />
+          <Route path="/download" element={
+              <PageTransition>
+                <DownloadPage />
               </PageTransition>
             } />
 

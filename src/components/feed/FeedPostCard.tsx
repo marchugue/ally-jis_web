@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ThumbsUp, MessageCircle, Globe2, Users, MoreHorizontal, Trash2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import type { FeedPost } from '@/types/feed';
 import type { Student } from '@/types/ally';
@@ -17,6 +18,8 @@ interface FeedPostCardProps {
    * and navigates to their profile. Omitted (e.g. on ProfilePage, which
    * only ever shows one author's posts) it's just not clickable. */
   onAuthorClick?: (authorId: string) => void;
+  showBorder?: boolean;
+  className?: string;
 }
 
 function MediaGrid({ media }: { media: FeedPost['media'] }) {
@@ -26,15 +29,15 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 1) {
     return (
-      <div className="mt-3 lg:rounded-2xl overflow-hidden border-y lg:border border-gray-100 -mx-4 lg:mx-0">
-        <img src={sorted[0].url} alt="" className="w-full object-cover max-h-[420px]" />
+      <div className="mt-3 rounded-xl overflow-hidden border border-gray-100/80 w-full bg-black/5 flex items-center justify-center">
+        <img src={sorted[0].url} alt="" className="w-full h-auto max-h-[550px] object-cover" />
       </div>
     );
   }
 
   if (sorted.length === 2) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
         {sorted.map((m) => (
           <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
         ))}
@@ -44,8 +47,8 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 3) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
-        <img src={sorted[0].url} alt="" className="w-full object-cover row-span-2 aspect-square" />
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
+        <img src={sorted[0].url} alt="" className="w-full object-cover row-span-2 h-full aspect-square" />
         <img src={sorted[1].url} alt="" className="w-full object-cover aspect-square" />
         <img src={sorted[2].url} alt="" className="w-full object-cover aspect-square" />
       </div>
@@ -54,7 +57,7 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   // 4 images
   return (
-    <div className="mt-3 grid grid-cols-2 gap-1 lg:rounded-2xl overflow-hidden -mx-4 lg:mx-0">
+    <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
       {sorted.slice(0, 4).map((m) => (
         <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
       ))}
@@ -69,6 +72,8 @@ export default function FeedPostCard({
   onCommentClick,
   onDelete,
   onAuthorClick,
+  showBorder = true,
+  className,
 }: FeedPostCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const author = post.author;
@@ -84,7 +89,15 @@ export default function FeedPostCard({
   })();
 
   return (
-    <article className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-2xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4">
+    <article
+      className={cn(
+        'bg-white p-4',
+        showBorder
+          ? 'border-b border-[#1A6B3C]/6 lg:rounded-xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)]'
+          : 'rounded-xl border-0 shadow-none',
+        className
+      )}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div

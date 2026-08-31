@@ -9,6 +9,7 @@ import { usePresence } from '@/context/PresenceContext';
 import { useIcebreakers } from '@/hooks/useIcebreakers';
 import { useChatView } from '@/context/ChatViewContext';
 import { ConversationList } from '@/components/chat/ConversationList';
+import { ChatBrowseList } from '@/components/chat/ChatBrowseList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { IcebreakerSuggestions } from '@/components/chat/IcebreakerSuggestions';
@@ -30,6 +31,9 @@ import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { MatchRevealPanel } from '@/components/match/MatchRevealPanel';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
+import { useChatBrowseUsers } from '@/hooks/useChatBrowseUsers';
+import { buildChatBrowseResults, computeMaxBrowseItems } from '@/lib/chatUserSearch';
+import type { ChatBrowseUser } from '@/lib/chatUserSearch';
 import { notify } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
@@ -115,7 +119,12 @@ export default function MessagesPage() {
   const [isMobileView, setIsMobileView] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [browseMode, setBrowseMode] = useState(false);
+  const [startingUserId, setStartingUserId] = useState<string | null>(null);
+  const [maxBrowseItems, setMaxBrowseItems] = useState(10);
   const [variantFilter, setVariantFilter] = useState<'all' | 'regular' | 'anonymous'>('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listContainerRef = useRef<HTMLDivElement>(null);
   const [unblocking, setUnblocking] = useState(false);
   const [replyTarget, setReplyTarget] = useState<MessageReplyPreview | null>(null);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
@@ -382,6 +391,74 @@ export default function MessagesPage() {
      return result;
   }, [conversations, searchQuery, variantFilter]);
 
+  const showBrowse = browseMode || searchQuery.trim().length > 0;
+  const { allies: browseAllies, profiles: browseProfiles, isLoading: loadingBrowse } = useChatBrowseUsers(
+    user?.id ?? null,
+    showBrowse && useBackend,
+  );
+
+  const existingParticipantIds = useMemo(
+    () => new Set(conversations.map((conv) => conv.participantId)),
+    [conversations],
+  );
+
+  const browseResults = useMemo(
+    () =>
+      buildChatBrowseResults({
+        query: searchQuery,
+        allies: browseAllies,
+        allProfiles: browseProfiles,
+        existingParticipantIds,
+        maxItems: maxBrowseItems,
+      }),
+    [searchQuery, browseAllies, browseProfiles, existingParticipantIds, maxBrowseItems],
+  );
+
+  const hasBrowseResults = browseResults.allies.length > 0 || browseResults.others.length > 0;
+
+  useEffect(() => {
+    const el = listContainerRef.current;
+    if (!el) return;
+
+    const updateMaxItems = () => {
+      setMaxBrowseItems(computeMaxBrowseItems(el.clientHeight));
+    };
+
+    updateMaxItems();
+    const observer = new ResizeObserver(updateMaxItems);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showBrowse]);
+
+  const handleBrowseSelect = useCallback(async (browseUser: ChatBrowseUser) => {
+    if (!user || startingUserId) return;
+
+    setStartingUserId(browseUser.id);
+    try {
+      const conversationId = await chatService.getOrCreateConversation(browseUser.id);
+      const conv = await chatService.getConversation(conversationId, user.id);
+      setActiveConversation(conv);
+      setBrowseMode(false);
+      setSearchQuery('');
+      void refreshConvs(true);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      notify.error('Could not start conversation', message);
+    } finally {
+      setStartingUserId(null);
+    }
+  }, [user, startingUserId, refreshConvs]);
+
+  const handleToggleBrowseMode = useCallback(() => {
+    setBrowseMode((prev) => {
+      const next = !prev;
+      if (next) {
+        requestAnimationFrame(() => searchInputRef.current?.focus());
+      }
+      return next;
+    });
+  }, []);
+
   const isParticipantOnline = activeConversation
     ? onlineUserIds.has(activeConversation.participantId)
     : false;
@@ -401,7 +478,16 @@ export default function MessagesPage() {
         )}>
           <div className="p-4 flex items-center justify-between flex-shrink-0">
             <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C]">Chats</h1>
-            <button className="p-2 text-[#1A6B3C] hover:bg-[#1A6B3C]/5 rounded-full transition-all">
+            <button
+              type="button"
+              onClick={handleToggleBrowseMode}
+              className={cn(
+                'p-2 text-[#1A6B3C] rounded-full transition-all',
+                browseMode ? 'bg-[#1A6B3C]/10' : 'hover:bg-[#1A6B3C]/5',
+              )}
+              aria-label="Find people to message"
+              aria-pressed={browseMode}
+            >
               <UserPlus size={20} />
             </button>
           </div>
@@ -410,10 +496,11 @@ export default function MessagesPage() {
             <div className="relative">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search conversations"
+                placeholder={browseMode ? 'Search allies and classmates…' : 'Search chats or people…'}
                 className="w-full bg-gray-100 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 transition-all"
               />
             </div>
@@ -440,15 +527,73 @@ export default function MessagesPage() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <ConversationList
-              conversations={filteredConversations}
-              activeId={activeConversation?.id}
-              onSelect={setActiveConversation}
-              isLoading={loadingConvs}
-              onlineUserIds={onlineUserIds}
-              currentUserId={user?.id ?? CURRENT_USER.id}
-            />
+          <div
+            ref={listContainerRef}
+            className={cn(
+              'flex-1 min-h-0',
+              showBrowse ? 'overflow-y-auto' : 'overflow-hidden flex flex-col',
+            )}
+          >
+            {showBrowse ? (
+              <>
+                {loadingBrowse ? (
+                  <div className="p-6 text-center text-sm text-gray-400 font-jakarta">Loading people…</div>
+                ) : hasBrowseResults ? (
+                  <>
+                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 bg-white sticky top-0 z-10 border-b border-gray-50">
+                      {searchQuery.trim() ? 'Start a chat' : 'Allies to message'}
+                    </p>
+                    <ChatBrowseList
+                      allies={browseResults.allies}
+                      others={browseResults.others}
+                      onSelect={handleBrowseSelect}
+                      startingUserId={startingUserId}
+                      onlineUserIds={onlineUserIds}
+                      showSections={Boolean(searchQuery.trim())}
+                      embedded
+                    />
+                  </>
+                ) : searchQuery.trim() ? (
+                  <div className="p-6 text-center">
+                    <p className="text-gray-500 text-sm">No people found.</p>
+                    <p className="text-gray-400 text-xs mt-1">Try a different name or connect on Discover.</p>
+                  </div>
+                ) : null}
+
+                {filteredConversations.length > 0 && (
+                  <>
+                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 bg-white sticky top-0 z-10 border-b border-gray-50">
+                      {searchQuery.trim() ? 'Matching chats' : 'Your chats'}
+                    </p>
+                    <ConversationList
+                      conversations={filteredConversations}
+                      activeId={activeConversation?.id}
+                      onSelect={setActiveConversation}
+                      isLoading={false}
+                      onlineUserIds={onlineUserIds}
+                      currentUserId={user?.id ?? CURRENT_USER.id}
+                      embedded
+                    />
+                  </>
+                )}
+
+                {!loadingBrowse && !hasBrowseResults && filteredConversations.length === 0 && !searchQuery.trim() && (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500 text-sm">All your allies already have chats.</p>
+                    <p className="text-gray-400 text-xs mt-1">Search above to message someone new.</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <ConversationList
+                conversations={filteredConversations}
+                activeId={activeConversation?.id}
+                onSelect={setActiveConversation}
+                isLoading={loadingConvs}
+                onlineUserIds={onlineUserIds}
+                currentUserId={user?.id ?? CURRENT_USER.id}
+              />
+            )}
           </div>
         </div>
 

@@ -1,8 +1,9 @@
 // src/components/profile/RelationshipButtons.tsx
 
 import { useState } from 'react';
-import { Check, Clock, UserCheck, UserMinus, UserPlus, X } from 'lucide-react';
+import { Check, Clock, MessageCircle, UserCheck, UserMinus, UserPlus, X } from 'lucide-react';
 import { apiClient } from '@/api/client';
+import { chatService } from '@/lib/services/chatService';
 import type { RelationshipStatus } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import {
@@ -40,6 +41,7 @@ export function RelationshipButtons({
 }: RelationshipButtonsProps) {
   const [allyBusy, setAllyBusy] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [messageBusy, setMessageBusy] = useState(false);
 
   const handleAddAlly = async () => {
     setAllyBusy(true);
@@ -102,6 +104,18 @@ export function RelationshipButtons({
     }
   };
 
+  const handleMessage = async () => {
+    setMessageBusy(true);
+    try {
+      const conversationId = await chatService.getOrCreateConversation(targetUserId);
+      onConversationReady?.(conversationId);
+    } catch (err: any) {
+      notify.error('Could not start conversation', err?.message);
+    } finally {
+      setMessageBusy(false);
+    }
+  };
+
   const handleToggleFollow = async () => {
     setFollowBusy(true);
     const next = !isFollowing;
@@ -161,7 +175,15 @@ export function RelationshipButtons({
       )}
 
       {allyStatus === 'allies' && (
-        <AlertDialog>
+        <>
+          <button
+            onClick={handleMessage}
+            disabled={messageBusy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] text-white font-jakarta text-sm font-semibold hover:bg-[#155a33] transition-colors shadow-md disabled:opacity-60"
+          >
+            <MessageCircle size={14} /> Message
+          </button>
+          <AlertDialog>
           <AlertDialogTrigger asChild>
             <button
               disabled={allyBusy}
@@ -185,6 +207,7 @@ export function RelationshipButtons({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </>
       )}
 
       {/* Follow action */}

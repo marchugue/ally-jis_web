@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import FeedPostCard from '@/components/feed/FeedPostCard';
-import AlliesRow from '@/components/feed/AlliesRow';
 import PostComposerTrigger from '@/components/ally/PostComposerTrigger';
 import PostComposerModal from '@/components/feed/PostComposerModal';
 import CommentsModal from '@/components/feed/CommentsModal';
@@ -95,7 +94,7 @@ export default function NewsfeedPage() {
       <div className="flex-1 overflow-y-auto pb-24 md:pb-8">
         {/* Mobile: edge-to-edge, no horizontal padding.
             Desktop (lg+): contained column with padding, as before. */}
-        <div className="max-w-2xl mx-auto lg:px-4 pt-5">
+        <div className="max-w-3xl mx-auto lg:px-4 pt-5">
 
           {/* Error banner */}
           {banner && (
@@ -117,14 +116,11 @@ export default function NewsfeedPage() {
             onClick={() => setComposerOpen(true)}
           />
 
-          {/* Allies strip */}
-          <AlliesRow allies={allies} />
-
           {/* Feed */}
           {isLoading ? (
-            <div className="space-y-2 lg:space-y-4">
+            <div className="space-y-2 lg:space-y-2.5">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-2xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
+                <div key={i} className="bg-white border-b border-[#1A6B3C]/6 lg:rounded-xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-4 animate-pulse">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-200 rounded-xl" />
                     <div className="flex-1 space-y-2">
@@ -150,7 +146,7 @@ export default function NewsfeedPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2 lg:space-y-4">
+            <div className="space-y-2 lg:space-y-2.5">
               {posts.map((post) => (
                 <FeedPostCard
                   key={post.id}
@@ -197,6 +193,12 @@ export default function NewsfeedPage() {
         loadComments={loadComments}
         onSubmitComment={submitComment}
         onToggleCommentLike={toggleCommentLike}
+        onTogglePostLike={toggleLike}
+        onDeletePost={handleDelete}
+        onAuthorClick={(authorId) => {
+          setActivePost(null);
+          navigate(`/profile/${authorId}`);
+        }}
       />
     </PageTransition>
   );

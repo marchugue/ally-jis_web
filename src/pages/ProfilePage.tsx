@@ -1122,6 +1122,8 @@ export default function ProfilePage() {
         loadComments={loadComments}
         onSubmitComment={submitComment}
         onToggleCommentLike={toggleCommentLike}
+        onTogglePostLike={toggleLike}
+        onDeletePost={handleDelete}
       />
 
       {viewedUserId && listModal && (
