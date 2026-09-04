@@ -12,11 +12,13 @@ export const isApiConfigured = Boolean(API_BASE_URL);
 
 export class ApiError extends Error {
   status: number;
+  body?: Record<string, unknown>;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body?: Record<string, unknown>) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -116,7 +118,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
     }
 
-    throw new ApiError(message, response.status);
+    const body = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : undefined;
+    throw new ApiError(message, response.status, body);
   }
 
   if (typeof payload === 'object' && payload !== null && 'data' in payload) {

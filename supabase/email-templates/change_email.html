@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirm Email Change - Ally-jis</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F7F4EF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #0F172A !important; }
+      .card { background-color: #1E293B !important; border-color: #334155 !important; }
+      .text-title { color: #F8FAFC !important; }
+      .text-body { color: #94A3B8 !important; }
+    }
+  </style>
+</head>
+<body style="background-color: #F7F4EF; padding: 40px 10px;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation">
+    <tr>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden;" class="card">
+          <tr>
+            <td align="center" style="background: #0284C7; padding: 28px;">
+              <span style="color: white; font-size: 24px; font-weight: bold;">Ally-jis Account Change</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <h1 class="text-title" style="font-size: 20px; color: #0F172A; text-align: center; margin: 0 0 16px 0;">Confirm New Email Address</h1>
+              <p class="text-body" style="color: #475569; font-size: 15px; line-height: 1.6; text-align: center;">
+                We received a request to update your email address to <strong>{{ .Email }}</strong>.
+              </p>
+              <div align="center" style="margin: 24px 0;">
+                <div style="background: #F0F9FF; border: 2px dashed #7DD3FC; padding: 16px; border-radius: 10px; font-family: monospace; font-size: 28px; letter-spacing: 6px; color: #0284C7;">
+                  {{ .Token }}
+                </div>
+              </div>
+              <div align="center" style="margin-bottom: 24px;">
+                <a href="{{ .ConfirmationURL }}" style="background: #0284C7; color: white; padding: 12px 28px; border-radius: 8px; font-weight: bold; text-decoration: none; display: inline-block;">
+                  Confirm Email Change &rarr;
+                </a>
+              </div>
+              <p class="text-body" style="color: #64748B; font-size: 12px; text-align: center;">
+                If you did not request this email change, please secure your account immediately.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -24,6 +24,7 @@ import AdminActivityLogPage from "@/pages/admin/AdminActivityLogPage";
 import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
 import AdminAvatarsPage from "@/pages/admin/AdminAvatarsPage";
 import ConfirmPage from "@/pages/ConfirmPage";
+import OtpVerifyPage from "@/pages/OtpVerifyPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import SupportPage from "@/pages/SupportPage";
@@ -33,6 +34,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/MainLayout";
 import { DashboardRoleGate } from "@/components/DashboardRoleGate";
+import PendingApprovalPage from "@/pages/PendingApprovalPage";
 
 function App() {
   const location = useLocation();
@@ -81,7 +83,13 @@ function App() {
           } />
           <Route path="/confirmation-page" element={
               <PageTransition>
+                {/* Legacy redirect: old magic-link URLs → new OTP page */}
                 <ConfirmPage />
+              </PageTransition>
+            } />
+          <Route path="/verify-email" element={
+              <PageTransition>
+                <OtpVerifyPage />
               </PageTransition>
             } />
           <Route path="/privacy" element={
@@ -160,6 +168,11 @@ function App() {
             <Route path="/settings" element={
               <PageTransition>
                 <SettingsPage />
+              </PageTransition>
+            } />
+            <Route path="/pending-approval" element={
+              <PageTransition>
+                <PendingApprovalPage />
               </PageTransition>
             } />
             

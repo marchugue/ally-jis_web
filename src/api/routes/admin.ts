@@ -55,7 +55,7 @@ export function listActivityLog(cursor?: string | null) {
 
 export interface ListUsersQuery {
   search?: string;
-  status?: 'all' | 'active' | 'banned' | 'suspended';
+  status?: 'all' | 'active' | 'banned' | 'suspended' | 'pending' | 'verified';
   department?: string;
   sortBy?: 'created_at' | 'full_name' | 'username' | 'last_seen_at';
   sortDir?: 'asc' | 'desc';
@@ -117,6 +117,23 @@ export function resetUserPassword(userId: string) {
 export function deleteUser(userId: string) {
   return request<void>(`/admin/users/${userId}`, { method: 'DELETE' });
 }
+
+// ─── Student Verification ────────────────────────────────────────────────
+
+import type { PendingVerificationItem } from '../types';
+
+export function listPendingVerifications() {
+  return request<PendingVerificationItem[]>('/admin/users/pending-verifications');
+}
+
+export function approveStudentVerification(userId: string) {
+  return request<void>(`/admin/users/${userId}/approve-verification`, { method: 'POST' });
+}
+
+export function rejectStudentVerification(userId: string, reason?: string) {
+  return request<void>(`/admin/users/${userId}/reject-verification`, { method: 'POST', body: { reason } });
+}
+
 
 // ─── Reports Management ─────────────────────────────────────────────────
 

@@ -19,6 +19,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
+      // Let ProtectedRoute handle the pending-approval redirect if needed
       navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
@@ -73,14 +74,23 @@ export default function LoginPage() {
         // 403 or network error → regular user, proceed normally
       }
 
-      navigate('/dashboard', { replace: true });
+      // Non-CHMSU students pending admin approval go to the waiting room.
+      // All others go to the dashboard (ProtectedRoute also enforces this).
+      const isPending =
+        session.user?.user_metadata?.pending_student_verification === true &&
+        session.user?.user_metadata?.student_verification_status !== 'approved';
+
+      navigate(isPending ? '/pending-approval' : '/dashboard', { replace: true });
 
     } catch (err: any) {
       console.error('Login error:', err);
 
-      // 403 = email not confirmed (backend surfaces Supabase's specific error)
-      if (err.status === 403) {
-        notify.warning('Email not confirmed', 'Please check your inbox and click the confirmation link.');
+      // 403 with requiresOtp = user registered but hasn't verified OTP yet
+      if (err.status === 403 && err.body?.requiresOtp) {
+        const { userId, email } = err.body;
+        navigate(`/verify-email?userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(email ?? form.email)}`);
+      } else if (err.status === 403) {
+        notify.warning('Email not verified', 'Please verify your email to continue.');
       } else if (err.status === 0) {
         notify.error('Cannot reach server', 'The backend is unreachable. Check your connection.');
         setShowDemoOption(true);

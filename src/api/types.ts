@@ -41,6 +41,16 @@ export interface RegisterPayload {
   movie_interests?: string[];
   age_range?: string | null;
   match_gender_preference?: string | null;
+  // New email type system
+  email_type?: 'chmsu' | 'external';
+  student_id_url?: string | null;
+}
+
+/** Returned by POST /auth/register — no accessToken until OTP verified */
+export interface RegisterResponse {
+  userId: string;
+  email: string;
+  accessToken: string;
 }
 
 // ─── Profiles ───────────────────────────────────────────────────────────────
@@ -348,6 +358,14 @@ export interface EmailStatus {
   emailConfirmedAt: string | undefined;
 }
 
+export interface OtpStatus {
+  exists: boolean;
+  verified: boolean;
+  resendCount: number;
+  resendLimit: number;
+  expiresAt: string | null;
+}
+
 // ─── Follow ─────────────────────────────────────────────────────────────
 
 export interface FollowStatusResponse {
@@ -499,6 +517,12 @@ export interface AdminUserListItem {
   admin_verified: boolean;
   created_at: string;
   last_seen_at: string | null;
+  // Enhanced verification & identity status fields
+  email_type?: 'chmsu' | 'external' | null;
+  chmsu_auto_verified?: boolean;
+  pending_student_verification?: boolean;
+  student_verification_status?: 'pending' | 'approved' | 'rejected' | null;
+  student_id_url?: string | null;
 }
 
 export interface AdminUserDetail extends AdminUserListItem {
@@ -508,12 +532,31 @@ export interface AdminUserDetail extends AdminUserListItem {
   postsCount: number;
   reportsAgainstCount: number;
   banned_at: string | null;
+  // Student verification fields shown in the admin detail sheet
+  email_type: 'chmsu' | 'external' | null;
+  chmsu_auto_verified: boolean;
+  pending_student_verification: boolean;
+  student_verification_status: 'pending' | 'approved' | 'rejected' | null;
+  student_id_url: string | null;
 }
 
 export interface PaginatedUserList {
   items: AdminUserListItem[];
   nextCursor: string | null;
   total: number;
+}
+
+export interface PendingVerificationItem {
+  id: string;
+  username: string | null;
+  full_name: string | null;
+  email: string;
+  avatar_url: string | null;
+  department: string | null;
+  course: string | null;
+  student_id_url: string | null;
+  student_verification_status: string;
+  created_at: string;
 }
 
 // ─── Admin: Reports Management ─────────────────────────────────────────────

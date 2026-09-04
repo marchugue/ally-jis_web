@@ -10,7 +10,12 @@ interface AuthContextValue {
   session: AuthSession | null;
   loading: boolean;
   verified: boolean;
+  /** True when the user is a non-CHMSU student waiting for admin approval of their student ID. */
+  isPendingApproval: boolean;
+  /** True when the user is logged-in and verified but hasn't finished the onboarding form yet. */
+  needsOnboarding: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setMockUser: (user: AuthUser | null) => void;
   /** Use this after login/confirm — sets both session AND verified atomically. */
   completeLogin: (session: AuthSession, verified: boolean) => void;
@@ -23,7 +28,10 @@ const AuthContext = createContext<AuthContextValue>({
   session: null,
   loading: true,
   verified: false,
+  isPendingApproval: false,
+  needsOnboarding: false,
   signOut: async () => {},
+  deleteAccount: async () => {},
   setMockUser: () => {},
   completeLogin: () => {},
   setSession: () => {},
@@ -97,6 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       loading,
       verified,
+      // isPendingApproval: external-email student whose identity hasn't been
+      // approved by admin yet. Uses backend-computed is_approved flag —
+      // single source of truth, not reconstructed from multiple fields.
+      isPendingApproval: Boolean(
+        session &&
+        verified &&
+        session.user?.user_metadata?.email_type === 'external' &&
+        !session.user?.user_metadata?.is_approved
+      ),
+      // needsOnboarding: logged-in, verified, approved, but profile not saved yet.
+      needsOnboarding: Boolean(
+        session &&
+        verified &&
+        session.user?.user_metadata?.is_approved !== false &&  // don't flag pending students
+        !session.user?.user_metadata?.onboarding_complete
+      ),
       setMockUser: (user: AuthUser | null) => setMockUserState(user),
       setSession,
       // Atomic setter used by LoginPage and ConfirmPage — avoids the race
@@ -122,6 +146,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await apiClient.logout();
         } catch (error) {
           console.error("Sign out error:", error);
+          apiClient.setAccessToken(null);
+        }
+      },
+
+      deleteAccount: async () => {
+        setMockUserState(null);
+        setSession(null);
+        setVerified(false);
+        disconnectSocket();
+        clearRolePromptFlag();
+
+        if (!isApiConfigured) return;
+
+        try {
+          await apiClient.deleteAccount();
+        } catch (error) {
+          console.error("Delete account error:", error);
           apiClient.setAccessToken(null);
         }
       },

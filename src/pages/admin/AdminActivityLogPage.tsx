@@ -56,7 +56,7 @@ export default function AdminActivityLogPage() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 w-full pb-8">
       <div>
         <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Activity Log</h1>
         <p className="text-sm text-gray-400 dark:text-white/40 mt-0.5">Every admin-tier action, logged automatically.</p>

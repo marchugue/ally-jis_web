@@ -89,6 +89,9 @@ export type {
   ReportStatusCounts,
   GlobalSearchResult,
   SystemSettings,
+  OtpStatus,
+  RegisterResponse,
+  PendingVerificationItem,
 } from './types';
 
 import * as auth from './routes/auth';
@@ -116,11 +119,19 @@ export const apiClient = {
   forgotPassword: auth.forgotPassword,
   resetPassword: auth.resetPassword,
   changePassword: auth.changePassword,
+  deleteAccount: auth.deleteAccount,
   getSession: auth.getSession,
   setAccessToken: auth.setAccessToken,
   getAccessToken: auth.getAccessToken,
   getEmailStatus: auth.getEmailStatus,
   confirmEmail: auth.confirmEmail,
+  // OTP
+  sendOtp: auth.sendOtp,
+  verifyOtp: auth.verifyOtp,
+  resendOtp: auth.resendOtp,
+  getOtpStatus: auth.getOtpStatus,
+  uploadStudentId: auth.uploadStudentId,
+  cancelRegistration: auth.cancelRegistration,
 
   // ─── Profiles ───────────────────────────────────────────────────────────
   getMyProfile: profiles.getMyProfile,
@@ -179,6 +190,10 @@ export const apiClient = {
   adminForceLogoutUser: admin.forceLogoutUser,
   adminResetUserPassword: admin.resetUserPassword,
   adminDeleteUser: admin.deleteUser,
+  // Student verification
+  adminListPendingVerifications: admin.listPendingVerifications,
+  adminApproveStudentVerification: admin.approveStudentVerification,
+  adminRejectStudentVerification: admin.rejectStudentVerification,
 
   // ─── Admin: Reports Management ──────────────────────────────────────────
   adminListReports: admin.listReports,

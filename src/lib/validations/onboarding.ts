@@ -5,7 +5,10 @@ export const basicInfoSchema = z.object({
     .min(3, "Username must be at least 3 characters")
     .max(20, "Username must be at most 20 characters")
     .regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers, and underscores only"),
-  email: z.string().email("Enter a valid CHMSU email").endsWith("@chmsu.edu.ph", "Must be a CHMSU email"),
+  // Any valid email accepted — the emailType selector in the UI determines
+  // whether to enforce @chmsu.edu.ph (client-side hint, not a hard Zod rule
+  // here so both paths use the same schema shape).
+  email: z.string().email("Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
