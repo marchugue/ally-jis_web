@@ -156,15 +156,15 @@ export default function LoginPage() {
       </header>
 
       {/* ── MAIN CONTENT (EDITORIAL SPLIT / HIGH LEGIBILITY AUTH) ── */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-12 lg:py-20 flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
           
-          {/* Left Column: Magazine Narrative & Brand Statement */}
+          {/* Left Column: Magazine Narrative & Brand Statement (Hidden on mobile for clean, uncluttered card view) */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:col-span-6 space-y-8"
+            className="hidden lg:block lg:col-span-6 space-y-8"
           >
             <div className="space-y-4">
               <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
@@ -200,9 +200,9 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:col-span-6"
+            className="w-full max-w-md mx-auto lg:max-w-none lg:col-span-6"
           >
-            <div className="bg-[#EDE7DB] p-8 sm:p-12 rounded-[36px] shadow-sm space-y-8 border-none">
+            <div className="bg-[#EDE7DB] p-6 sm:p-12 rounded-3xl sm:rounded-[36px] shadow-sm space-y-6 sm:space-y-8 border-none">
               
               <div className="space-y-1.5 border-b border-[#1A6B3C]/15 pb-6">
                 <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70">
