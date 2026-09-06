@@ -111,7 +111,7 @@ function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
         </div>
 
         {/* Right column skeleton */}
-        <div className="hidden lg:flex w-[420px] xl:w-[460px] 2xl:w-[480px] bg-white border-l border-gray-100 flex-col p-6 space-y-6 overflow-y-auto flex-shrink-0 animate-pulse">
+        <div className="hidden lg:flex w-[480px] xl:w-[540px] 2xl:w-[600px] bg-white border-l border-gray-100 flex-col p-6 space-y-6 overflow-y-auto flex-shrink-0 animate-pulse">
           <div className="h-5 w-24 bg-gray-200 rounded-md" />
           <div className="space-y-2">
             <div className="h-3 bg-gray-100 rounded-md w-full" />
@@ -1591,7 +1591,7 @@ export default function ProfilePage() {
             RIGHT COLUMN: Fully Blended Information Sidebar
         ══════════════════════════════════════════════════════════ */}
         <div className={cn(
-          'w-full lg:w-[420px] xl:w-[460px] 2xl:w-[480px] bg-white border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col min-h-0 flex-shrink-0 overflow-y-auto custom-scrollbar',
+          'w-full lg:w-[480px] xl:w-[540px] 2xl:w-[600px] bg-white border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col min-h-0 flex-shrink-0 overflow-y-auto custom-scrollbar',
           mobileTab !== 'about' && 'hidden lg:flex'
         )}>
           {/* Top Panel Bar */}
