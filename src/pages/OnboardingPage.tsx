@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, ArrowLeft, Check, User, GraduationCap, Sparkles, FileText, Plus, X, HeartHandshake, Film, Music, Compass, Upload, Camera, Loader2, GraduationCap as GradIcon, Globe, BadgeCheck, Mail, AlertCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, User, GraduationCap, Sparkles, FileText, Plus, X, HeartHandshake, Film, Music, Compass, Upload, Camera, Loader2, Globe, BadgeCheck, Mail, AlertCircle, Search, Building2, Users, Shield } from 'lucide-react';
 import InterestTag from '@/components/ally/InterestTag';
 import { onboardingSchema, OnboardingFormValues } from '@/lib/validations/onboarding';
 import { cn } from '@/lib/utils';
@@ -32,17 +32,70 @@ const MUSIC_GENRES = ['OPM', 'Pop', 'Indie', 'K-Pop', 'Rock', 'R&B', 'Hip-Hop', 
 
 const MOVIE_GENRES = ['Anime', 'Rom-Com', 'Sci-Fi', 'Horror', 'Action', 'Drama', 'Thriller', 'K-Drama', 'Documentaries'];
 
-const TERMS_TEXT = `Welcome to Ally-jis! These are placeholder Terms & Conditions.
+const TERMS_TEXT = `Welcome to Ally-jis! By creating an account or using our platform, you agree to follow these Terms & Conditions.
 
-By using this platform, you agree to use Ally-jis respectfully and only for its intended purpose of connecting with fellow CHMSU Alijis Campus students.
+1. Who Can Use Ally-jis?
+Ally-jis is intended for students of Carlos Hilado Memorial State University – Alijis Campus. When creating an account, you agree to provide accurate information and to use only your own identity.
 
-This is sample text. Replace this with your actual Terms & Conditions before launch.`;
+2. Be Respectful
+Ally-jis is a community for making connections. Please treat other users with respect. You must not use Ally-jis to:
+• Harass, threaten, or bully another user
+• Impersonate another person
+• Send inappropriate or offensive content
+• Spam or repeatedly contact someone who does not wish to communicate
+• Share another person's private information without permission
+• Attempt to access another user's account
+• Distribute malicious links or software
+• Use the platform for unlawful activities
 
-const PRIVACY_TEXT = `This is a placeholder Privacy Policy for Ally-jis.
+3. Your Account
+You are responsible for keeping your account information and password secure. Please do not share your password with anyone.
 
-We collect basic profile information (username, email, course, interests, matchmaking preferences) to help you connect with other students on campus.
+4. Your Profile and Messages
+You are responsible for the information, photos, interests, and messages you post or send through Ally-jis. Please make sure that the content you share does not violate another person's privacy, rights, or safety.
 
-This is sample text. Replace this with your actual Privacy Policy before launch.`;
+5. Friend Matching
+Matches on Ally-jis are suggestions based on shared interests, course details, and campus organizations. Ally-jis does not guarantee friendships, compatibility, or specific outcomes.
+
+6. Reporting and Safety
+If you encounter harassment, inappropriate behavior, or feel unsafe, please use the report or block features available on the platform.
+
+7. Account Suspension or Termination
+We reserve the right to suspend or remove accounts that violate these Terms & Conditions or engage in harmful behavior toward other users.
+
+8. Changes to These Terms
+These Terms & Conditions may be updated periodically. Continued use of Ally-jis means you accept any changes made.`;
+
+const PRIVACY_TEXT = `Welcome to Ally-jis. We respect your personal privacy and are committed to safeguarding the data of our campus student community.
+
+1. Campus Privacy Commitment
+Ally-jis is built exclusively for students of Carlos Hilado Memorial State University – Alijis Campus. We collect only what is necessary to help you discover friends and interact safely within campus life.
+
+2. Information We Collect
+To help you create a profile and connect with matching peers across campus:
+• Profile Details: Your name, username, course, year level, profile photo, and bio.
+• Interests & Organizations: Hobbies, passions, and active campus student organizations.
+• Connections & Chat: Friend requests, matches, and direct messages exchanged with peers.
+• Account Security: Email address and encrypted authentication credentials for sign in.
+
+3. How We Use Your Information
+We use your information solely to:
+• Display your campus profile to other students
+• Calculate shared interest percentages and suggest friend matches
+• Enable private, real-time messaging between mutual connections
+• Protect student safety, investigate reports, and enforce community standards
+
+4. Sharing Your Information
+Your profile is visible only to verified CHMSU Alijis students. We never sell your personal data or share it with third-party advertisers.
+
+5. Data Security
+Your credentials and messages are stored using secure encryption protocols to protect against unauthorized access.
+
+6. Your Rights and Control
+You have full control over your data:
+• Update your profile information, photo, and interests at any time
+• Block or report any user who makes you feel uncomfortable
+• Delete your account and associated data whenever you choose.`;
 
 const steps = [
   { num: 1, label: 'Basic Info', icon: User, hint: 'Your identity on the platform' },
@@ -53,15 +106,19 @@ const steps = [
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const { completeLogin, session, needsOnboarding } = useAuth();
+  const { completeLogin, session, needsOnboarding, isPendingApproval } = useAuth();
   const [step, setStep] = useState(1);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [customInterest, setCustomInterest] = useState('');
   const [showCustomInterestInput, setShowCustomInterestInput] = useState(false);
+  const [interestSearch, setInterestSearch] = useState('');
+  const [activeInterestCategory, setActiveInterestCategory] = useState<string>('all');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsError, setTermsError] = useState('');
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
+  const [privacyError, setPrivacyError] = useState('');
   const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | null>(null);
   const [presetAvatars, setPresetAvatars] = useState<PresetAvatarRow[]>([]);
   const [avatarTab, setAvatarTab] = useState<'presets' | 'upload'>('presets');
@@ -86,12 +143,32 @@ export default function OnboardingPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Guard: if the user is already logged in and onboarding is complete,
-  // redirect them to the dashboard. Prevents re-onboarding after refresh.
+  // redirect them. Prevents re-onboarding after refresh.
   useEffect(() => {
     if (session && !needsOnboarding) {
-      navigate('/dashboard', { replace: true });
+      navigate(isPendingApproval ? '/pending-approval' : '/dashboard', { replace: true });
     }
-  }, [session, needsOnboarding, navigate]);
+  }, [session, needsOnboarding, isPendingApproval, navigate]);
+
+  // If the user is already authenticated (e.g. verified or signed in) but onboarding is incomplete,
+  // skip step 1 and jump straight to Step 2 (Academic Details).
+  useEffect(() => {
+    if (session?.user && needsOnboarding) {
+      setStep(prev => (prev === 1 ? 2 : prev));
+      if (!registeredUserId) {
+        setRegisteredUserId(session.user.id);
+      }
+      const existingUsername = (session.user.user_metadata?.username as string) || '';
+      const existingEmail = session.user.email || '';
+      if (existingUsername) {
+        setValue('basicInfo.username', existingUsername);
+      }
+      if (existingEmail) {
+        setValue('basicInfo.email', existingEmail);
+      }
+      setValue('basicInfo.password', 'AccountVerified1!');
+    }
+  }, [session, needsOnboarding, registeredUserId]);
 
   // Load preset avatars from backend (set by admin)
   useEffect(() => {
@@ -136,6 +213,28 @@ export default function OnboardingPage() {
     .flat()
     .map(item => item.label);
   const customInterests = formData.interests.filter(i => !knownInterestLabels.includes(i));
+
+  const filteredInterestsByCategory = useMemo(() => {
+    const query = interestSearch.trim().toLowerCase();
+    const result: Record<string, { label: string; color: string }[]> = {};
+
+    for (const [cat, items] of Object.entries(interestsByCategory)) {
+      if (activeInterestCategory !== 'all' && activeInterestCategory !== cat) {
+        continue;
+      }
+      const matching = items.filter(item =>
+        query ? item.label.toLowerCase().includes(query) : true
+      );
+      if (matching.length > 0) {
+        result[cat] = matching;
+      }
+    }
+    return result;
+  }, [interestsByCategory, activeInterestCategory, interestSearch]);
+
+  const interestCategoriesList = useMemo(() => {
+    return ['all', ...Object.keys(interestsByCategory), 'custom'];
+  }, [interestsByCategory]);
 
   const handleNext = async () => {
     let fieldsToValidate: any[] = [];
@@ -204,10 +303,16 @@ export default function OnboardingPage() {
     }
 
     if (step === 4) {
+      let hasError = false;
       if (!agreedToTerms) {
         setTermsError('You must agree to the Terms & Conditions to continue.');
-        return;
+        hasError = true;
       }
+      if (!agreedToPrivacy) {
+        setPrivacyError('You must agree to the Privacy Policy to continue.');
+        hasError = true;
+      }
+      if (hasError) return;
       handleSubmit(onComplete)();
       return;
     }
@@ -263,6 +368,11 @@ export default function OnboardingPage() {
       return;
     }
     if (step > 1) {
+      // If user came into onboarding already authenticated, going back to Step 1 is disabled
+      if (step === 2 && session?.user) {
+        notify.info('Verification Complete', 'Your account is verified. Please complete your academic details.');
+        return;
+      }
       setStep(step - 1);
     } else {
       navigate('/');
@@ -305,7 +415,8 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
 
     try {
-      await profileService.updateProfile(registeredUserId || '', {
+      const activeUserId = registeredUserId || session?.user?.id || '';
+      await profileService.updateProfile(activeUserId, {
         username: data.basicInfo.username.toLowerCase(),
         bio: data.bio || '',
         avatar: data.avatar || customAvatarPreview || '',
@@ -324,9 +435,21 @@ export default function OnboardingPage() {
 
       notify.success('Profile complete!', 'Welcome to Ally-jis.');
       setIsCompleting(true);
-      // Reload the session so AuthContext gets the fresh onboarding_complete=true metadata,
-      // which will let ProtectedRoute pass and redirect to /dashboard.
-      navigate('/dashboard', { replace: true });
+
+      // Reload the session so AuthContext gets the fresh onboarding_complete=true metadata
+      try {
+        const nextSession = await apiClient.getSession();
+        if (nextSession?.user) {
+          completeLogin(nextSession, true);
+        }
+        const isPending =
+          nextSession?.user?.user_metadata?.pending_student_verification === true &&
+          nextSession?.user?.user_metadata?.student_verification_status !== 'approved';
+
+        navigate(isPending ? '/pending-approval' : '/dashboard', { replace: true });
+      } catch {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err: any) {
       notify.error('Save failed', err?.message || 'Could not update profile.');
     } finally {
@@ -385,64 +508,194 @@ export default function OnboardingPage() {
 
   return (
     <div className="h-[100dvh] flex flex-col lg:flex-row overflow-hidden">
-      {/* ── LEFT PANEL ─────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[42%] flex-col relative overflow-hidden"
-        style={{ background: 'linear-gradient(155deg, #0f4a29 0%, #1A6B3C 55%, #1e7a44 100%)' }}>
-        {/* Animated blobs */}
-        <div className="ob-blob absolute -top-24 -left-24 w-72 h-72 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #E8A838 0%, transparent 70%)' }} />
-        <div className="ob-blob-2 absolute -bottom-16 right-0 w-64 h-64 rounded-full opacity-15" style={{ background: 'radial-gradient(circle, #3B8C7E 0%, transparent 70%)' }} />
-        <div className="ob-blob-3 absolute top-1/2 left-1/3 w-48 h-48 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #ffffff 0%, transparent 70%)' }} />
+      {/* ── LEFT PANEL: REALTIME PROFILE PREVIEW (MATCHES PROFILE UI) ── */}
+      <div className="hidden lg:flex lg:w-[42%] xl:w-[40%] flex-col relative overflow-hidden"
+        style={{ background: 'linear-gradient(155deg, #0a331c 0%, #1A6B3C 55%, #185e35 100%)' }}>
+        {/* Ambient atmospheric gradients */}
+        <div className="ob-blob absolute -top-24 -left-24 w-72 h-72 rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #E8A838 0%, transparent 70%)' }} />
+        <div className="ob-blob-2 absolute -bottom-16 right-0 w-64 h-64 rounded-full opacity-15 pointer-events-none" style={{ background: 'radial-gradient(circle, #3B8C7E 0%, transparent 70%)' }} />
 
-        {/* Logo */}
-        <div className="relative z-10 px-10 pt-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shadow-lg backdrop-blur-sm">
-            <span className="text-white font-fraunces font-bold text-xl">A</span>
+        {/* Top Header: Brand & Live Indicator */}
+        <div className="relative z-10 px-8 pt-8 pb-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shadow-lg backdrop-blur-sm">
+              <span className="text-white font-fraunces font-bold text-xl">A</span>
+            </div>
+            <span className="font-fraunces font-semibold text-2xl text-white">
+              lly<span className="text-[#E8A838]">-jis</span>
+            </span>
           </div>
-          <span className="font-fraunces font-semibold text-2xl text-white">
-            lly<span className="text-[#E8A838]">-jis</span>
-          </span>
+
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/25 border border-white/15 backdrop-blur-md shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-[#E8A838] animate-pulse" />
+            <span className="font-mono text-[10px] uppercase tracking-wider text-white/90 font-bold">
+              Live Profile Preview
+            </span>
+          </div>
         </div>
 
-        {/* Vertical step track */}
-        <div className="relative z-10 flex flex-col flex-1 px-10 pt-12 pb-10 justify-between">
-          <div className="space-y-6">
-            {steps.map(({ num, label, hint, icon: Icon }) => (
-              <div key={num} className="flex items-start gap-4">
-                <div className="flex flex-col items-center">
+        {/* Mini Stepper Track */}
+        <div className="relative z-10 px-8 pb-4 flex-shrink-0">
+          <div className="flex items-center justify-between bg-black/20 backdrop-blur-md rounded-2xl p-2 border border-white/10">
+            {steps.map(({ num, label }) => {
+              const isDone = step > num;
+              const isCurrent = step === num;
+              return (
+                <div key={num} className="flex items-center gap-2 flex-1 px-1">
                   <div className={cn(
-                    'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300',
-                    step > num  ? 'bg-[#E8A838] shadow-lg shadow-[#E8A838]/30' :
-                    step === num ? 'bg-white/15 border-2 border-white/50 ring-4 ring-white/10' :
-                                  'bg-white/8 border border-white/15'
+                    'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-mono font-bold transition-all shrink-0',
+                    isDone
+                      ? 'bg-[#E8A838] text-[#0a331c] shadow-xs'
+                      : isCurrent
+                      ? 'bg-white text-[#1A6B3C] shadow-md ring-2 ring-white/30'
+                      : 'bg-white/15 text-white/40'
                   )}>
-                    {step > num
-                      ? <Check size={16} className="text-white" />
-                      : <Icon size={16} className={step >= num ? 'text-white' : 'text-white/30'} />}
+                    {isDone ? <Check size={12} strokeWidth={3} /> : num}
                   </div>
-                  {num < 4 && <div className={cn('w-px flex-1 min-h-[28px] mt-1 transition-all duration-500', step > num ? 'bg-[#E8A838]/40' : 'bg-white/10')} />}
+                  <span className={cn(
+                    'font-jakarta text-[11px] font-bold truncate hidden xl:inline transition-colors',
+                    isCurrent ? 'text-white' : isDone ? 'text-white/70' : 'text-white/30'
+                  )}>
+                    {label}
+                  </span>
                 </div>
-                <div className="pt-1">
-                  <p className={cn('font-jakarta font-bold text-sm transition-colors', step === num ? 'text-white' : step > num ? 'text-white/60' : 'text-white/25')}>{label}</p>
-                  <p className={cn('font-jakarta text-xs mt-0.5 transition-colors', step === num ? 'text-white/60' : 'text-white/20')}>{hint}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        </div>
 
-          {/* Step context art */}
-          <div className="ob-fade-up mt-8">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-              <p className="font-fraunces text-2xl font-bold text-white mb-1">{steps[step - 1]?.label}</p>
-              <p className="font-jakarta text-sm text-white/50 mb-4">{steps[step - 1]?.hint}</p>
-              {/* Mini progress bar */}
-              <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-[#E8A838] rounded-full transition-all duration-500" style={{ width: `${step * 25}%` }} />
+        {/* ── REALTIME PROFILE CARD (MATCHES PROFILEPAGE.TSX UI) ── */}
+        <div className="relative z-10 flex-1 min-h-0 px-8 pb-6 flex flex-col">
+          <div className="bg-white rounded-3xl border border-white/20 shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* FB-Style Cover Banner */}
+            <div className="h-32 sm:h-36 bg-gradient-to-r from-[#1A6B3C] via-[#2d8a56] to-[#3B8C7E] relative overflow-hidden flex-shrink-0">
+              <div
+                className="absolute inset-0 opacity-20"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}
+              />
+              <div className="absolute top-3 right-3">
+                <span className="inline-flex items-center gap-1 bg-black/35 backdrop-blur-md text-white px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold border border-white/20 shadow-xs">
+                  CAMPUS CARD
+                </span>
               </div>
-              <p className="font-jakarta text-xs text-white/30 mt-2">Step {step} of 4</p>
+            </div>
+
+            {/* Overhanging Avatar & Verified Badge */}
+            <div className="relative px-6 -mt-12 flex items-end justify-between flex-shrink-0">
+              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full bg-white border-4 border-white shadow-xl overflow-hidden flex items-center justify-center relative z-10 bg-gray-50">
+                {formData.avatar && (formData.avatar.startsWith('http') || formData.avatar.startsWith('data:')) ? (
+                  <img src={formData.avatar} alt="Profile avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl sm:text-5xl">{formData.avatar || '👤'}</span>
+                )}
+              </div>
+
+              <div className="pb-1">
+                <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 text-[#1A6B3C] px-2.5 py-1 rounded-full text-[11px] font-bold font-jakarta border border-[#1A6B3C]/15">
+                  <Shield size={12} className="text-[#1A6B3C]" />
+                  CHMSU VERIFIED
+                </span>
+              </div>
+            </div>
+
+            {/* Profile Information Body (Scrollable canvas) */}
+            <div className="px-6 pt-3 pb-6 space-y-4 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+              {/* Identity row */}
+              <div>
+                <h2 className="font-fraunces text-xl font-bold text-gray-900 leading-tight">
+                  {formData.basicInfo?.username ? `@${formData.basicInfo.username}` : '@username'}
+                </h2>
+                <p className="font-jakarta text-xs text-gray-500 mt-0.5">
+                  Carlos Hilado Memorial State University · Alijis
+                </p>
+              </div>
+
+              {/* Academic Details Pill Box */}
+              <div className="space-y-2 text-xs font-jakarta bg-[#FAF7F2] p-3 rounded-2xl border border-[#1A6B3C]/10">
+                <div className="flex items-center gap-2.5 text-gray-700">
+                  <div className="w-6 h-6 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+                    <GraduationCap size={13} className="text-[#1A6B3C]" />
+                  </div>
+                  <span className="font-semibold">
+                    {formData.academicDetails?.course
+                      ? `${formData.academicDetails.course}${formData.academicDetails?.yearLevel ? ` · ${formData.academicDetails.yearLevel}` : ''}`
+                      : 'Course & Year Level'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-gray-700">
+                  <div className="w-6 h-6 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+                    <Building2 size={13} className="text-[#1A6B3C]" />
+                  </div>
+                  <span className="font-medium text-gray-600">
+                    {formData.academicDetails?.department
+                      ? formData.academicDetails.department.replace('College of ', '')
+                      : 'College / Department'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bio Section */}
+              <div>
+                <p className="font-jakarta font-bold text-[10px] text-gray-400 uppercase tracking-wider mb-1">Intro</p>
+                <p className={cn(
+                  'font-jakarta text-xs leading-relaxed',
+                  formData.bio ? 'text-gray-700' : 'text-gray-400 italic'
+                )}>
+                  {formData.bio || 'No bio added yet. Share a bit about yourself in Step 4.'}
+                </p>
+              </div>
+
+              {/* Interests Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-jakarta font-bold text-[10px] text-gray-400 uppercase tracking-wider">
+                    Interests {formData.interests && formData.interests.length > 0 ? `(${formData.interests.length})` : ''}
+                  </p>
+                  {(!formData.interests || formData.interests.length < 3) && (
+                    <span className="text-[10px] font-mono text-[#E8A838] font-bold">
+                      {formData.interests ? formData.interests.length : 0}/3 min
+                    </span>
+                  )}
+                </div>
+                {formData.interests && formData.interests.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {formData.interests.map(interest => (
+                      <span
+                        key={interest}
+                        className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 font-jakarta text-[11px] font-medium border border-gray-200"
+                      >
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-jakarta text-xs text-gray-400 italic">
+                    Select your passions in Step 3 to display them here
+                  </p>
+                )}
+              </div>
+
+              {/* Organizations Section */}
+              {formData.organizations && formData.organizations.length > 0 && (
+                <div className="pt-2 border-t border-gray-100">
+                  <p className="font-jakarta font-bold text-[10px] text-gray-400 uppercase tracking-wider mb-2">
+                    Organizations ({formData.organizations.length})
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {formData.organizations.map(org => (
+                      <div key={org} className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
+                          <Users size={11} className="text-[#1A6B3C]" />
+                        </div>
+                        <span className="font-jakarta text-xs text-gray-700 font-medium truncate">{org}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          <p className="font-jakarta text-xs text-white/20 mt-6">CHMSU Alijis Campus · Ally-jis</p>
         </div>
       </div>
 
@@ -465,28 +718,41 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Right panel scrollable content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="px-8 lg:px-14 pt-10 pb-6">
-            {/* Step header — full width, left-aligned */}
-            <div className="ob-fade-up mb-8 flex items-start justify-between gap-4">
+        {/* Right panel container — only scrollable when NOT in Step 3 (Step 3 has dedicated child box scrolling) */}
+        <div className={cn(
+          "flex-1 custom-scrollbar",
+          step === 3 ? "overflow-hidden flex flex-col" : "overflow-y-auto"
+        )}>
+          <div className={cn(
+            "px-8 lg:px-14 pt-8 pb-6",
+            step === 3 && "flex-1 flex flex-col min-h-0 overflow-hidden"
+          )}>
+            {/* Step header — editorial magazine layout */}
+            <div className={cn(
+              "ob-fade-up flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#1A6B3C]/15 flex-shrink-0",
+              step === 3 ? "mb-4 pb-4" : "mb-8 pb-6"
+            )}>
               <div>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-jakarta font-bold uppercase tracking-widest text-[#1A6B3C]/60 mb-2">
-                  <span className="w-3 h-px bg-[#1A6B3C]/40 inline-block" />
-                  {step} / 4
+                <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 block mb-1">
+                  Registration // Phase 0{step} of 04
                 </span>
-                <h1 className="font-fraunces text-4xl font-bold text-gray-900 leading-tight">{steps[step - 1]?.label}</h1>
+                <h1 className="font-fraunces text-4xl sm:text-5xl font-bold text-[#1A6B3C] leading-tight">
+                  {steps[step - 1]?.label}
+                </h1>
+                <p className="font-jakarta text-sm text-gray-600 mt-1">
+                  {steps[step - 1]?.hint}
+                </p>
               </div>
 
               {step === 1 && (
-                <div className="text-right pt-2">
-                  <span className="font-jakarta text-xs text-gray-500">Already have an account? </span>
+                <div className="text-left sm:text-right pt-2">
+                  <span className="font-jakarta text-xs text-gray-600">Already have an account? </span>
                   <button
                     type="button"
                     onClick={() => navigate('/login')}
-                    className="font-jakarta text-xs font-bold text-[#1A6B3C] hover:underline cursor-pointer transition-colors"
+                    className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] hover:underline cursor-pointer transition-colors"
                   >
-                    Sign in
+                    Sign in →
                   </button>
                 </div>
               )}
@@ -561,7 +827,7 @@ export default function OnboardingPage() {
                   <button
                     type="button"
                     onClick={handleCancelRegistration}
-                    className="text-xs font-jakarta text-gray-400 hover:text-gray-600 hover:underline block mx-auto pt-1"
+                    className="text-xs font-jakarta text-gray-500 hover:text-gray-700 hover:underline block mx-auto pt-1"
                   >
                     ← Change email address
                   </button>
@@ -570,7 +836,7 @@ export default function OnboardingPage() {
                 <div className="space-y-6">
                 {/* Account type */}
                 <div>
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-3">Account type</label>
+                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-3">Account type</label>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
@@ -579,15 +845,15 @@ export default function OnboardingPage() {
                         'relative flex flex-col justify-between p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] min-h-[110px]',
                         emailType === 'chmsu'
                           ? 'border-[#1A6B3C] bg-[#1A6B3C]'
-                          : 'border-gray-200 bg-white hover:border-[#1A6B3C]/40 shadow-sm'
+                          : 'border-[#1A6B3C]/15 bg-white hover:border-[#1A6B3C]/40 shadow-xs'
                       )}
                     >
-                      <BadgeCheck size={22} className={emailType === 'chmsu' ? 'text-[#E8A838]' : 'text-gray-300'} />
+                      <BadgeCheck size={22} className={emailType === 'chmsu' ? 'text-[#E8A838]' : 'text-[#1A6B3C]'} />
                       <div>
-                        <p className={cn('font-fraunces font-bold text-base', emailType === 'chmsu' ? 'text-white' : 'text-gray-800')}>CHMSU</p>
-                        <p className={cn('font-jakarta text-xs mt-0.5', emailType === 'chmsu' ? 'text-white/60' : 'text-gray-400')}>@chmsu.edu.ph</p>
+                        <p className={cn('font-fraunces font-bold text-base', emailType === 'chmsu' ? 'text-white' : 'text-gray-900')}>CHMSU Student</p>
+                        <p className={cn('font-mono text-xs mt-0.5', emailType === 'chmsu' ? 'text-white/80' : 'text-gray-600')}>@chmsu.edu.ph</p>
                       </div>
-                      {emailType === 'chmsu' && <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#E8A838]" />}
+                      {emailType === 'chmsu' && <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-[#E8A838]" />}
                     </button>
 
                     <button
@@ -596,32 +862,32 @@ export default function OnboardingPage() {
                       className={cn(
                         'relative flex flex-col justify-between p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] min-h-[110px]',
                         emailType === 'external'
-                          ? 'border-[#E8A838] bg-[#78350f]'
-                          : 'border-gray-200 bg-white hover:border-[#E8A838]/40 shadow-sm'
+                          ? 'border-[#1A6B3C] bg-[#1A6B3C]'
+                          : 'border-[#1A6B3C]/15 bg-white hover:border-[#1A6B3C]/40 shadow-xs'
                       )}
                     >
-                      <Globe size={22} className={emailType === 'external' ? 'text-[#E8A838]' : 'text-gray-300'} />
+                      <Globe size={22} className={emailType === 'external' ? 'text-[#E8A838]' : 'text-[#1A6B3C]'} />
                       <div>
-                        <p className={cn('font-fraunces font-bold text-base', emailType === 'external' ? 'text-white' : 'text-gray-800')}>Personal</p>
-                        <p className={cn('font-jakarta text-xs mt-0.5', emailType === 'external' ? 'text-white/60' : 'text-gray-400')}>Needs ID review</p>
+                        <p className={cn('font-fraunces font-bold text-base', emailType === 'external' ? 'text-white' : 'text-gray-900')}>Personal Email</p>
+                        <p className={cn('font-mono text-xs mt-0.5', emailType === 'external' ? 'text-white/80' : 'text-gray-600')}>Requires student ID review</p>
                       </div>
-                      {emailType === 'external' && <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#E8A838]" />}
+                      {emailType === 'external' && <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-[#E8A838]" />}
                     </button>
                   </div>
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">
-                    {emailType === 'chmsu' ? 'CHMSU Email' : 'Email Address'}
+                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">
+                    {emailType === 'chmsu' ? 'CHMSU Email Address' : 'Personal Email Address'}
                   </label>
                   <input
                     {...register('basicInfo.email')}
                     type="email"
                     placeholder={emailType === 'chmsu' ? 'maria@chmsu.edu.ph' : 'maria@gmail.com'}
                     className={cn(
-                      'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                      errors.basicInfo?.email ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#1A6B3C] bg-white shadow-sm focus:shadow-md'
+                      'w-full px-4 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                      errors.basicInfo?.email ? 'border-red-300 bg-red-50' : 'border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 shadow-xs'
                     )}
                   />
                   {errors.basicInfo?.email && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.basicInfo.email.message}</p>}
@@ -630,8 +896,8 @@ export default function OnboardingPage() {
                 {/* Student ID — external only */}
                 {emailType === 'external' && (
                   <div>
-                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">
-                      Student ID <span className="font-normal normal-case tracking-normal text-gray-300">optional</span>
+                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">
+                      Student ID <span className="font-normal normal-case tracking-normal text-gray-500">optional</span>
                     </label>
                     <input
                       ref={studentIdRef}
@@ -679,29 +945,29 @@ export default function OnboardingPage() {
                 )}
 
                 {/* Username + Password row (positioned below email and student ID) */}
-                <div className="grid grid-cols-2 gap-4 pt-1 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4 pt-1 border-t border-[#1A6B3C]/15">
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Username</label>
+                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">Username</label>
                     <input
                       {...register('basicInfo.username')}
                       type="text"
                       placeholder="mariasantos_99"
                       className={cn(
-                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                        errors.basicInfo?.username ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#1A6B3C] bg-white shadow-sm focus:shadow-md'
+                        'w-full px-4 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                        errors.basicInfo?.username ? 'border-red-300 bg-red-50' : 'border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 shadow-xs'
                       )}
                     />
                     {errors.basicInfo?.username && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.basicInfo.username.message}</p>}
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Password</label>
+                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">Password</label>
                     <input
                       {...register('basicInfo.password')}
                       type="password"
                       placeholder="Min. 6 characters"
                       className={cn(
-                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                        errors.basicInfo?.password ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#1A6B3C] bg-white shadow-sm focus:shadow-md'
+                        'w-full px-4 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                        errors.basicInfo?.password ? 'border-red-300 bg-red-50' : 'border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 shadow-xs'
                       )}
                     />
                     {errors.basicInfo?.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.basicInfo.password.message}</p>}
@@ -714,7 +980,7 @@ export default function OnboardingPage() {
             {step === 2 && (
               <div className="grid grid-cols-2 gap-5">
                 <div className="col-span-2">
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Department</label>
+                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">Department</label>
                   <select
                     {...register('academicDetails.department')}
                     onChange={e => {
@@ -722,8 +988,8 @@ export default function OnboardingPage() {
                       setValue('academicDetails.course', '');
                     }}
                     className={cn(
-                      'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all bg-white shadow-sm',
-                      errors.academicDetails?.department ? 'border-red-300' : 'border-gray-200 focus:border-[#1A6B3C]'
+                      'w-full px-4 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all bg-white text-gray-900 shadow-xs',
+                      errors.academicDetails?.department ? 'border-red-300' : 'border-[#1A6B3C]/15 focus:border-[#1A6B3C]'
                     )}
                   >
                     <option value="">Select department</option>
@@ -733,13 +999,13 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Course / Program</label>
+                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">Course / Program</label>
                   <select
                     {...register('academicDetails.course')}
                     disabled={!formData.academicDetails.department}
                     className={cn(
-                      'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all bg-white shadow-sm',
-                      errors.academicDetails?.course ? 'border-red-300' : 'border-gray-200 focus:border-[#1A6B3C]',
+                      'w-full px-4 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all bg-white text-gray-900 shadow-xs',
+                      errors.academicDetails?.course ? 'border-red-300' : 'border-[#1A6B3C]/15 focus:border-[#1A6B3C]',
                       !formData.academicDetails.department && 'opacity-50 cursor-not-allowed'
                     )}
                   >
@@ -750,7 +1016,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Year Level</label>
+                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block mb-2">Year Level</label>
                   <div className="grid grid-cols-5 gap-2">
                     {yearLevels.map(y => (
                       <button
@@ -758,10 +1024,10 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => setValue('academicDetails.yearLevel', y, { shouldValidate: true })}
                         className={cn(
-                          'py-3 rounded-2xl border font-jakarta text-xs font-bold transition-all active:scale-[0.97]',
+                          'py-3 rounded-full border-2 font-jakarta text-xs font-bold transition-all active:scale-[0.97]',
                           formData.academicDetails.yearLevel === y
-                            ? 'bg-[#1A6B3C] text-white border-[#1A6B3C] shadow-md'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-[#1A6B3C]/40 shadow-sm'
+                            ? 'bg-[#1A6B3C] text-white border-[#1A6B3C] shadow-sm'
+                            : 'bg-white text-gray-700 border-[#1A6B3C]/15 hover:border-[#1A6B3C]/40 shadow-xs'
                         )}
                       >
                         {y.replace(' Year', '')}
@@ -772,29 +1038,38 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Student Organizations <span className="font-normal normal-case tracking-normal text-gray-300">optional</span></label>
-                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="font-jakarta text-xs font-bold uppercase tracking-wider text-[#1A6B3C] block">
+                      Student Organizations <span className="font-normal normal-case tracking-normal text-gray-500">optional</span>
+                    </label>
+                    {formData.organizations.length > 0 && (
+                      <span className="font-mono text-[11px] font-bold text-[#1A6B3C] bg-[#1A6B3C]/10 px-2.5 py-0.5 rounded-full">
+                        {formData.organizations.length} selected
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
                     {organizations.map(org => {
                       const selected = formData.organizations.includes(org);
                       return (
                         <label
                           key={org}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer",
+                            "flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer",
                             selected
-                              ? "bg-[#1A6B3C]/5 border-[#1A6B3C]/20"
-                              : "bg-white border-gray-100 hover:border-[#1A6B3C]/15 shadow-sm"
+                              ? "bg-[#1A6B3C]/10 border-[#1A6B3C]/30 shadow-xs ring-1 ring-[#1A6B3C]/20"
+                              : "bg-white border-[#1A6B3C]/10 hover:border-[#1A6B3C]/25 shadow-xs"
                           )}
                         >
                           <Checkbox
                             id={`org-${org}`}
                             checked={selected}
                             onCheckedChange={() => toggleOrganization(org)}
-                            className="border-gray-300 rounded-[4px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
+                            className="border-gray-300 rounded-[6px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
                           />
                           <span className={cn(
                             "flex-1 font-jakarta text-sm transition-colors",
-                            selected ? "text-[#1A6B3C] font-semibold" : "text-gray-600"
+                            selected ? "text-[#1A6B3C] font-bold" : "text-gray-700"
                           )}>
                             {org}
                           </span>
@@ -807,34 +1082,135 @@ export default function OnboardingPage() {
             )}
 
             {step === 3 && (
-              <div className="flex flex-col h-[50dvh] sm:h-[400px]">
-                <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                  <p className="font-jakarta text-sm text-gray-400">Pick at least 3</p>
-                  <div className={cn(
-                    'font-mono-accent text-sm font-semibold px-3 py-1 rounded-full transition-colors',
-                    formData.interests.length >= 3
-                      ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]'
-                      : 'bg-[#E8A838]/15 text-[#E8A838]'
-                  )}>
-                    {formData.interests.length} selected
+              <div className="flex-1 flex flex-col min-h-0 space-y-4">
+                {/* ── HEADER STRIP ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1A6B3C]/10 pb-3 flex-shrink-0">
+                  <div className="space-y-0.5">
+                    <p className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C]">
+                      Passions & Campus Affinity
+                    </p>
+                    <p className="font-jakarta text-xs text-gray-500">
+                      Select at least 3 passions. Matches are computed based on shared tags.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      'inline-flex items-center gap-1.5 font-mono text-xs uppercase font-bold px-3.5 py-1.5 rounded-full transition-all shadow-xs',
+                      formData.interests.length >= 3
+                        ? 'bg-[#1A6B3C] text-white'
+                        : 'bg-[#E8A838]/25 text-[#92400e]'
+                    )}>
+                      {formData.interests.length >= 3 && <Check size={13} />}
+                      <span>{formData.interests.length} / 3 selected</span>
+                    </div>
                   </div>
                 </div>
 
                 {errors.interests && (
-                  <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm font-jakarta px-4 py-2.5 rounded-xl flex-shrink-0">
-                    ⚠️ {errors.interests.message}
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-jakarta px-4 py-2.5 rounded-2xl flex items-center gap-2 flex-shrink-0">
+                    <AlertCircle size={15} className="text-red-500 shrink-0" />
+                    <span>{errors.interests.message}</span>
                   </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6">
-                  {Object.entries(interestsByCategory).map(([category, items]) => (
+                {/* ── ACTIVE SELECTIONS TRAY (IF ANY SELECTED) ── */}
+                {formData.interests.length > 0 && (
+                  <div className="bg-white/90 border border-[#1A6B3C]/15 rounded-2xl p-3 space-y-2 shadow-xs flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#1A6B3C]">
+                        Your Selected ({formData.interests.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setValue('interests', [], { shouldValidate: true })}
+                        className="text-[11px] font-jakarta font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto custom-scrollbar pr-1">
+                      {formData.interests.map(item => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#1A6B3C] text-white text-xs font-jakarta font-semibold shadow-xs"
+                        >
+                          <span>{item}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleInterest(item)}
+                            className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                            aria-label={`Remove ${item}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SEARCH & CATEGORY FILTER BAR ── */}
+                <div className="space-y-2.5 flex-shrink-0">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search passions (e.g. Gaming, Music, Coding, Anime)..."
+                      value={interestSearch}
+                      onChange={e => setInterestSearch(e.target.value)}
+                      className="w-full pl-11 pr-10 py-2.5 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-xs outline-none transition-all shadow-xs"
+                    />
+                    {interestSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setInterestSearch('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                        aria-label="Clear search"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Horizontal Category Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+                    {interestCategoriesList.map(cat => {
+                      const isActive = activeInterestCategory === cat;
+                      const label = cat === 'all' ? 'All Passions' : cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setActiveInterestCategory(cat)}
+                          className={cn(
+                            'whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-jakarta font-bold transition-all shrink-0',
+                            isActive
+                              ? 'bg-[#1A6B3C] text-white shadow-xs'
+                              : 'bg-white text-gray-600 border border-[#1A6B3C]/15 hover:border-[#1A6B3C]/35 hover:text-[#1A6B3C]'
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── EXPANDED MAIN SCROLLBOX CANVAS (ONLY THIS BOX SCROLLS) ── */}
+                <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar space-y-6">
+                  {Object.entries(filteredInterestsByCategory).map(([category, items]) => (
                     <div key={category} className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-px flex-1 bg-gray-100"></div>
-                        <p className="font-jakarta font-bold text-[10px] text-gray-400 uppercase tracking-[0.2em]">{category}</p>
-                        <div className="h-px flex-1 bg-gray-100"></div>
+                        <span className="font-jakarta font-bold text-[11px] text-[#1A6B3C] uppercase tracking-[0.2em]">
+                          {category}
+                        </span>
+                        <span className="text-[10px] font-mono text-[#1A6B3C]/50">
+                          • {items.length} {items.length === 1 ? 'passion' : 'passions'}
+                        </span>
+                        <div className="h-px flex-1 bg-[#1A6B3C]/10"></div>
                       </div>
-                      <div className="flex flex-wrap gap-2.5">
+                      <div className="flex flex-wrap gap-2">
                         {items.map(({ label }) => (
                           <InterestTag
                             key={label}
@@ -847,105 +1223,121 @@ export default function OnboardingPage() {
                     </div>
                   ))}
 
-                  {/* "Others" — lets the user add freeform interests not covered above */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-px flex-1 bg-gray-100"></div>
-                      <p className="font-jakarta font-bold text-[10px] text-gray-400 uppercase tracking-[0.2em]">Others</p>
-                      <div className="h-px flex-1 bg-gray-100"></div>
-                    </div>
+                  {/* Custom Interests Section */}
+                  {(activeInterestCategory === 'all' || activeInterestCategory === 'custom') && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-jakarta font-bold text-[11px] text-[#1A6B3C] uppercase tracking-[0.2em]">
+                          Custom Interests
+                        </span>
+                        <div className="h-px flex-1 bg-[#1A6B3C]/10"></div>
+                      </div>
 
-                    <div className="flex flex-wrap gap-2.5">
-                      {customInterests.map(interest => (
-                        <span
-                          key={interest}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1A6B3C]/10 text-[#1A6B3C] border border-[#1A6B3C]/20 font-jakarta text-sm font-medium"
-                        >
-                          {interest}
+                      <div className="flex flex-wrap gap-2">
+                        {customInterests.map(interest => (
+                          <span
+                            key={interest}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1A6B3C] text-white border border-[#1A6B3C] font-jakarta text-xs font-bold shadow-xs"
+                          >
+                            <Check size={12} />
+                            <span>{interest}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeCustomInterest(interest)}
+                              className="hover:bg-white/20 rounded-full p-0.5 transition-colors ml-0.5"
+                              aria-label={`Remove ${interest}`}
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+
+                        {!showCustomInterestInput && (
                           <button
                             type="button"
-                            onClick={() => removeCustomInterest(interest)}
-                            className="hover:bg-[#1A6B3C]/20 rounded-full p-0.5 transition-colors"
-                            aria-label={`Remove ${interest}`}
+                            onClick={() => setShowCustomInterestInput(true)}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border-2 border-dashed border-[#1A6B3C]/30 text-[#1A6B3C] hover:border-[#1A6B3C] hover:bg-[#1A6B3C]/5 font-jakarta text-xs font-bold transition-all shadow-2xs"
                           >
-                            <X size={12} />
+                            <Plus size={14} />
+                            Add custom interest
                           </button>
-                        </span>
-                      ))}
+                        )}
+                      </div>
 
-                      {!showCustomInterestInput && (
-                        <button
-                          type="button"
-                          onClick={() => setShowCustomInterestInput(true)}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-dashed border-gray-300 text-gray-500 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] font-jakarta text-sm font-medium transition-colors"
-                        >
-                          <Plus size={14} />
-                          Add your own
-                        </button>
-                      )}
-                    </div>
-
-                    {showCustomInterestInput && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={customInterest}
-                          onChange={e => setCustomInterest(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addCustomInterest();
-                            }
-                            if (e.key === 'Escape') {
+                      {showCustomInterestInput && (
+                        <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border-2 border-[#1A6B3C]/20 shadow-xs">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={customInterest}
+                            onChange={e => setCustomInterest(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addCustomInterest();
+                              }
+                              if (e.key === 'Escape') {
+                                setShowCustomInterestInput(false);
+                                setCustomInterest('');
+                              }
+                            }}
+                            placeholder="Type an interest, e.g. K-pop, Robotics..."
+                            maxLength={30}
+                            className="flex-1 px-3 py-1.5 bg-transparent font-jakarta text-xs outline-none text-gray-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={addCustomInterest}
+                            className="px-4 py-2 rounded-full bg-[#1A6B3C] text-white font-jakarta text-xs font-bold hover:bg-[#13502D] transition-colors shadow-xs"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
                               setShowCustomInterestInput(false);
                               setCustomInterest('');
-                            }
-                          }}
-                          placeholder="Type an interest, e.g. K-pop"
-                          maxLength={30}
-                          className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-                        />
-                        <button
-                          type="button"
-                          onClick={addCustomInterest}
-                          className="px-4 py-2.5 rounded-xl bg-[#1A6B3C] text-white font-jakarta text-sm font-semibold hover:bg-[#155a33] transition-colors"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCustomInterestInput(false);
-                            setCustomInterest('');
-                          }}
-                          className="px-3 py-2.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                          aria-label="Cancel"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                            }}
+                            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                            aria-label="Cancel"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Empty search results state */}
+                  {Object.keys(filteredInterestsByCategory).length === 0 && (
+                    <div className="text-center py-10 space-y-2">
+                      <p className="font-jakarta font-semibold text-sm text-gray-600">
+                        No interests matching "{interestSearch}"
+                      </p>
+                      <p className="font-jakarta text-xs text-gray-400">
+                        You can add it as a custom interest above!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {step === 4 && (
               <div className="space-y-5">
-                <div className="bg-white rounded-2xl p-5 border border-[#1A6B3C]/6 card-shadow mb-6">
-                  <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-3">Profile Photo</label>
+                <div className="bg-white rounded-2xl p-6 border-2 border-[#1A6B3C]/15 shadow-xs mb-6">
+                  <label className="font-jakarta font-bold text-xs text-[#1A6B3C] uppercase tracking-wider block mb-3">Profile Photo</label>
 
                   {/* Tab selector */}
-                  <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-4">
+                  <div className="flex gap-1 bg-[#EDE7DB] rounded-full p-1 mb-4">
                     <button
                       type="button"
                       onClick={() => setAvatarTab('presets')}
                       className={cn(
-                        'flex-1 py-1.5 rounded-lg text-xs font-jakarta font-semibold transition-all',
+                        'flex-1 py-2 rounded-full text-xs font-mono uppercase tracking-wider font-semibold transition-all',
                         avatarTab === 'presets'
-                          ? 'bg-white text-[#1A6B3C] shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700'
+                          ? 'bg-[#1A6B3C] text-white shadow-xs'
+                          : 'text-gray-700 hover:text-gray-900'
                       )}
                     >
                       Choose Preset
@@ -954,10 +1346,10 @@ export default function OnboardingPage() {
                       type="button"
                       onClick={() => setAvatarTab('upload')}
                       className={cn(
-                        'flex-1 py-1.5 rounded-lg text-xs font-jakarta font-semibold transition-all',
+                        'flex-1 py-2 rounded-full text-xs font-mono uppercase tracking-wider font-semibold transition-all',
                         avatarTab === 'upload'
-                          ? 'bg-white text-[#1A6B3C] shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700'
+                          ? 'bg-[#1A6B3C] text-white shadow-xs'
+                          : 'text-gray-700 hover:text-gray-900'
                       )}
                     >
                       Upload Photo
@@ -967,7 +1359,7 @@ export default function OnboardingPage() {
                   {avatarTab === 'presets' && (
                     presetAvatars.length === 0 ? (
                       <div className="py-6 text-center">
-                        <p className="font-jakarta text-sm text-gray-400">No preset avatars available yet. Upload your own photo!</p>
+                        <p className="font-jakarta text-sm text-gray-500">No preset avatars available yet. Upload your own photo!</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-5 gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
@@ -1011,7 +1403,7 @@ export default function OnboardingPage() {
                                 setValue('avatar', '', { shouldValidate: true });
                                 if (avatarFileRef.current) avatarFileRef.current.value = '';
                               }}
-                              className="font-jakarta text-xs text-red-500 hover:text-red-700 transition-colors"
+                              className="font-jakarta text-xs text-red-600 hover:text-red-700 font-bold transition-colors"
                             >
                               Remove photo
                             </button>
@@ -1021,8 +1413,8 @@ export default function OnboardingPage() {
                         <div
                           onClick={() => !avatarUploading && avatarFileRef.current?.click()}
                           className={cn(
-                            'border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center cursor-pointer transition-all',
-                            'hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/3',
+                            'border-2 border-dashed border-[#1A6B3C]/25 rounded-2xl p-6 text-center cursor-pointer transition-all',
+                            'hover:border-[#1A6B3C] hover:bg-[#1A6B3C]/5',
                             avatarUploading && 'pointer-events-none opacity-60',
                           )}
                         >
@@ -1033,9 +1425,9 @@ export default function OnboardingPage() {
                             </div>
                           ) : (
                             <div className="flex flex-col items-center gap-2">
-                              <Camera size={24} className="text-gray-300" />
-                              <p className="font-jakarta text-sm font-semibold text-gray-700">Tap to upload a photo</p>
-                              <p className="font-jakarta text-xs text-gray-400">JPEG, PNG, WebP · Max 10 MB</p>
+                              <Camera size={24} className="text-[#1A6B3C]/50" />
+                              <p className="font-jakarta text-sm font-bold text-gray-800">Tap to upload a photo</p>
+                              <p className="font-mono text-xs text-gray-500">JPEG, PNG, WebP · Max 10 MB</p>
                             </div>
                           )}
                         </div>
@@ -1048,7 +1440,6 @@ export default function OnboardingPage() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          // Local preview immediately
                           const objectUrl = URL.createObjectURL(file);
                           setCustomAvatarPreview(objectUrl);
                           if (!isApiConfigured) {
@@ -1076,8 +1467,8 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="font-jakarta font-semibold text-sm text-gray-700 block mb-1.5">
-                    Bio <span className="text-gray-400 font-normal">(optional but recommended!)</span>
+                  <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block mb-2">
+                    Bio <span className="text-gray-500 font-normal lowercase tracking-normal">(optional but recommended)</span>
                   </label>
                   <div className="relative">
                     <textarea
@@ -1085,68 +1476,90 @@ export default function OnboardingPage() {
                       placeholder="Tell your future friends a bit about yourself! What are you passionate about? What are you looking for in a friend?"
                       maxLength={250}
                       rows={4}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors resize-none"
+                      className="w-full px-5 py-4 rounded-2xl border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all resize-none shadow-xs"
                     />
-                    <span className="absolute bottom-3 right-3 font-mono-accent text-xs text-gray-400">
+                    <span className="absolute bottom-3 right-3 font-mono text-xs font-semibold text-[#1A6B3C]/70">
                       {formData.bio?.length || 0}/250
                     </span>
                   </div>
                   {errors.bio && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.bio.message}</p>}
                 </div>
 
-                <div className="bg-[#F7F4EF] rounded-2xl p-4">
-                  <p className="font-jakarta font-semibold text-sm text-[#1A6B3C] mb-2">Your profile preview</p>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#1A6B3C]/10 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      <span className="text-2xl">{formData.avatar || '👤'}</span>
-                    </div>
-                    <div>
-                      <p className="font-jakarta font-semibold text-sm text-gray-900">{formData.basicInfo.username || 'Your Username'}</p>
-                      <p className="font-jakarta text-xs text-gray-500">{formData.academicDetails.course || 'Your Course'} · {formData.academicDetails.yearLevel || 'Year Level'}</p>
-                      {formData.bio && <p className="font-jakarta text-xs text-gray-600 mt-1 line-clamp-2">{formData.bio}</p>}
-                    </div>
-                  </div>
-                </div>
+                {/* Terms & Conditions & Privacy Policy — required to complete the profile */}
+                <div className="rounded-2xl p-6 border-2 border-[#1A6B3C]/15 bg-white shadow-xs space-y-4">
+                  <p className="font-jakarta text-xs text-gray-500 italic pb-2 border-b border-gray-100">
+                    “Welcome to Ally-jis! By creating an account or using our platform, you agree to follow these Terms & Conditions and Privacy Policy.”
+                  </p>
 
-                {/* Terms & Conditions — required to complete the profile */}
-                <div className={cn(
-                  'rounded-2xl p-4 border transition-colors',
-                  termsError ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'
-                )}>
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="terms-agreement"
-                      checked={agreedToTerms}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setActiveModal('terms');
-                        } else {
-                          setAgreedToTerms(false);
-                        }
-                      }}
-                      className="mt-0.5 border-gray-300 rounded-[4px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
-                    />
-                    <span className="font-jakarta text-sm text-gray-600">
-                      I agree to the{' '}
-                      <button
-                        type="button"
-                        onClick={() => setActiveModal('terms')}
-                        className="text-[#1A6B3C] font-semibold underline hover:text-[#155a33]"
-                      >
-                        Terms & Conditions
-                      </button>
-                      {' '}and{' '}
-                      <button
-                        type="button"
-                        onClick={() => setActiveModal('privacy')}
-                        className="text-[#1A6B3C] font-semibold underline hover:text-[#155a33]"
-                      >
-                        Privacy Policy
-                      </button>
-                      .
-                    </span>
+                  {/* Separate Checkbox 1: Terms & Conditions */}
+                  <div className={cn(
+                    'p-4 rounded-xl border-2 transition-colors',
+                    termsError ? 'border-red-300 bg-red-50/60' : 'border-gray-100 hover:border-[#1A6B3C]/20 bg-[#FAF7F2]/40'
+                  )}>
+                    <div className="flex items-start gap-3.5">
+                      <Checkbox
+                        id="terms-agreement"
+                        checked={agreedToTerms}
+                        onCheckedChange={(checked) => {
+                          setAgreedToTerms(Boolean(checked));
+                          if (checked) setTermsError('');
+                        }}
+                        className="mt-0.5 border-gray-400 rounded-[6px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
+                      />
+                      <div className="space-y-1 flex-1">
+                        <label htmlFor="terms-agreement" className="font-jakarta text-sm text-gray-800 leading-relaxed block cursor-pointer select-none">
+                          By agreeing, I confirm that I am a student of Carlos Hilado Memorial State University – Alijis Campus and accept the{' '}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setActiveModal('terms');
+                            }}
+                            className="text-[#1A6B3C] font-bold underline hover:text-[#13502D]"
+                          >
+                            Terms & Conditions
+                          </button>
+                          .
+                        </label>
+                        {termsError && <p className="text-red-500 text-xs font-jakarta mt-1">{termsError}</p>}
+                      </div>
+                    </div>
                   </div>
-                  {termsError && <p className="text-red-500 text-xs mt-2 font-jakarta">{termsError}</p>}
+
+                  {/* Separate Checkbox 2: Privacy Policy */}
+                  <div className={cn(
+                    'p-4 rounded-xl border-2 transition-colors',
+                    privacyError ? 'border-red-300 bg-red-50/60' : 'border-gray-100 hover:border-[#1A6B3C]/20 bg-[#FAF7F2]/40'
+                  )}>
+                    <div className="flex items-start gap-3.5">
+                      <Checkbox
+                        id="privacy-agreement"
+                        checked={agreedToPrivacy}
+                        onCheckedChange={(checked) => {
+                          setAgreedToPrivacy(Boolean(checked));
+                          if (checked) setPrivacyError('');
+                        }}
+                        className="mt-0.5 border-gray-400 rounded-[6px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
+                      />
+                      <div className="space-y-1 flex-1">
+                        <label htmlFor="privacy-agreement" className="font-jakarta text-sm text-gray-800 leading-relaxed block cursor-pointer select-none">
+                          By agreeing, I accept the{' '}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setActiveModal('privacy');
+                            }}
+                            className="text-[#1A6B3C] font-bold underline hover:text-[#13502D]"
+                          >
+                            Privacy Policy
+                          </button>
+                          {' '}and consent to the campus student data practices.
+                        </label>
+                        {privacyError && <p className="text-red-500 text-xs font-jakarta mt-1">{privacyError}</p>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1154,24 +1567,24 @@ export default function OnboardingPage() {
         </div>{/* end overflow-y-auto */}
 
         {/* ── Sticky footer nav ─────────────────────────────── */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-[#1A6B3C]/8 bg-white/80 backdrop-blur-sm flex items-center justify-between">
+        <div className="flex-shrink-0 px-8 py-4 border-t border-[#1A6B3C]/15 bg-white/90 backdrop-blur-md flex items-center justify-between">
             <button
               onClick={handleBack}
               disabled={isSubmitting || isCheckingUsername}
-              className="flex items-center gap-2 font-jakarta font-medium text-sm px-5 py-2.5 rounded-xl transition-all text-gray-600 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-semibold px-6 py-3 rounded-full transition-all text-[#1A6B3C] bg-[#EDE7DB] hover:bg-[#e4ddcf] disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={14} />
               Back
             </button>
 
             <button
               onClick={handleNext}
-              disabled={isSubmitting || isCheckingUsername || isVerifyingOtp || (step === 4 && !agreedToTerms)}
+              disabled={isSubmitting || isCheckingUsername || isVerifyingOtp || (step === 4 && (!agreedToTerms || !agreedToPrivacy))}
               className={cn(
-                'flex items-center gap-2 font-jakarta font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98]',
-                step === 4 && !agreedToTerms
+                'flex items-center gap-2.5 font-mono text-xs uppercase tracking-wider font-bold px-8 py-3.5 rounded-full transition-all shadow-md active:scale-95',
+                step === 4 && (!agreedToTerms || !agreedToPrivacy)
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                  : 'bg-[#1A6B3C] text-white hover:bg-[#155a33]'
+                  : 'bg-[#1A6B3C] text-white hover:bg-[#13502D]'
               )}
             >
               {isSubmitting || isCheckingUsername || isVerifyingOtp
@@ -1223,6 +1636,9 @@ export default function OnboardingPage() {
                   if (activeModal === 'terms') {
                     setAgreedToTerms(true);
                     setTermsError('');
+                  } else if (activeModal === 'privacy') {
+                    setAgreedToPrivacy(true);
+                    setPrivacyError('');
                   }
                   setActiveModal(null);
                 }}

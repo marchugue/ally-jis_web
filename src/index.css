@@ -256,27 +256,7 @@
 
 @keyframes ob-art-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50%       { transform: translateY(-10px) rotate(3deg); }
-}
-
-.ob-blob {
-  animation: ob-blob 8s ease-in-out infinite;
-}
-
-.ob-blob-2 {
-  animation: ob-blob 11s ease-in-out infinite reverse;
-}
-
-.ob-blob-3 {
-  animation: ob-blob 14s ease-in-out infinite 3s;
-}
-
-.ob-fade-up {
-  animation: ob-fade-up 0.4s ease-out both;
-}
-
-.ob-slide-right {
-  animation: ob-slide-right 0.35s ease-out both;
+  50%       { transform: translateY(-10px) rotate(2deg); }
 }
 
 .ob-art-float {
@@ -285,4 +265,66 @@
 
 .ob-art-float-slow {
   animation: ob-art-float 6s ease-in-out infinite 1s;
+}
+
+/* ── Modern Landing & Phone Showcase Utilities ─────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 30px -10px rgba(26, 107, 60, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+.glass-panel-dark {
+  background: rgba(18, 55, 34, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.35);
+}
+
+.phone-shadow {
+  box-shadow: 
+    0 25px 60px -15px rgba(26, 107, 60, 0.25),
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(26, 107, 60, 0.08);
+}
+
+.phone-screen-glow {
+  box-shadow: inset 0 0 100px rgba(232, 168, 56, 0.04);
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+@keyframes float-badge {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+@keyframes float-badge-delayed {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.01);
+  }
+}
+
+.animate-float-badge {
+  animation: float-badge 4.5s ease-in-out infinite;
+}
+
+.animate-float-badge-delayed {
+  animation: float-badge-delayed 5.5s ease-in-out 1.5s infinite;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, Eye, EyeOff, ArrowLeft, Shield, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
 import type { AdminRole } from '@/api/client';
@@ -9,7 +10,7 @@ import { notify } from '@/components/ui/sonner';
 import { RoleSelectionModal } from '@/components/RoleSelectionModal';
 
 export default function LoginPage() {
-  const { user, loading, setMockUser, completeLogin } = useAuth();
+  const { user, loading, setMockUser, completeLogin, needsOnboarding, isPendingApproval } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -19,16 +20,21 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      // Let ProtectedRoute handle the pending-approval redirect if needed
-      navigate('/dashboard', { replace: true });
+      if (needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else if (isPendingApproval) {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, needsOnboarding, isPendingApproval, navigate]);
 
   const handleDemoLogin = () => {
     setMockUser({
       id: 'mock-user-id',
       email: 'demo@chmsu.edu.ph',
-      user_metadata: { full_name: 'Demo User' },
+      user_metadata: { full_name: 'Demo Student' },
       app_metadata: {},
       aud: 'authenticated',
       created_at: new Date().toISOString(),
@@ -50,42 +56,38 @@ export default function LoginPage() {
     setFormLoading(true);
     setShowDemoOption(false);
     try {
-      // If login succeeds, Supabase has already validated credentials AND
-      // email confirmation. The backend returns 403 for unverified accounts,
-      // which is caught below and shown as a clear message.
       const session = await apiClient.login(form.email, form.password);
-
-      // Atomically set session + verified=true to prevent ProtectedRoute
-      // redirect loop (session true but verified still false).
       completeLogin(session, true);
       notify.success('Signed in successfully', 'Welcome back!');
       setFormLoading(false);
 
-      // Check if user has an elevated role (admin / moderator / super_admin).
-      // getAdminMe returns 403 for regular users — treat that as "no role".
       try {
         const adminInfo = await apiClient.getAdminMe();
         if (adminInfo?.role) {
-          // Show modal so user can choose admin panel vs regular app.
           setPendingRole(adminInfo.role);
           return;
         }
       } catch {
-        // 403 or network error → regular user, proceed normally
+        // Regular user, proceed normally
       }
 
-      // Non-CHMSU students pending admin approval go to the waiting room.
-      // All others go to the dashboard (ProtectedRoute also enforces this).
+      const userNeedsOnboarding = !session.user?.user_metadata?.onboarding_complete;
       const isPending =
         session.user?.user_metadata?.pending_student_verification === true &&
         session.user?.user_metadata?.student_verification_status !== 'approved';
 
-      navigate(isPending ? '/pending-approval' : '/dashboard', { replace: true });
+      if (userNeedsOnboarding) {
+        notify.info('Profile Setup Required', 'Please complete your student profile to proceed.');
+        navigate('/onboarding', { replace: true });
+      } else if (isPending) {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
 
     } catch (err: any) {
       console.error('Login error:', err);
 
-      // 403 with requiresOtp = user registered but hasn't verified OTP yet
       if (err.status === 403 && err.body?.requiresOtp) {
         const { userId, email } = err.body;
         navigate(`/verify-email?userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(email ?? form.email)}`);
@@ -119,112 +121,207 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#F7F4EF] flex flex-col items-center justify-center px-4">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#1A6B3C]/5 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-[#E8A838]/8 blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-lg">
-              <span className="text-white font-fraunces font-bold text-xl">A</span>
+    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+      
+      {/* ── TOP NAVIGATION ── */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 group">
+            <motion.div 
+              whileHover={{ scale: 1.08, rotate: -4 }}
+              whileTap={{ scale: 0.94 }}
+              className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
+            >
+              A
+            </motion.div>
+            <div className="flex flex-col">
+              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+                Ally<span className="text-[#E8A838]">-jis</span>
+              </span>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+                CHMSU Alijis
+              </span>
             </div>
-            <span className="font-fraunces font-semibold text-2xl text-[#1A6B3C]">
-              lly<span className="text-[#E8A838]">-jis</span>
-            </span>
           </Link>
-          <h1 className="font-fraunces text-3xl font-bold text-[#1A6B3C] mt-4 mb-1">Welcome back!</h1>
-          <p className="font-jakarta text-[#1A6B3C]/60 text-sm">Sign in to your CHMSU account</p>
+
+          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+            <Link 
+              to="/" 
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+            >
+              <ArrowLeft size={14} /> Back to Home
+            </Link>
+          </motion.div>
         </div>
+      </header>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-[#1A6B3C]/8 p-8">
-          {!isApiConfigured && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-jakarta px-4 py-3 rounded-xl">
-              API is not configured. Add VITE_API_BASE_URL in a local .env file.
-            </div>
-          )}
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="font-jakarta font-semibold text-sm text-gray-700 block mb-1.5">Email</label>
-              <input
-                type="email"
-                placeholder="your@chmsu.edu.ph"
-                value={form.email}
-                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-              />
+      {/* ── MAIN CONTENT (EDITORIAL SPLIT / HIGH LEGIBILITY AUTH) ── */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          
+          {/* Left Column: Magazine Narrative & Brand Statement */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6 space-y-8"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+                <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
+                <span>Student Secure Access</span>
+              </div>
+              
+              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] leading-[0.95]">
+                Welcome <br />
+                back to <br />
+                <span className="italic font-normal text-[#E8A838]">Alijis.</span>
+              </h1>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="font-jakarta font-semibold text-sm text-gray-700">Password</label>
-                <Link
-                  to="/forgot-password"
-                  className="font-jakarta text-xs font-semibold text-[#1A6B3C]/70 hover:text-[#1A6B3C] hover:underline"
+            <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed max-w-lg">
+              Sign in to access your student network, check real-time campus match affinity, and chat securely with peers.
+            </p>
+
+            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80">
+              <div className="flex items-center gap-2.5">
+                <Shield size={15} className="text-[#E8A838]" />
+                <span>Protected with end-to-end encrypted session tokens</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Sparkles size={15} className="text-[#E8A838]" />
+                <span>Exclusive to Carlos Hilado Memorial State University</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right Column: High-Legibility, High-Contrast Form Workspace */}
+          <motion.div 
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6"
+          >
+            <div className="bg-[#EDE7DB] p-8 sm:p-12 rounded-[36px] shadow-sm space-y-8 border-none">
+              
+              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 pb-6">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70">
+                  Authentication
+                </span>
+                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C]">
+                  Sign In with Credentials
+                </h2>
+              </div>
+
+              {!isApiConfigured && (
+                <div className="bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-jakarta p-4 rounded-2xl">
+                  API is currently in local development mode. Add VITE_API_BASE_URL in your .env file or use demo mode.
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-6">
+                {/* Email Field with high-contrast label */}
+                <div className="space-y-2">
+                  <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                    Campus Email or Username
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="yourname@chmsu.edu.ph"
+                    value={form.email}
+                    onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                    autoComplete="email"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C]">
+                      Password
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      className="font-jakarta text-xs font-bold text-[#1A6B3C] hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your account password"
+                      value={form.password}
+                      onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
+                      className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C] transition-colors p-1"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit Pill Button */}
+                <motion.button
+                  type="submit"
+                  disabled={formLoading}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                    formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                  )}
                 >
-                  Forgot password?
+                  {formLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Sign In to Ally-jis</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </motion.button>
+
+                {showDemoOption && (
+                  <button
+                    type="button"
+                    onClick={handleDemoLogin}
+                    className="w-full flex items-center justify-center gap-2 bg-[#E8A838] text-[#13502D] font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#d4952e] transition-all shadow-sm"
+                  >
+                    Enter Demo Mode (Skip Auth)
+                  </button>
+                )}
+              </form>
+
+              {/* Registration Prompt */}
+              <div className="pt-6 border-t border-[#1A6B3C]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-jakarta">
+                <span className="text-gray-700">Don't have an account yet?</span>
+                <Link
+                  to="/onboarding"
+                  className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] bg-white hover:bg-[#F7F4EF] px-5 py-2.5 rounded-full transition-all shadow-xs"
+                >
+                  Join Circle Now →
                 </Link>
               </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+
             </div>
+          </motion.div>
 
-            <button
-              type="submit"
-              disabled={formLoading}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg',
-                formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#155a33] active:scale-[0.98]'
-              )}
-            >
-              {formLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>Sign In <ArrowRight size={18} /></>
-              )}
-            </button>
-
-            {showDemoOption && (
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                className="w-full flex items-center justify-center gap-2 bg-[#E8A838]/10 text-[#E8A838] border border-[#E8A838]/30 font-jakarta font-bold py-3.5 rounded-xl hover:bg-[#E8A838]/20 transition-all active:scale-[0.98]"
-              >
-                Try Demo Mode (Skip Auth)
-              </button>
-            )}
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="font-jakarta text-sm text-gray-500">
-              Don't have an account?{' '}
-              <Link to="/onboarding" className="text-[#1A6B3C] font-semibold hover:underline">
-                Join Ally-jis
-              </Link>
-            </p>
-          </div>
         </div>
+      </main>
 
-        <p className="text-center font-jakarta text-xs text-[#1A6B3C]/40 mt-6">
-          For CHMSU Alijis Campus students only
-        </p>
-      </div>
+      {/* ── FOOTER SIMPLE STRIP ── */}
+      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 border-t border-[#1A6B3C]/10">
+        Carlos Hilado Memorial State University – Alijis Campus • Ally-jis v1.0
+      </footer>
+
     </div>
   );
 }

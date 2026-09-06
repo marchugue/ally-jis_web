@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Shield, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 
-/**
- * Combined Forgot / Reset Password page.
- *
- * - Default mode: user enters their email, we call apiClient.forgotPassword.
- * - Reset mode: triggered when Supabase redirects back here with a recovery
- *   token in the URL *hash* (e.g. #access_token=...&type=recovery). Hash
- *   fragments never reach the server, so we parse window.location.hash on
- *   mount rather than using useSearchParams (which only sees query params).
- */
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
@@ -36,13 +28,12 @@ export default function ForgotPasswordPage() {
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
-      const params = new URLSearchParams(hash.slice(1)); // drop leading '#'
+      const params = new URLSearchParams(hash.slice(1));
       const token = params.get('access_token');
       const type = params.get('type');
 
       if (token && type === 'recovery') {
         setRecoveryToken(token);
-        // Clean the sensitive token out of the visible URL/history once captured.
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
@@ -65,9 +56,6 @@ export default function ForgotPasswordPage() {
       setRequestSent(true);
     } catch (err: any) {
       console.error('Forgot password error:', err);
-      // Intentionally generic: backend always resolves successfully to avoid
-      // leaking which emails are registered, but network/config errors still
-      // deserve a message.
       notify.error('Request failed', err.message || 'Something went wrong. Please try again.');
     } finally {
       setFormLoading(false);
@@ -98,11 +86,13 @@ export default function ForgotPasswordPage() {
       setResetSuccess(true);
     } catch (err: any) {
       console.error('Reset password error:', err);
-      notify.error('Reset failed', err.message || 'Reset link is invalid or has expired. Please request a new one.');
+      notify.error('Reset failed', err.message || 'Failed to update password.');
     } finally {
       setFormLoading(false);
     }
   };
+
+  const mode = recoveryToken ? 'reset' : 'request';
 
   if (checkingHash) {
     return (
@@ -112,175 +102,276 @@ export default function ForgotPasswordPage() {
     );
   }
 
-  const mode: 'request' | 'reset' = recoveryToken ? 'reset' : 'request';
-
   return (
-    <div className="min-h-[100dvh] bg-[#F7F4EF] flex flex-col items-center justify-center px-4">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#1A6B3C]/5 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-[#E8A838]/8 blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-lg">
-              <span className="text-white font-fraunces font-bold text-xl">A</span>
+    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+      
+      {/* ── TOP NAVIGATION ── */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 group">
+            <motion.div 
+              whileHover={{ scale: 1.08, rotate: -4 }}
+              whileTap={{ scale: 0.94 }}
+              className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
+            >
+              A
+            </motion.div>
+            <div className="flex flex-col">
+              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+                Ally<span className="text-[#E8A838]">-jis</span>
+              </span>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+                CHMSU Alijis
+              </span>
             </div>
-            <span className="font-fraunces font-semibold text-2xl text-[#1A6B3C]">
-              lly<span className="text-[#E8A838]">-jis</span>
-            </span>
           </Link>
-          <h1 className="font-fraunces text-3xl font-bold text-[#1A6B3C] mt-4 mb-1">
-            {mode === 'reset' ? 'Set a new password' : 'Forgot your password?'}
-          </h1>
-          <p className="font-jakarta text-[#1A6B3C]/60 text-sm">
-            {mode === 'reset'
-              ? 'Choose a new password for your account'
-              : "No worries, we'll send you a reset link"}
-          </p>
+
+          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+            <Link 
+              to="/login" 
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+            >
+              <ArrowLeft size={14} /> Back to Sign In
+            </Link>
+          </motion.div>
         </div>
+      </header>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-[#1A6B3C]/8 p-8">
-          {!isApiConfigured && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-jakarta px-4 py-3 rounded-xl">
-              API is not configured. Add VITE_API_BASE_URL in a local .env file.
-            </div>
-          )}
-
-          {/* ── MODE: request reset email ───────────────────────────────── */}
-          {mode === 'request' && !requestSent && (
-            <form onSubmit={handleRequestReset} className="space-y-5">
-              <div>
-                <label className="font-jakarta font-semibold text-sm text-gray-700 block mb-1.5">Email</label>
-                <input
-                  type="email"
-                  placeholder="your@chmsu.edu.ph"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-                />
+      {/* ── MAIN EDITORIAL LAYOUT ── */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          
+          {/* Left Narrative */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6 space-y-8"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+                <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
+                <span>Account Recovery</span>
               </div>
-
-              <button
-                type="submit"
-                disabled={formLoading}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg',
-                  formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#155a33] active:scale-[0.98]'
-                )}
-              >
-                {formLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              
+              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] leading-[0.95]">
+                {mode === 'reset' ? (
+                  <>
+                    Set a new <br />
+                    account <br />
+                    <span className="italic font-normal text-[#E8A838]">password.</span>
+                  </>
                 ) : (
-                  <>Send Reset Link <ArrowRight size={18} /></>
+                  <>
+                    Recover <br />
+                    your student <br />
+                    <span className="italic font-normal text-[#E8A838]">access.</span>
+                  </>
                 )}
-              </button>
-            </form>
-          )}
-
-          {/* ── MODE: request sent confirmation ─────────────────────────── */}
-          {mode === 'request' && requestSent && (
-            <div className="text-center py-2">
-              <div className="w-14 h-14 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="text-[#1A6B3C]" size={28} />
-              </div>
-              <h2 className="font-fraunces font-bold text-lg text-[#1A6B3C] mb-1.5">Check your email</h2>
-              <p className="font-jakarta text-sm text-gray-500">
-                If an account exists for <span className="font-semibold text-gray-700">{email}</span>, we've sent a
-                link to reset your password.
-              </p>
+              </h1>
             </div>
-          )}
 
-          {/* ── MODE: set new password ───────────────────────────────────── */}
-          {mode === 'reset' && !resetSuccess && (
-            <form onSubmit={handleSetNewPassword} className="space-y-5">
-              <div>
-                <label className="font-jakarta font-semibold text-sm text-gray-700 block mb-1.5">
-                  New password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="At least 8 characters"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-jakarta font-semibold text-sm text-gray-700 block mb-1.5">
-                  Confirm new password
-                </label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Re-enter your new password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-gray-50 focus:bg-white font-jakarta text-sm outline-none transition-colors"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={formLoading}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg',
-                  formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#155a33] active:scale-[0.98]'
-                )}
-              >
-                {formLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>Reset Password <ArrowRight size={18} /></>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* ── MODE: reset success ─────────────────────────────────────── */}
-          {mode === 'reset' && resetSuccess && (
-            <div className="text-center py-2">
-              <div className="w-14 h-14 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="text-[#1A6B3C]" size={28} />
-              </div>
-              <h2 className="font-fraunces font-bold text-lg text-[#1A6B3C] mb-1.5">Password updated</h2>
-              <p className="font-jakarta text-sm text-gray-500 mb-5">
-                Your password has been reset. You can now sign in with your new password.
-              </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl hover:bg-[#155a33] active:scale-[0.98] transition-all shadow-lg"
-              >
-                Go to Sign In <ArrowRight size={18} />
-              </button>
-            </div>
-          )}
-
-          <div className="mt-6 text-center">
-            <p className="font-jakarta text-sm text-gray-500">
-              Remembered your password?{' '}
-              <Link to="/login" className="text-[#1A6B3C] font-semibold hover:underline">
-                Sign In
-              </Link>
+            <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed max-w-lg">
+              {mode === 'reset'
+                ? 'Create a strong, new password with at least 8 characters to secure your Ally-jis profile.'
+                : 'Enter your registered university email to receive a secure password reset link.'}
             </p>
-          </div>
-        </div>
 
-        <p className="text-center font-jakarta text-xs text-[#1A6B3C]/40 mt-6">
-          For CHMSU Alijis Campus students only
-        </p>
-      </div>
+            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80">
+              <div className="flex items-center gap-2.5">
+                <Shield size={15} className="text-[#E8A838]" />
+                <span>Encrypted single-use recovery token protocol</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <KeyRound size={15} className="text-[#E8A838]" />
+                <span>Instant verification for CHMSU student accounts</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right Column: High-Legibility Form */}
+          <motion.div 
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6"
+          >
+            <div className="bg-[#EDE7DB] p-8 sm:p-12 rounded-[36px] shadow-sm space-y-8 border-none">
+              
+              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 pb-6">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70">
+                  Credentials Assistance
+                </span>
+                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C]">
+                  {mode === 'reset' ? 'Create New Password' : 'Send Recovery Email'}
+                </h2>
+              </div>
+
+              {!isApiConfigured && (
+                <div className="bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-jakarta p-4 rounded-2xl">
+                  API is currently in local development mode. Add VITE_API_BASE_URL in your .env file.
+                </div>
+              )}
+
+              {/* MODE: Request Reset Email */}
+              {mode === 'request' && !requestSent && (
+                <form onSubmit={handleRequestReset} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                      Registered Student Email
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="yourname@chmsu.edu.ph"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      autoComplete="email"
+                    />
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={formLoading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                    )}
+                  >
+                    {formLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Send Recovery Link</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </motion.button>
+                </form>
+              )}
+
+              {/* MODE: Request Sent Confirmation */}
+              {mode === 'request' && requestSent && (
+                <div className="text-center py-4 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto text-[#1A6B3C]">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C]">Recovery Email Dispatched</h3>
+                  <p className="font-jakarta text-sm text-gray-700 leading-relaxed max-w-sm mx-auto">
+                    If an account is associated with <span className="font-bold text-[#1A6B3C]">{email}</span>, a secure recovery link has been delivered to your inbox.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] bg-white px-6 py-3 rounded-full hover:bg-[#F7F4EF] transition-all shadow-xs"
+                    >
+                      Return to Sign In →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* MODE: Set New Password */}
+              {mode === 'reset' && !resetSuccess && (
+                <form onSubmit={handleSetNewPassword} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="At least 8 characters"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C]"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Re-enter your new password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                    />
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={formLoading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                    )}
+                  >
+                    {formLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Update Password</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </motion.button>
+                </form>
+              )}
+
+              {/* MODE: Reset Success */}
+              {mode === 'reset' && resetSuccess && (
+                <div className="text-center py-4 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto text-[#1A6B3C]">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C]">Password Successfully Updated</h3>
+                  <p className="font-jakarta text-sm text-gray-700 leading-relaxed max-w-sm mx-auto">
+                    Your password has been changed. You can now sign in with your new credentials.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-white bg-[#1A6B3C] px-8 py-4 rounded-full hover:bg-[#13502D] transition-all shadow-md"
+                    >
+                      Sign In Now →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-6 border-t border-[#1A6B3C]/15 flex items-center justify-between text-xs font-jakarta">
+                <span className="text-gray-700">Remembered credentials?</span>
+                <Link to="/login" className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] hover:underline">
+                  Return to Sign In
+                </Link>
+              </div>
+
+            </div>
+          </motion.div>
+
+        </div>
+      </main>
+
+      {/* ── FOOTER SIMPLE STRIP ── */}
+      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 border-t border-[#1A6B3C]/10">
+        Carlos Hilado Memorial State University – Alijis Campus • Ally-jis v1.0
+      </footer>
+
     </div>
   );
 }

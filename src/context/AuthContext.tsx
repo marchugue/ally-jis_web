@@ -114,11 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session.user?.user_metadata?.email_type === 'external' &&
         !session.user?.user_metadata?.is_approved
       ),
-      // needsOnboarding: logged-in, verified, approved, but profile not saved yet.
+      // needsOnboarding: logged-in, verified, but profile not fully completed yet.
+      // All students (CHMSU and external) must complete onboarding steps first.
       needsOnboarding: Boolean(
         session &&
         verified &&
-        session.user?.user_metadata?.is_approved !== false &&  // don't flag pending students
         !session.user?.user_metadata?.onboarding_complete
       ),
       setMockUser: (user: AuthUser | null) => setMockUserState(user),

@@ -40,6 +40,7 @@ import CommentsModal from '@/components/feed/CommentsModal';
 import type { FeedComment, FeedCommentWithReplies } from '@/types/feed';
 import { RelationshipButtons } from '@/components/profile/RelationshipButtons';
 import { RelationshipListModal } from '@/components/profile/RelationshipListModal';
+import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 
 const PAGE_SIZE = 10;
 
@@ -542,18 +543,28 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'orgs' && (
-            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
               {organizations.map(org => {
                 const selected = formData.organizations?.includes(org);
                 return (
-                  <div key={org} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 transition-all">
+                  <div key={org} className={cn(
+                    "flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer",
+                    selected
+                      ? "bg-[#1A6B3C]/10 border-[#1A6B3C]/30 shadow-xs"
+                      : "bg-white border-[#1A6B3C]/10 hover:border-[#1A6B3C]/25"
+                  )}>
                     <Checkbox
                       id={`org-${org}`}
                       checked={selected}
                       onCheckedChange={() => toggleOrg(org)}
-                      className="border-gray-300 rounded-[4px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
+                      className="border-gray-300 rounded-[6px] data-[state=checked]:bg-[#1A6B3C] data-[state=checked]:border-[#1A6B3C]"
                     />
-                    <label htmlFor={`org-${org}`} className="flex-1 font-jakarta text-sm text-gray-700 cursor-pointer">{org}</label>
+                    <label htmlFor={`org-${org}`} className={cn(
+                      "flex-1 font-jakarta text-sm cursor-pointer transition-colors",
+                      selected ? "text-[#1A6B3C] font-bold" : "text-gray-700"
+                    )}>
+                      {org}
+                    </label>
                   </div>
                 );
               })}
@@ -571,14 +582,28 @@ export default function ProfilePage() {
               const status = connections[person.id] || 'none';
               return (
                 <div key={person.id} className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/8 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xl">{person.avatar || '👤'}</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/profile/${person.id}`)}
+                    className="hover:opacity-85 transition-opacity flex-shrink-0"
+                    aria-label={`View ${person.name || person.username}'s profile`}
+                  >
+                    <AvatarDisplay
+                      src={person.avatar}
+                      name={person.name || person.username}
+                      className="w-10 h-10 rounded-full object-cover shadow-xs"
+                      textClassName="text-xl"
+                    />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="font-jakarta text-sm font-semibold text-gray-900 truncate">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/profile/${person.id}`)}
+                        className="font-jakarta text-sm font-semibold text-gray-900 truncate hover:underline hover:text-[#1A6B3C] text-left"
+                      >
                         {person.username ? `@${person.username}` : person.name}
-                      </p>
+                      </button>
                       {person.isVerified && <Shield size={10} className="text-[#1A6B3C] flex-shrink-0" />}
                     </div>
                     <p className="font-jakarta text-xs text-gray-400 truncate">{person.course}</p>
@@ -640,11 +665,12 @@ export default function ProfilePage() {
               aria-label="View profile details"
             >
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white border-4 border-white shadow-lg overflow-hidden flex items-center justify-center active:scale-95 lg:active:scale-100 transition-transform">
-                {displayProfile.avatar && (displayProfile.avatar.startsWith('http') || displayProfile.avatar.startsWith('data:')) ? (
-                  <img src={displayProfile.avatar} alt="Profile avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-5xl sm:text-6xl">{displayProfile.avatar || '👤'}</span>
-                )}
+                <AvatarDisplay
+                  src={displayProfile.avatar}
+                  name={displayProfile.username || profile?.name}
+                  className="w-full h-full object-cover"
+                  textClassName="text-5xl sm:text-6xl"
+                />
               </div>
             </button>
           </div>
@@ -819,7 +845,7 @@ export default function ProfilePage() {
 
                 {avatarTab === 'upload' && (
                   <div className="space-y-2">
-                    {customAvatarPreview || (formData.avatar && formData.avatar.startsWith('http')) ? (
+                    {customAvatarPreview || (formData.avatar && (formData.avatar.startsWith('http') || formData.avatar.startsWith('/') || formData.avatar.startsWith('data:'))) ? (
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#1A6B3C] shadow-sm flex-shrink-0">
                           <img src={customAvatarPreview ?? formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -1014,13 +1040,16 @@ export default function ProfilePage() {
                 onClick={() => setComposerOpen(true)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg">{profile?.avatar || '👤'}</span>
-                  </div>
+                  <AvatarDisplay
+                    src={profile?.avatar}
+                    name={profile?.name || profile?.username}
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-black/5"
+                    textClassName="text-lg"
+                  />
                   <div className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 font-jakarta text-sm text-gray-400">
                     What's on your mind?
                   </div>
-                  <button className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#1A6B3C]/8 text-[#1A6B3C] font-jakarta text-xs font-semibold">
+                  <button className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#1A6B3C]/8 text-[#1A6B3C] font-jakarta text-xs font-semibold hover:bg-[#1A6B3C]/15 transition-colors">
                     <ImageIcon size={13} /> <span className="hidden sm:inline">Photo</span>
                   </button>
                 </div>

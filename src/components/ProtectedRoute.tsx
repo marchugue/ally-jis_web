@@ -46,19 +46,18 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  // ── External-email student pending admin approval ─────────────────────
-  // Hard-locked to /pending-approval until an admin verifies their identity.
-  // Check happens before onboarding guard — a pending student must wait for
-  // approval before they can complete onboarding or access any other page.
-  if (isPendingApproval && location.pathname !== '/pending-approval') {
-    return <Navigate to="/pending-approval" replace />;
-  }
-
-  // ── Verified & approved but onboarding not complete ───────────────────
-  // Send them back to finish onboarding. Allow /onboarding through to avoid
-  // an infinite redirect loop.
+  // ── Verified but onboarding not complete ──────────────────────────────
+  // Send them back to finish onboarding (Steps 2-4). Allow /onboarding through
+  // to avoid an infinite redirect loop.
   if (needsOnboarding && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // ── External-email student pending admin approval ─────────────────────
+  // Once onboarding is complete, hard-lock to /pending-approval until an admin
+  // verifies their student identity.
+  if (isPendingApproval && location.pathname !== '/pending-approval') {
+    return <Navigate to="/pending-approval" replace />;
   }
 
   // ── Fully authenticated, verified, approved, and onboarded ───────────

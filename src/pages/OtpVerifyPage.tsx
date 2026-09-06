@@ -125,6 +125,7 @@ export default function OtpVerifyPage() {
     setError('');
     try {
       const session = await apiClient.verifyOtp(userId, code);
+      const userNeedsOnboarding = !session.user?.user_metadata?.onboarding_complete;
       const isPending =
         session.user?.user_metadata?.pending_student_verification === true &&
         session.user?.user_metadata?.student_verification_status !== 'approved';
@@ -133,9 +134,16 @@ export default function OtpVerifyPage() {
       setSuccess(true);
       await completeLogin(session, true);
 
-      // Route to pending-approval for non-CHMSU students, dashboard for everyone else.
-      // isPending is already computed above from user_metadata injected by buildAuthSession.
-      setTimeout(() => navigate(isPending ? '/pending-approval' : '/dashboard', { replace: true }), 800);
+      // Route to onboarding if profile is incomplete, pending-approval for unapproved students, or dashboard.
+      setTimeout(() => {
+        if (userNeedsOnboarding) {
+          navigate('/onboarding', { replace: true });
+        } else if (isPending) {
+          navigate('/pending-approval', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }, 800);
     } catch (err: any) {
       setError(err?.message ?? 'Incorrect code. Please try again.');
       setDigits(Array(OTP_LENGTH).fill(''));
