@@ -95,15 +95,33 @@ export function useConversations(userId: string | null) {
     }
   }, [userId]);
 
+  // ── Initial load + Window focus revalidation + Slow safety net ───────────
   useEffect(() => {
     if (!isApiConfigured || !userId) return;
 
     void loadConversations();
-    const interval = setInterval(() => {
-      void loadConversations(true); // polls are always silent now
-    }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(interval);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadConversations(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onVisibilityChange);
+
+    // Passive low-frequency fallback (60s instead of 15s) only when page is active
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void loadConversations(true);
+      }
+    }, 60000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onVisibilityChange);
+      clearInterval(interval);
+    };
   }, [userId, loadConversations]);
 
   // ── Real-time new-message updates ─────────────────────────────────────────
