@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Pencil, Check, X, Plus, Building2, GraduationCap,
-  Shield, Users, LogOut, ImageIcon,
+  Shield, Users, ImageIcon,
   UserPlus, RefreshCw, Camera, Loader2,
   Sparkles, MessageSquare, Music, Film, Compass,
   Newspaper, Layers, Heart, MessageCircle,
@@ -28,14 +28,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { notify } from '@/components/ui/sonner';
 import { generateMatches } from '@/data/mockData';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import FeedPostCard from '@/components/feed/FeedPostCard';
 import PostComposerModal from '@/components/feed/PostComposerModal';
 import CommentsModal from '@/components/feed/CommentsModal';
@@ -137,7 +129,7 @@ function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
 }
 
 export default function ProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { userId: routeUserId } = useParams<{ userId?: string }>();
 
@@ -412,18 +404,6 @@ export default function ProfilePage() {
   }, [useBackend, activePost]);
 
   // ── profile edit actions ──────────────────────────────────────────────────
-  const handleSignOut = async () => { await signOut(); navigate('/', { replace: true }); };
-
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    if (!window.confirm('Delete your account? This cannot be undone.')) return;
-    if (useBackend) {
-      try { await profileService.deleteProfile(); }
-      catch (e: any) { notify.error('Delete failed', e.message); return; }
-    }
-    await signOut();
-    navigate('/');
-  };
 
   const onSave = async (data: ProfileFormValues) => {
     if (!useBackend || !user) {
@@ -993,58 +973,13 @@ export default function ProfilePage() {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all"
-                  >
-                    <Pencil size={13} /> Edit profile
-                  </button>
-
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 font-jakarta text-sm hover:bg-gray-50 transition-colors"
-                        title="Account options"
-                      >
-                        ···
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md rounded-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="font-fraunces text-xl">Account Settings</DialogTitle>
-                        <DialogDescription className="font-jakarta text-sm">
-                          Manage your session and account details.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-2.5 py-4">
-                        <button
-                          type="button"
-                          onClick={() => { setIsEditing(true); }}
-                          className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left font-jakarta text-sm font-semibold text-gray-800 hover:bg-gray-50"
-                        >
-                          Edit profile info <Pencil size={14} className="text-gray-400" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSignOut}
-                          className="flex items-center justify-between rounded-xl border border-red-200 px-4 py-3 text-left font-jakarta text-sm font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          Log out <LogOut size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleDeleteAccount}
-                          className="flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-left font-jakarta text-sm font-semibold text-white hover:bg-red-700"
-                        >
-                          Delete account <X size={14} />
-                        </button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all shadow-xs"
+                >
+                  <Pencil size={13} /> Edit profile
+                </button>
               )}
             </div>
           </div>
