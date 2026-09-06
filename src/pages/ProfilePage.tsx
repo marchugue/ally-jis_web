@@ -5,8 +5,8 @@ import {
   Pencil, Building2, GraduationCap,
   Shield, Users, ImageIcon,
   UserPlus, RefreshCw,
-  Sparkles, MessageSquare, Compass,
-  Music, Film, Newspaper, Layers, Heart, MessageCircle,
+  Sparkles, MessageSquare,
+  Newspaper, Layers, Heart, MessageCircle,
 } from 'lucide-react';
 import { CURRENT_USER } from '@/data/mockData';
 import { Student } from '@/types/ally';
@@ -458,59 +458,6 @@ export default function ProfilePage() {
           <p className="font-jakarta text-xs text-gray-400 italic">No organizations listed.</p>
         )}
       </div>
-
-      {/* Lifestyle & Match Details (if set) */}
-      {(profile.zodiacSign || profile.personalityType || (profile.musicTaste && profile.musicTaste.length > 0) || (profile.movieInterests && profile.movieInterests.length > 0)) && (
-        <div className="p-6 space-y-4">
-          <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-            <Compass size={13} className="text-[#1A6B3C]" /> Discovery & Vibe
-          </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs font-jakarta">
-            {profile.zodiacSign && (
-              <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                <span className="text-gray-400 text-[10px] uppercase font-bold block">Zodiac</span>
-                <span className="font-semibold text-gray-800">{profile.zodiacSign}</span>
-              </div>
-            )}
-            {profile.personalityType && (
-              <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                <span className="text-gray-400 text-[10px] uppercase font-bold block">Personality</span>
-                <span className="font-semibold text-gray-800">{profile.personalityType}</span>
-              </div>
-            )}
-          </div>
-
-          {profile.musicTaste && profile.musicTaste.length > 0 && (
-            <div>
-              <p className="font-jakarta text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                <Music size={11} /> Music Taste
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {profile.musicTaste.map((g) => (
-                  <span key={g} className="px-2.5 py-0.5 rounded-md bg-gray-50 text-gray-700 font-jakarta text-xs border border-gray-200/80">
-                    {g}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {profile.movieInterests && profile.movieInterests.length > 0 && (
-            <div>
-              <p className="font-jakarta text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                <Film size={11} /> Movie Genres
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {profile.movieInterests.map((m) => (
-                  <span key={m} className="px-2.5 py-0.5 rounded-md bg-gray-50 text-gray-700 font-jakarta text-xs border border-gray-200/80">
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* People you may know (own profile only) */}
       {isOwnProfile && suggested.length > 0 && (

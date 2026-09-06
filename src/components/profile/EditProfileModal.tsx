@@ -3,9 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  X, Camera, Loader2, Check, Sparkles,
-  GraduationCap, Building2, Users, Compass,
-  Music, Film, User, Plus,
+  Camera, Loader2, Check, Sparkles,
+  GraduationCap, User,
 } from 'lucide-react';
 import { Student } from '@/types/ally';
 import { cn } from '@/lib/utils';
@@ -14,10 +13,6 @@ import type { PresetAvatarRow } from '@/api/client';
 import { profileService } from '@/lib/services/profileService';
 import { profileSchema, ProfileFormValues } from '@/lib/validations/profile';
 import { useLookupOptions } from '@/hooks/useLookupOptions';
-import {
-  ZODIAC_OPTIONS, PERSONALITY_TYPE_OPTIONS, AGE_RANGE_OPTIONS,
-  MATCH_GENDER_PREFERENCE_OPTIONS, MUSIC_TASTE_OPTIONS, MOVIE_INTEREST_OPTIONS,
-} from '@/lib/matchOptions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { notify } from '@/components/ui/sonner';
 import {
@@ -125,24 +120,6 @@ export function EditProfileModal({
     );
   };
 
-  const toggleMusicTaste = (genre: string) => {
-    const cur = formData.musicTaste || [];
-    setValue(
-      'musicTaste',
-      cur.includes(genre) ? cur.filter((g) => g !== genre) : [...cur, genre],
-      { shouldValidate: true }
-    );
-  };
-
-  const toggleMovieInterest = (genre: string) => {
-    const cur = formData.movieInterests || [];
-    setValue(
-      'movieInterests',
-      cur.includes(genre) ? cur.filter((g) => g !== genre) : [...cur, genre],
-      { shouldValidate: true }
-    );
-  };
-
   const onSave = async (data: ProfileFormValues) => {
     if (!useBackend || !userId) {
       const updated: Student = {
@@ -208,7 +185,7 @@ export function EditProfileModal({
               Edit Profile
             </DialogTitle>
             <DialogDescription className="font-jakarta text-xs text-gray-400 mt-0.5">
-              Update your public identity, academic details, and discovery interests.
+              Update your public identity, academic details, and campus interests.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -218,7 +195,7 @@ export function EditProfileModal({
           {[
             { key: 'general', label: 'Identity & Bio', icon: User },
             { key: 'academics', label: 'Academics & Orgs', icon: GraduationCap },
-            { key: 'interests', label: 'Interests & Vibe', icon: Sparkles },
+            { key: 'interests', label: 'Campus Interests', icon: Sparkles },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -506,154 +483,86 @@ export function EditProfileModal({
             </div>
           )}
 
-          {/* TAB 3: Interests & Match Vibe */}
+          {/* TAB 3: Campus Interests (Only used interests remain) */}
           {activeTab === 'interests' && (
-            <div className="space-y-5">
-              {/* Campus Interests */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide">
-                    Campus Interests (Select at least 3)
-                  </label>
-                  <span className={cn(
-                    'text-xs font-jakarta font-semibold px-2 py-0.5 rounded-full',
-                    (formData.interests?.length || 0) >= 3
-                      ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]'
-                      : 'bg-amber-100 text-amber-700'
-                  )}>
-                    {formData.interests?.length || 0} selected
-                  </span>
-                </div>
-
-                {(formData.interests?.length || 0) < 3 && (
-                  <p className="text-xs text-amber-600 font-jakarta mb-2">
-                    Please pick at least 3 interests to help peers and classmates discover you.
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-jakarta font-bold text-sm text-gray-900">
+                    Campus Interests
+                  </h4>
+                  <p className="font-jakarta text-xs text-gray-400 mt-0.5">
+                    Select at least 3 topics to connect with classmates and campus peers.
                   </p>
-                )}
+                </div>
+                <span className={cn(
+                  'text-xs font-jakarta font-semibold px-2.5 py-1 rounded-full',
+                  (formData.interests?.length || 0) >= 3
+                    ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]'
+                    : 'bg-amber-100 text-amber-700'
+                )}>
+                  {formData.interests?.length || 0} selected
+                </span>
+              </div>
 
-                <div className="max-h-52 overflow-y-auto space-y-3 p-3 bg-gray-50/70 border border-gray-200 rounded-xl custom-scrollbar">
-                  {Object.entries(interestsByCategory).map(([category, items]) => (
-                    <div key={category}>
-                      <p className="font-jakarta font-semibold text-[11px] text-gray-400 uppercase tracking-wide mb-1.5">
-                        {category}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {items.map(({ label }) => {
-                          const selected = formData.interests?.includes(label);
-                          return (
-                            <button
-                              key={label}
-                              type="button"
-                              onClick={() => toggleInterest(label)}
-                              className={cn(
-                                'px-2.5 py-1 rounded-lg font-jakarta text-xs font-medium border transition-colors',
-                                selected
-                                  ? 'bg-[#1A6B3C] text-white border-[#1A6B3C]'
-                                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                              )}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+              {(formData.interests?.length || 0) < 3 && (
+                <p className="text-xs text-amber-600 font-jakarta">
+                  Please pick at least 3 interests ({formData.interests?.length || 0}/3 chosen).
+                </p>
+              )}
+
+              {/* Selected Interests Summary Pills */}
+              {(formData.interests?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-3 bg-white border border-gray-200/80 rounded-xl">
+                  {formData.interests?.map((interest) => (
+                    <span
+                      key={interest}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#1A6B3C]/10 text-[#1A6B3C] font-jakarta text-xs font-medium border border-[#1A6B3C]/20"
+                    >
+                      {interest}
+                      <button
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        className="hover:text-red-500 transition-colors text-xs font-bold leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
                   ))}
                 </div>
-                {errors.interests && <p className="mt-1 text-xs font-jakarta text-red-500">{errors.interests.message}</p>}
+              )}
+
+              {/* All Categories Grid */}
+              <div className="max-h-72 overflow-y-auto space-y-4 p-4 bg-gray-50/70 border border-gray-200 rounded-xl custom-scrollbar">
+                {Object.entries(interestsByCategory).map(([category, items]) => (
+                  <div key={category}>
+                    <p className="font-jakarta font-bold text-[11px] text-gray-400 uppercase tracking-wider mb-2">
+                      {category}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map(({ label }) => {
+                        const selected = formData.interests?.includes(label);
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => toggleInterest(label)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg font-jakarta text-xs font-medium border transition-colors',
+                              selected
+                                ? 'bg-[#1A6B3C] text-white border-[#1A6B3C] shadow-xs'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                            )}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              {/* Match & Lifestyle Preferences */}
-              <div className="pt-3 border-t border-gray-100">
-                <p className="font-jakarta font-semibold text-xs text-[#1A6B3C] uppercase tracking-wide mb-3">
-                  Match & Discovery Profile <span className="text-gray-400 normal-case font-normal">(optional)</span>
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1">
-                      Age Range
-                    </label>
-                    <select {...register('ageRange')} className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-white font-jakarta text-sm outline-none">
-                      <option value="">Prefer not to say</option>
-                      {AGE_RANGE_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1">
-                      Match Preference
-                    </label>
-                    <select {...register('matchGenderPreference')} className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-white font-jakarta text-sm outline-none">
-                      <option value="">Prefer not to say</option>
-                      {MATCH_GENDER_PREFERENCE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1">
-                      Zodiac Sign
-                    </label>
-                    <select {...register('zodiacSign')} className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-white font-jakarta text-sm outline-none">
-                      <option value="">Not set</option>
-                      {ZODIAC_OPTIONS.map((z) => <option key={z} value={z}>{z}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1">
-                      Personality Type
-                    </label>
-                    <select {...register('personalityType')} className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-[#1A6B3C] bg-white font-jakarta text-sm outline-none">
-                      <option value="">Not set</option>
-                      {PERSONALITY_TYPE_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1.5">
-                    Music Taste
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {MUSIC_TASTE_OPTIONS.map((genre) => (
-                      <button
-                        key={genre}
-                        type="button"
-                        onClick={() => toggleMusicTaste(genre)}
-                        className={cn(
-                          'px-2.5 py-1 rounded-lg font-jakarta text-xs font-medium border transition-colors',
-                          formData.musicTaste?.includes(genre)
-                            ? 'bg-[#1A6B3C] text-white border-[#1A6B3C]'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                        )}
-                      >
-                        {genre}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-jakarta font-semibold text-xs text-gray-400 uppercase tracking-wide block mb-1.5">
-                    Movie Interests
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {MOVIE_INTEREST_OPTIONS.map((genre) => (
-                      <button
-                        key={genre}
-                        type="button"
-                        onClick={() => toggleMovieInterest(genre)}
-                        className={cn(
-                          'px-2.5 py-1 rounded-lg font-jakarta text-xs font-medium border transition-colors',
-                          formData.movieInterests?.includes(genre)
-                            ? 'bg-[#1A6B3C] text-white border-[#1A6B3C]'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                        )}
-                      >
-                        {genre}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              {errors.interests && <p className="mt-1 text-xs font-jakarta text-red-500">{errors.interests.message}</p>}
             </div>
           )}
         </div>
