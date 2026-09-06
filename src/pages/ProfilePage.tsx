@@ -44,6 +44,115 @@ import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 
 const PAGE_SIZE = 10;
 
+function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
+  return (
+    <div className="min-h-screen bg-[#F7F4EF] pb-20">
+      <div className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 space-y-5">
+        {/* Profile Header Card Skeleton */}
+        <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 shadow-[0_1px_6px_rgba(0,0,0,0.06)] overflow-hidden animate-pulse">
+          {/* Cover gradient */}
+          <div className="h-36 sm:h-44 bg-gradient-to-r from-[#0A331C]/60 via-[#1A6B3C]/50 to-[#185E35]/60 relative">
+            {/* Avatar circle overhang */}
+            <div className="absolute bottom-0 left-6 translate-y-1/2">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 border-4 border-white shadow-lg" />
+            </div>
+          </div>
+
+          {/* Name & Action Row */}
+          <div className="pt-16 sm:pt-18 pb-5 px-6 flex items-center justify-between gap-4 flex-wrap">
+            <div className="space-y-2">
+              <div className="h-7 w-44 bg-gray-200 rounded-lg" />
+              <div className="h-4 w-28 bg-gray-100 rounded-md" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-28 bg-gray-100 rounded-xl" />
+            </div>
+          </div>
+        </div>
+
+        {/* 2-Column Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+          {/* Main (Left) Column */}
+          <div className="space-y-5">
+            {/* Composer skeleton (if own profile) */}
+            {isOwnProfile && (
+              <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 p-4 shadow-[0_1px_6px_rgba(0,0,0,0.06)] animate-pulse flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+                <div className="h-10 bg-gray-100 rounded-full flex-1" />
+              </div>
+            )}
+
+            {/* Post Card Skeletons */}
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-3xl border border-[#1A6B3C]/8 p-5 shadow-[0_1px_6px_rgba(0,0,0,0.06)] animate-pulse space-y-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 bg-gray-200 rounded-full w-1/3" />
+                      <div className="h-2.5 bg-gray-100 rounded-full w-1/4" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-100 rounded-full w-full" />
+                    <div className="h-3 bg-gray-100 rounded-full w-4/5" />
+                    <div className="h-3 bg-gray-100 rounded-full w-2/3" />
+                  </div>
+                  <div className="pt-3 border-t border-gray-100 flex gap-6">
+                    <div className="h-3 w-12 bg-gray-100 rounded-full" />
+                    <div className="h-3 w-12 bg-gray-100 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column (Intro + Suggestions) */}
+          <div className="hidden lg:flex flex-col gap-5">
+            {/* Intro Card */}
+            <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 p-5 shadow-[0_1px_6px_rgba(0,0,0,0.06)] animate-pulse space-y-4">
+              <div className="h-5 w-16 bg-gray-200 rounded-md" />
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-100 rounded-full w-full" />
+                <div className="h-3 bg-gray-100 rounded-full w-4/5" />
+              </div>
+              <div className="space-y-2.5 pt-2">
+                <div className="h-4 w-44 bg-gray-100 rounded-md" />
+                <div className="h-4 w-36 bg-gray-100 rounded-md" />
+              </div>
+              <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-1.5">
+                <div className="h-6 w-16 bg-gray-100 rounded-full" />
+                <div className="h-6 w-20 bg-gray-100 rounded-full" />
+                <div className="h-6 w-14 bg-gray-100 rounded-full" />
+              </div>
+            </div>
+
+            {/* People you may know Card */}
+            {isOwnProfile && (
+              <div className="bg-white rounded-3xl border border-[#1A6B3C]/8 p-5 shadow-[0_1px_6px_rgba(0,0,0,0.06)] animate-pulse space-y-4">
+                <div className="h-5 w-36 bg-gray-200 rounded-md" />
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 bg-gray-200 rounded-full w-24" />
+                      <div className="h-2.5 bg-gray-100 rounded-full w-16" />
+                    </div>
+                    <div className="h-7 w-16 bg-gray-100 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -401,11 +510,7 @@ export default function ProfilePage() {
   // ── derived ───────────────────────────────────────────────────────────────
   const displayProfile = isEditing ? formData : profile;
 
-  if (!displayProfile) return (
-    <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
-    </div>
-  );
+  if (!displayProfile) return <ProfileSkeleton isOwnProfile={isOwnProfile} />;
 
   const currentUser = profile ?? CURRENT_USER;
 
