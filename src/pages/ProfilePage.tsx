@@ -166,6 +166,9 @@ export default function ProfilePage() {
 
   // ── own posts ─────────────────────────────────────────────────────────────
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const mediaPosts = useMemo(() => {
+    return posts.filter(p => p.media && p.media.length > 0);
+  }, [posts]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -522,11 +525,6 @@ export default function ProfilePage() {
   if (!displayProfile) return <ProfileSkeleton isOwnProfile={isOwnProfile} />;
 
   const currentUser = profile ?? CURRENT_USER;
-
-  // Filter posts that contain media attachments
-  const mediaPosts = useMemo(() => {
-    return posts.filter(p => p.media && p.media.length > 0);
-  }, [posts]);
 
   // ── Right Side Blended Information Panel Content ─────────────────────────
   const rightSideInfoContent = (
