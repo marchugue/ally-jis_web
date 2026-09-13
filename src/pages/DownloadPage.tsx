@@ -6,7 +6,7 @@ import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
   const apkFileName = 'ally-jis-app-v1.0.apk';
-  const apkPath = 'https://ally-jis.xyz/download/ally-jis-app-v1.0.apk';
+  const apkPath = 'https://www.ally-jis.xyz/download/ally-jis-app-v1.0.apk';
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
