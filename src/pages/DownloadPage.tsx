@@ -5,65 +5,45 @@ import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight,
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
-  const apkFileName = 'ally-jis-app-beta-test-1.0.apk';
-  const apkPath = `/${apkFileName}`;
+  const apkFileName = 'ally-jis-app-v1.0.apk';
+  const apkPath = 'https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk';
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [loadedMB, setLoadedMB] = useState(0);
-  const [totalMB, setTotalMB] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  const handleDownloadWithProgress = () => {
+  // Directly initiates native browser streaming download (saves directly via OS Download Manager)
+  const triggerNativeDownload = () => {
+    const link = document.createElement('a');
+    link.href = apkPath;
+    link.setAttribute('download', apkFileName);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownload = () => {
     setDownloading(true);
     setProgress(0);
     setIsCompleted(false);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', apkPath, true);
-    xhr.responseType = 'blob';
+    // 1. Immediately invoke the browser's native file download stream
+    triggerNativeDownload();
 
-    xhr.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percent = Math.round((event.loaded / event.total) * 100);
-        setProgress(percent);
-        setLoadedMB(Number((event.loaded / (1024 * 1024)).toFixed(1)));
-        setTotalMB(Number((event.total / (1024 * 1024)).toFixed(1)));
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        const blob = xhr.response;
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = apkFileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
-
+    // 2. Smoothly animate handoff progress to 100% without memory bottlenecks or blob freezes
+    let currentProgress = 0;
+    const interval = setInterval(() => {
+      currentProgress += 25;
+      if (currentProgress >= 100) {
+        clearInterval(interval);
+        setProgress(100);
         setIsCompleted(true);
         setDownloading(false);
       } else {
-        setDownloading(false);
-        const link = document.createElement('a');
-        link.href = apkPath;
-        link.download = apkFileName;
-        link.click();
+        setProgress(currentProgress);
       }
-    };
-
-    xhr.onerror = () => {
-      setDownloading(false);
-      const link = document.createElement('a');
-      link.href = apkPath;
-      link.download = apkFileName;
-      link.click();
-    };
-
-    xhr.send();
+    }, 150);
   };
 
   return (
@@ -126,7 +106,7 @@ export default function DownloadPage() {
               className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 dark:border-white/10 pb-4"
             >
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/80">
-                Official Android Client • Alpha Release 1.0
+                Official Android Client • Official Release v1.0
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
                 Direct Web Distribution • ally-jis.xyz
@@ -171,7 +151,7 @@ export default function DownloadPage() {
                   Download Android APK
                 </h3>
                 <p className="font-jakarta text-gray-700 dark:text-gray-300 text-base leading-relaxed max-w-lg">
-                  Direct standalone package verified by the Ally-jis developer team for selected testers and CHMSU Alijis students.
+                  Direct standalone package verified by the Ally-jis developer team for all CHMSU Alijis students and faculty.
                 </p>
               </div>
 
@@ -181,7 +161,7 @@ export default function DownloadPage() {
                   <motion.button
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.96 }}
-                    onClick={handleDownloadWithProgress}
+                    onClick={handleDownload}
                     className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-9 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   >
                     <Download size={18} /> Download {apkFileName}
@@ -192,25 +172,25 @@ export default function DownloadPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-3 p-5 bg-[#EDE7DB] dark:bg-[#0D131F] rounded-2xl"
+                    className="space-y-3 p-5 bg-[#EDE7DB] dark:bg-[#0D131F] rounded-2xl border border-[#1A6B3C]/10 dark:border-white/10"
                   >
                     <div className="flex items-center justify-between font-mono text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
                       <span className="flex items-center gap-2 font-bold">
-                        <Loader2 size={16} className="animate-spin text-[#E8A838]" /> Transferring APK...
+                        <Loader2 size={16} className="animate-spin text-[#E8A838]" /> Starting Download...
                       </span>
                       <span className="font-bold">{progress}%</span>
                     </div>
 
-                    <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className="bg-[#1A6B3C] dark:bg-emerald-500 h-full transition-all duration-150 ease-out"
+                        className="bg-[#1A6B3C] dark:bg-emerald-500 h-full transition-all duration-150 ease-out rounded-full"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 font-mono">
-                      <span>{loadedMB} MB / {totalMB > 0 ? `${totalMB} MB` : '45 MB'}</span>
-                      <span className="text-[#B45309] dark:text-amber-400">Downloading...</span>
+                      <span>Direct streaming ~85 MB APK</span>
+                      <span className="text-[#B45309] dark:text-amber-400 font-medium">Handing off to browser...</span>
                     </div>
                   </motion.div>
                 )}
@@ -219,21 +199,34 @@ export default function DownloadPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/50 rounded-2xl flex items-center justify-between"
+                    className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/50 rounded-2xl space-y-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 size={22} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
-                      <div>
-                        <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download Finished</p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400">Open notification or Downloads folder to install</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                        <div>
+                          <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download Initiated!</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400">Check your notification drawer or Downloads folder</p>
+                        </div>
                       </div>
+                      <button
+                        onClick={handleDownload}
+                        className="text-xs font-mono uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
+                      >
+                        <RotateCcw size={13} /> Re-download
+                      </button>
                     </div>
-                    <button
-                      onClick={handleDownloadWithProgress}
-                      className="text-xs font-mono uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1"
-                    >
-                      <RotateCcw size={13} /> Retry
-                    </button>
+
+                    <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 font-jakarta flex flex-wrap items-center justify-between gap-2">
+                      <span>Didn't start automatically?</span>
+                      <a
+                        href={apkPath}
+                        download={apkFileName}
+                        className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200"
+                      >
+                        Click here to download directly
+                      </a>
+                    </div>
                   </motion.div>
                 )}
 
@@ -244,7 +237,7 @@ export default function DownloadPage() {
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <FileCode2 size={14} className="text-[#E8A838]" /> ~45 MB
+                    <FileCode2 size={14} className="text-[#E8A838]" /> ~131 MB
                   </span>
                   <span>•</span>
                   <span className="text-emerald-800 dark:text-emerald-400 font-bold">Verified Safe</span>
@@ -267,7 +260,7 @@ export default function DownloadPage() {
                   Why Android shows "File might be harmful"
                 </h4>
                 <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                  Because Ally-jis is distributed directly through our official campus server (<code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">ally-jis.xyz</code>) instead of Google Play, Android displays a standard warning notice whenever downloading any <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">.apk</code> file in Chrome or web browsers.
+                  Because Ally-jis is distributed directly through our official campus server (<code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">ally-jis.xyz</code>) and Cloudflare R2 CDN instead of Google Play, Android displays a standard warning notice whenever downloading any <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">.apk</code> file in Chrome or web browsers.
                 </p>
                 <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 leading-relaxed italic">
                   <strong>Rest assured:</strong> Our application binary is signed, verified, completely safe, and built strictly for the CHMSU Alijis student community.
@@ -282,11 +275,11 @@ export default function DownloadPage() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">Version</span>
-                  <span className="font-bold text-gray-900 dark:text-white">v1.0.0 (Alpha 1.0)</span>
+                  <span className="font-bold text-gray-900 dark:text-white">v1.0.0 (Official Release)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
-                  <span className="text-gray-500 dark:text-gray-400 uppercase">Host Domain</span>
-                  <span className="font-bold text-[#1A6B3C] dark:text-emerald-400">ally-jis.xyz</span>
+                  <span className="text-gray-500 dark:text-gray-400 uppercase">CDN Delivery</span>
+                  <span className="font-bold text-[#1A6B3C] dark:text-emerald-400">Cloudflare R2 (Global)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">Audience</span>

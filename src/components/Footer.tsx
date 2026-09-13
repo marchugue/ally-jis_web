@@ -89,7 +89,7 @@ export function Footer() {
       </div>
 
       <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-white/60 font-jakarta gap-4">
-        <p>© {new Date().getFullYear()} Ally-jis (ally-jis.xyz) • <span className="text-[#E8A838] font-semibold">Alpha Test 1.0 (Selected & Developer Testers Only)</span></p>
+        <p>© {new Date().getFullYear()} Ally-jis (ally-jis.xyz) • <span className="text-[#E8A838] font-semibold">Official Release v1.0</span></p>
         <p className="flex items-center gap-1">
           Made with <Heart size={12} className="text-[#E8A838] fill-[#E8A838]" /> for CHMSU Students
         </p>

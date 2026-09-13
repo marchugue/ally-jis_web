@@ -357,8 +357,8 @@ export default function WelcomePage() {
                 {/* Editorial Ledger List with Stagger InView */}
                 <div className="space-y-4 pt-2 max-w-lg">
                   {[
-                    { label: 'Format', val: 'Signed Android APK (v1.0 Beta)' },
-                    { label: 'Package Weight', val: '~45 MB Data-Optimized' },
+                    { label: 'Format', val: 'Signed Android APK (v1.0 Official Release)' },
+                    { label: 'Package Weight', val: '~85 MB Data-Optimized' },
                     { label: 'Notification Engine', val: 'Instant Mutual Match Alerts' },
                     { label: 'OS Support', val: 'Android 8.0 Oreo or Newer' },
                   ].map((row, i) => (

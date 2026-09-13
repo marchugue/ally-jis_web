@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0-beta",
+  "version": "1.0.0",
   "minVersion": "1.0.0",
   "downloadUrl": "https://ally-jis.xyz/download",
-  "apkUrl": "https://ally-jis.xyz/ally-jis-app-beta-test-1.0.apk",
-  "releaseNotes": "Beta Test 1.0 (Internal Release): Strictly for selected student testers and developers only."
+  "apkUrl": "https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk",
+  "releaseNotes": "Official Release 1.0: Full public release for all CHMSU Alijis students and faculty."
 }
