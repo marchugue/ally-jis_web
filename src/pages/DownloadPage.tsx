@@ -1,37 +1,29 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, Globe, HelpCircle, ExternalLink } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
   const apkFileName = 'ally-jis-app-v1.0.apk';
-  const apkPath = 'https://www.ally-jis.xyz/download/ally-jis-app-v1.0.apk';
+  // Direct Cloudflare R2 CDN link (bypasses cross-origin redirect lag & suppression in mobile Chrome)
+  const directR2Url = 'https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk';
+  // Custom Domain fallback / mirror link
+  const domainMirrorUrl = 'https://www.ally-jis.xyz/download/ally-jis-app-v1.0.apk';
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
-
-  // Directly initiates native browser streaming download (saves directly via OS Download Manager)
-  const triggerNativeDownload = () => {
-    const link = document.createElement('a');
-    link.href = apkPath;
-    link.setAttribute('download', apkFileName);
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const [showTroubleshooting, setShowTroubleshooting] = useState(true);
 
   const handleDownload = () => {
+    // Note: We do NOT call preventDefault() or synthesize a second link.click().
+    // The native user click on the <a> tag directly initiates the browser download stream.
     setDownloading(true);
     setProgress(0);
     setIsCompleted(false);
 
-    // 1. Immediately invoke the browser's native file download stream
-    triggerNativeDownload();
-
-    // 2. Smoothly animate handoff progress to 100% without memory bottlenecks or blob freezes
+    // Smoothly animate progress indicator to show user the system handoff
     let currentProgress = 0;
     const interval = setInterval(() => {
       currentProgress += 25;
@@ -43,7 +35,7 @@ export default function DownloadPage() {
       } else {
         setProgress(currentProgress);
       }
-    }, 150);
+    }, 120);
   };
 
   return (
@@ -160,15 +152,27 @@ export default function DownloadPage() {
                 {!downloading && !isCompleted && (
                   <div className="space-y-3">
                     <motion.a
-                      href={apkPath}
+                      href={directR2Url}
                       download={apkFileName}
-                      whileHover={{ scale: 1.03, y: -2 }}
-                      whileTap={{ scale: 0.96 }}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={handleDownload}
-                      className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-9 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
+                      className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto text-center"
                     >
                       <Download size={18} /> Download {apkFileName}
                     </motion.a>
+
+                    <div className="flex items-center gap-2 pt-1 text-xs text-gray-600 dark:text-gray-400 font-mono">
+                      <span>Alternate:</span>
+                      <a
+                        href={domainMirrorUrl}
+                        download={apkFileName}
+                        onClick={handleDownload}
+                        className="underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 font-semibold inline-flex items-center gap-1"
+                      >
+                        <Globe size={13} /> Domain Mirror Link
+                      </a>
+                    </div>
                   </div>
                 )}
 
@@ -193,7 +197,7 @@ export default function DownloadPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 font-mono">
-                      <span>Direct streaming ~131 MB APK</span>
+                      <span>Direct CDN stream ~131 MB APK</span>
                       <span className="text-[#B45309] dark:text-amber-400 font-medium">Handing off to browser...</span>
                     </div>
                   </motion.div>
@@ -214,7 +218,7 @@ export default function DownloadPage() {
                         </div>
                       </div>
                       <a
-                        href={apkPath}
+                        href={directR2Url}
                         download={apkFileName}
                         onClick={handleDownload}
                         className="text-xs font-mono uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
@@ -225,26 +229,102 @@ export default function DownloadPage() {
 
                     <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 font-jakarta flex flex-wrap items-center justify-between gap-2">
                       <span>Didn't start automatically?</span>
-                      <a
-                        href={apkPath}
-                        download={apkFileName}
-                        className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200"
-                      >
-                        Click here to download directly
-                      </a>
+                      <div className="flex items-center gap-3">
+                        <a
+                          href={directR2Url}
+                          download={apkFileName}
+                          className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200 inline-flex items-center gap-1"
+                        >
+                          Direct CDN Link
+                        </a>
+                        <span>•</span>
+                        <a
+                          href={domainMirrorUrl}
+                          download={apkFileName}
+                          className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200 inline-flex items-center gap-1"
+                        >
+                          Domain Link
+                        </a>
+                      </div>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Android 100% Notice / Security Context */}
-                <div className="p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-                  <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <strong className="font-semibold block">Android Download Note (100% Status):</strong>
-                    <p className="leading-relaxed text-[11.5px]">
-                      When the download reaches 100%, Android and Chrome run a Google Play Protect scan on the ~131 MB APK before committing the file. If Chrome prompts <em>"File might be harmful"</em>, tap <strong>"Download anyway"</strong>. Then tap the finished notification or open <strong>Files &gt; Downloads</strong> to tap and install.
-                    </p>
+                {/* Mobile Troubleshooting: "Didn't see the 'File might be harmful' or 'Download anyway' prompt?" */}
+                <div className="bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div 
+                    onClick={() => setShowTroubleshooting(!showTroubleshooting)}
+                    className="flex items-center justify-between cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+                      <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Phone didn't show "Download anyway"?</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline flex items-center gap-1"
+                    >
+                      {showTroubleshooting ? 'Hide Steps' : 'Tap for Quick Fix'}
+                      {showTroubleshooting ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
                   </div>
+
+                  <AnimatePresence>
+                    {showTroubleshooting && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-3 pt-2 text-xs text-amber-950 dark:text-amber-100 border-t border-amber-500/20"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {/* 1. Messenger / Instagram in-app browser */}
+                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
+                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+                              <ExternalLink size={13} /> 1. Using Messenger or Instagram?
+                            </strong>
+                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
+                              Social apps block APK downloads. Tap the <strong>3 dots (⋮)</strong> in the top-right corner of Messenger/Instagram and choose <strong>"Open in Chrome"</strong>.
+                            </p>
+                          </div>
+
+                          {/* 2. Chrome Downloads folder */}
+                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
+                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+                              <Download size={13} /> 2. Check Chrome Downloads
+                            </strong>
+                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
+                              In Chrome, tap the <strong>3 dots (⋮) → Downloads</strong>. If the APK is marked <em>"Blocked: suspicious file"</em>, tap it and select <strong>"Keep anyway"</strong>.
+                            </p>
+                          </div>
+
+                          {/* 3. Safe Browsing settings */}
+                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
+                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+                              <ShieldAlert size={13} /> 3. Chrome Safe Browsing
+                            </strong>
+                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
+                              If "Enhanced Protection" is on, Chrome hides popups. Go to Chrome <strong>Settings → Privacy and security → Safe Browsing</strong> and choose <strong>"Standard protection"</strong>.
+                            </p>
+                          </div>
+
+                          {/* 4. Install Unknown Apps */}
+                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
+                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+                              <Smartphone size={13} /> 4. Allow Browser Install
+                            </strong>
+                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
+                              When tapping the APK in Downloads, if Android says "Cannot install unknown apps", tap <strong>Settings</strong> and toggle <strong>"Allow from this source"</strong>.
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-amber-800/90 dark:text-amber-300/80 font-mono italic">
+                          ✓ Direct download URL: <a href={directR2Url} className="underline font-bold" target="_blank" rel="noreferrer">pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev</a>
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Pill specifications */}
