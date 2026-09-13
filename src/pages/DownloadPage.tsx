@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, Globe, HelpCircle, ExternalLink, X, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle, ShieldAlert, Globe, X, Sparkles } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
@@ -17,7 +17,6 @@ export default function DownloadPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [savedToPhone, setSavedToPhone] = useState(false);
-  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
 
   const startWebsiteDownload = () => {
     setDownloading(true);
@@ -266,83 +265,24 @@ export default function DownloadPage() {
                   </motion.div>
                 )}
 
-                {/* Mobile Troubleshooting: "Didn't see the 'File might be harmful' or 'Download anyway' prompt?" */}
-                <div className="bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl p-4 sm:p-5 space-y-3">
-                  <div 
-                    onClick={() => setShowTroubleshooting(!showTroubleshooting)}
-                    className="flex items-center justify-between cursor-pointer select-none"
-                  >
-                    <div className="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
-                      <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                      <span>Phone didn't show "Download anyway"?</span>
+                {/* 100% Freeze / Stuck Instructions */}
+                <div className="p-4 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-start gap-3 text-xs text-emerald-950 dark:text-emerald-200 shadow-xs">
+                  <AlertCircle size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5 w-full">
+                    <strong className="font-semibold block text-sm text-[#1A6B3C] dark:text-emerald-300">
+                      Download Freezes at 100%? Return to Website:
+                    </strong>
+                    <p className="leading-relaxed text-[12px] text-gray-700 dark:text-gray-300">
+                      If the download progress appears to freeze or pause at <strong>100%</strong>, Android is running its Google Play Protect scan on the ~131 MB APK before committing the file to disk.
+                    </p>
+                    <div className="p-3 bg-white/75 dark:bg-black/30 rounded-xl space-y-1 text-[11.5px] text-gray-800 dark:text-gray-200 font-medium border border-emerald-500/20">
+                      <p>1. <strong>Go back to this website tab</strong> if you navigated away or opened another app.</p>
+                      <p>2. Tap <strong>"Open Allow Prompt"</strong> or <strong>"Allow & Save to Downloads"</strong>.</p>
+                      <p>3. When Chrome asks <em>"File might be harmful"</em>, tap <strong>"Download anyway"</strong>.</p>
+                      <p>4. Your APK file will finish saving directly to your phone's <strong>Downloads</strong> folder — tap the finished notification to install!</p>
                     </div>
-                    <button 
-                      type="button" 
-                      className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline flex items-center gap-1"
-                    >
-                      {showTroubleshooting ? 'Hide Steps' : 'Tap for Quick Fix'}
-                      {showTroubleshooting ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
                   </div>
-
-                  <AnimatePresence>
-                    {showTroubleshooting && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-3 pt-2 text-xs text-amber-950 dark:text-amber-100 border-t border-amber-500/20"
-                      >
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          {/* 1. Messenger / Instagram in-app browser */}
-                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
-                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
-                              <ExternalLink size={13} /> 1. Using Messenger or Instagram?
-                            </strong>
-                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
-                              Social apps block APK downloads. Tap the <strong>3 dots (⋮)</strong> in the top-right corner of Messenger/Instagram and choose <strong>"Open in Chrome"</strong>.
-                            </p>
-                          </div>
-
-                          {/* 2. Chrome Downloads folder */}
-                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
-                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
-                              <Download size={13} /> 2. Check Chrome Downloads
-                            </strong>
-                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
-                              In Chrome, tap the <strong>3 dots (⋮) → Downloads</strong>. If the APK is marked <em>"Blocked: suspicious file"</em>, tap it and select <strong>"Keep anyway"</strong>.
-                            </p>
-                          </div>
-
-                          {/* 3. Safe Browsing settings */}
-                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
-                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
-                              <ShieldAlert size={13} /> 3. Chrome Safe Browsing
-                            </strong>
-                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
-                              If "Enhanced Protection" is on, Chrome hides popups. Go to Chrome <strong>Settings → Privacy and security → Safe Browsing</strong> and choose <strong>"Standard protection"</strong>.
-                            </p>
-                          </div>
-
-                          {/* 4. Install Unknown Apps */}
-                          <div className="p-3 bg-white/70 dark:bg-black/30 rounded-xl border border-amber-500/20 space-y-1">
-                            <strong className="text-amber-900 dark:text-amber-300 font-semibold flex items-center gap-1.5">
-                              <Smartphone size={13} /> 4. Allow Browser Install
-                            </strong>
-                            <p className="text-[11.5px] leading-relaxed text-gray-700 dark:text-gray-300">
-                              When tapping the APK in Downloads, if Android says "Cannot install unknown apps", tap <strong>Settings</strong> and toggle <strong>"Allow from this source"</strong>.
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-amber-800/90 dark:text-amber-300/80 font-mono italic">
-                          ✓ Direct download URL: <a href={directR2Url} className="underline font-bold" target="_blank" rel="noreferrer">pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev</a>
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
-
                 {/* Pill specifications */}
                 <div className="flex flex-wrap items-center gap-3 pt-2 font-mono text-xs text-[#1A6B3C]/70 dark:text-gray-400">
                   <span className="flex items-center gap-1">
@@ -447,7 +387,7 @@ export default function DownloadPage() {
                     Tap Download APK
                   </h3>
                   <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
-                    Click the green download button above to save <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">{apkFileName}</code> to your device. If prompted with "File might be harmful", tap <strong>Download anyway</strong>.
+                    Click the download button above to save <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">{apkFileName}</code>. If the download pauses or freezes at 100%, return to this website tab, tap <strong>"Open Allow Prompt"</strong>, and choose <strong>Download anyway</strong>.
                   </p>
                 </div>
                 <div className="w-12 h-0.5 bg-[#1A6B3C]/30 dark:bg-white/20" />
