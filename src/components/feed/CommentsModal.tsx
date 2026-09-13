@@ -16,6 +16,9 @@ interface CommentsModalProps {
   onTogglePostLike?: (post: FeedPost) => void;
   onDeletePost?: (postId: string) => void;
   onAuthorClick?: (authorId: string) => void;
+  onToggleFollow?: (authorId: string, isFollowing: boolean) => void;
+  /** If provided, auto-selects this comment as the reply target after load (used for comment_reply deep-links). */
+  initialReplyCommentId?: string | null;
 }
 
 function formatTime(value: string) {
@@ -24,6 +27,20 @@ function formatTime(value: string) {
   } catch {
     return '';
   }
+}
+
+function renderCommentContent(content: string) {
+  const parts = content.split(/(#[a-zA-Z0-9_]+)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('#')) {
+      return (
+        <span key={i} className="font-semibold text-[#1A6B3C] dark:text-emerald-400">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
 }
 
 function CommentRow({
@@ -53,9 +70,11 @@ function CommentRow({
     <div className="flex items-start gap-2.5">
       <AvatarDisplay src={author?.avatar_url} name={displayName} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="bg-gray-50 border border-gray-100 rounded-2xl px-3.5 py-2.5">
-          <p className="font-jakarta font-bold text-xs text-gray-900">{displayName}</p>
-          <p className="font-jakarta text-sm text-gray-800 break-words mt-0.5 leading-relaxed">{comment.content}</p>
+        <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-3.5 py-2.5">
+          <p className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">{displayName}</p>
+          <p className="font-jakarta text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5 leading-relaxed">
+            {renderCommentContent(comment.content)}
+          </p>
         </div>
         <div className="flex items-center gap-3 mt-1 px-1">
           <span className="font-jakarta text-[11px] text-gray-400">{formatTime(comment.created_at)}</span>
@@ -88,6 +107,8 @@ export default function CommentsModal({
   onTogglePostLike,
   onDeletePost,
   onAuthorClick,
+  onToggleFollow,
+  initialReplyCommentId,
 }: CommentsModalProps) {
   const [comments, setComments] = useState<FeedCommentWithReplies[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +117,8 @@ export default function CommentsModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localPost, setLocalPost] = useState<FeedPost | null>(post);
   const inputRef = useRef<HTMLInputElement>(null);
+  const commentRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const autoRepliedRef = useRef<string | null>(null);
 
   useEffect(() => {
     setLocalPost(post);
@@ -126,6 +149,36 @@ export default function CommentsModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  // Auto-enter reply mode when initialReplyCommentId is set (from comment_reply deep-links)
+  useEffect(() => {
+    if (!initialReplyCommentId || isLoading || comments.length === 0) return;
+    if (autoRepliedRef.current === initialReplyCommentId) return; // already handled
+
+    // Find the target in top-level or replies
+    let target: FeedComment | undefined;
+    for (const c of comments) {
+      if (c.id === initialReplyCommentId) { target = c; break; }
+      const reply = (c.replies ?? []).find((r) => r.id === initialReplyCommentId);
+      if (reply) { target = c; break; } // reply to the parent, not the reply itself
+    }
+
+    if (target) {
+      autoRepliedRef.current = initialReplyCommentId;
+      // Scroll to that comment
+      const el = commentRowRefs.current.get(target.id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Brief highlight
+        el.classList.add('ring-2', 'ring-[#1A6B3C]/50', 'dark:ring-emerald-400/50', 'rounded-2xl', 'transition-all');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-[#1A6B3C]/50', 'dark:ring-emerald-400/50', 'rounded-2xl');
+        }, 2000);
+      }
+      // Trigger reply mode
+      handleReplyClick(target);
+    }
+  }, [initialReplyCommentId, isLoading, comments]);
 
   if (!post || !localPost) return null;
 
@@ -193,9 +246,23 @@ export default function CommentsModal({
     );
   };
 
+  const handleToggleFollow = (authorId: string, isFollowing: boolean) => {
+    setLocalPost((prev) =>
+      prev && prev.author
+        ? { ...prev, author: { ...prev.author, is_following: isFollowing } }
+        : prev
+    );
+    onToggleFollow?.(authorId, isFollowing);
+  };
+
   const handleReplyClick = (comment: FeedComment) => {
-    const name = comment.author?.full_name || comment.author?.username || 'this comment';
-    setReplyTarget({ id: comment.id, name });
+    const handle = (comment.author?.username || comment.author?.full_name || 'ally').replace(/\s+/g, '_');
+    setReplyTarget({ id: comment.id, name: `#${handle}` });
+    setDraft((prev) => {
+      const tag = `#${handle} `;
+      if (prev.startsWith(tag)) return prev;
+      return `${tag}${prev}`;
+    });
     inputRef.current?.focus();
   };
 
@@ -206,27 +273,27 @@ export default function CommentsModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full sm:max-w-2xl md:max-w-3xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full sm:max-w-2xl md:max-w-3xl bg-white dark:bg-[#111827] rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-gray-100 dark:border-white/10 animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-white/90 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/10 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <h2 className="font-fraunces text-lg font-bold text-gray-900">Post & Comments</h2>
-            <span className="px-2 py-0.5 rounded-full bg-[#1A6B3C]/10 text-[#1A6B3C] font-jakarta font-semibold text-xs">
+            <h2 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Post & Comments</h2>
+            <span className="px-2 py-0.5 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 font-jakarta font-semibold text-xs">
               {localPost.comments_count}
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Scrollable Container (FeedPostCard + Comments) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-gray-100">
+        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-white/10">
           {/* Top Section: FeedPostCard */}
-          <div className="bg-white p-2 sm:p-3">
+          <div className="bg-white dark:bg-[#111827] p-2 sm:p-3">
             <FeedPostCard
               post={localPost}
               currentUser={currentUser}
@@ -234,6 +301,7 @@ export default function CommentsModal({
               onCommentClick={handleFocusInput}
               onDelete={onDeletePost}
               onAuthorClick={onAuthorClick}
+              onToggleFollow={handleToggleFollow}
               showBorder={false}
             />
           </div>
@@ -250,31 +318,38 @@ export default function CommentsModal({
               <div className="py-8 space-y-3">
                 {[1, 2].map((i) => (
                   <div key={i} className="flex gap-3 animate-pulse">
-                    <div className="w-8 h-8 bg-gray-200 rounded-lg flex-shrink-0" />
+                    <div className="w-8 h-8 bg-gray-200 dark:bg-white/10 rounded-lg flex-shrink-0" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 bg-gray-200 rounded-full w-1/4" />
-                      <div className="h-10 bg-gray-100 rounded-xl w-3/4" />
+                      <div className="h-3 bg-gray-200 dark:bg-white/10 rounded-full w-1/4" />
+                      <div className="h-10 bg-gray-100 dark:bg-white/5 rounded-xl w-3/4" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : comments.length === 0 ? (
-              <div className="text-center py-10 px-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                <MessageCircle size={28} className="mx-auto text-gray-300 mb-2" />
-                <p className="font-jakarta font-semibold text-sm text-gray-600">No comments yet</p>
+              <div className="text-center py-10 px-4 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                <MessageCircle size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="font-jakarta font-semibold text-sm text-gray-600 dark:text-gray-300">No comments yet</p>
                 <p className="font-jakarta text-xs text-gray-400 mt-0.5">Be the first to join the conversation.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="space-y-3">
+                  <div
+                    key={comment.id}
+                    className="space-y-3"
+                    ref={(el) => {
+                      if (el) commentRowRefs.current.set(comment.id, el);
+                      else commentRowRefs.current.delete(comment.id);
+                    }}
+                  >
                     <CommentRow
                       comment={comment}
                       onToggleLike={toggleLikeAndSync}
                       onReply={() => handleReplyClick(comment)}
                     />
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="ml-7 sm:ml-9 border-l-2 border-[#1A6B3C]/15 pl-3 sm:pl-4 space-y-3">
+                      <div className="ml-7 sm:ml-9 border-l-2 border-[#1A6B3C]/15 dark:border-emerald-500/30 pl-3 sm:pl-4 space-y-3">
                         {comment.replies.map((reply) => (
                           <CommentRow key={reply.id} comment={reply} onToggleLike={toggleLikeAndSync} />
                         ))}
@@ -288,13 +363,13 @@ export default function CommentsModal({
         </div>
 
         {/* Input Footer */}
-        <div className="px-4 py-3 border-t border-gray-100 bg-white sticky bottom-0 z-10 shadow-lg">
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#111827] sticky bottom-0 z-10 shadow-lg">
           {replyTarget && (
-            <div className="flex items-center justify-between mb-2 px-3 py-1.5 bg-[#1A6B3C]/8 rounded-xl text-xs font-jakarta">
-              <span className="text-[#1A6B3C] font-semibold">Replying to {replyTarget.name}</span>
+            <div className="flex items-center justify-between mb-2 px-3 py-1.5 bg-[#1A6B3C]/8 dark:bg-emerald-500/20 rounded-xl text-xs font-jakarta">
+              <span className="text-[#1A6B3C] dark:text-emerald-400 font-semibold">Replying to {replyTarget.name}</span>
               <button
                 onClick={() => setReplyTarget(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-0.5"
               >
                 <X size={14} />
               </button>
@@ -317,12 +392,12 @@ export default function CommentsModal({
                 }
               }}
               placeholder={replyTarget ? `Reply to ${replyTarget.name}…` : 'Write a comment…'}
-              className="flex-1 bg-gray-100/80 focus:bg-white rounded-2xl px-4 py-2.5 font-jakarta text-sm text-gray-900 outline-none border border-transparent focus:border-[#1A6B3C]/30 focus:ring-2 focus:ring-[#1A6B3C]/20 transition-all placeholder:text-gray-400"
+              className="flex-1 bg-gray-100/80 dark:bg-white/5 focus:bg-white dark:focus:bg-white/10 rounded-2xl px-4 py-2.5 font-jakarta text-sm text-gray-900 dark:text-white outline-none border border-transparent focus:border-[#1A6B3C]/30 dark:focus:border-emerald-500/30 focus:ring-2 focus:ring-[#1A6B3C]/20 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
             />
             <button
               onClick={handleSend}
               disabled={!draft.trim() || isSubmitting}
-              className="w-9 h-9 rounded-xl bg-[#1A6B3C] text-white flex items-center justify-center disabled:opacity-40 disabled:bg-gray-200 disabled:text-gray-400 hover:bg-[#155a33] active:scale-95 transition-all flex-shrink-0 shadow-xs"
+              className="w-9 h-9 rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center disabled:opacity-40 disabled:bg-gray-200 dark:disabled:bg-white/10 disabled:text-gray-400 hover:bg-[#155a33] dark:hover:bg-emerald-500 active:scale-95 transition-all flex-shrink-0 shadow-xs"
             >
               <Send size={16} />
             </button>

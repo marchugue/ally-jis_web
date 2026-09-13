@@ -1,7 +1,7 @@
 // src/pages/MessagesPage.tsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Search, Info } from 'lucide-react';
+import { ArrowLeft, UserPlus, Search, Info, Clock, MessagesSquare } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations } from '@/hooks/useConversations';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
@@ -21,7 +21,7 @@ import { apiClient, isApiConfigured } from '@/api/client';
 import { CURRENT_USER } from '@/data/mockData';
 import { profileService } from '@/lib/services/profileService';
 import { chatService, formatForwardedMessage } from '@/lib/services/chatService';
-import { ConversationHeader } from '@/components/chat/ConversationHeader';
+import { ConversationPaneSkeleton } from '@/components/chat/ConversationPaneSkeleton';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { ConversationInfoPanel } from '@/components/chat/ConversationInfoPanel';
 import { DeleteMode } from '@/components/chat/DeleteConversationModal';
@@ -29,9 +29,13 @@ import { MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { ForwardMessageModal } from '@/components/chat/ForwardMessageModal';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
-import { MatchRevealPanel } from '@/components/match/MatchRevealPanel';
+import { MatchTimerBadge, ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
+import { FloatingStatusBadge } from '@/components/match/FloatingStatusBadge';
+import { MatchRoadmapModal } from '@/components/match/MatchRoadmapModal';
+import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
 import { useChatBrowseUsers } from '@/hooks/useChatBrowseUsers';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { buildChatBrowseResults, computeMaxBrowseItems } from '@/lib/chatUserSearch';
 import type { ChatBrowseUser } from '@/lib/chatUserSearch';
 import { notify } from '@/components/ui/sonner';
@@ -45,6 +49,7 @@ export default function MessagesPage() {
   const { setChatFocused } = useChatView();
 
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [showRoadmapModal, setShowRoadmapModal] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student>(CURRENT_USER);
   const { conversations, isLoading: loadingConvs, refresh: refreshConvs, removeConversation } = useConversations(user?.id ?? null);
   const { messages, sendMessage, retrySend, reactToMessage, deleteMessage: deleteRealtimeMessage, isLoading: loadingMessages, partnerTyping, notifyTyping } = useRealtimeMessages(activeConversation?.id ?? null);
@@ -54,6 +59,43 @@ export default function MessagesPage() {
     activeConversation?.matchInfo?.stage ?? 0,
   );
 
+  // Check if streak was activated today (both participants sent at least 1 message today), exactly like mobile
+  const isStreakActiveToday = useMemo(() => {
+    if (Boolean(activeConversation?.streakActiveToday || activeConversation?.matchInfo?.streakActiveToday)) {
+      return true;
+    }
+    if (!messages.length || !user?.id) return false;
+
+    // Evaluate in both PHT (UTC+8) and device local date
+    const phtToday = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
+    const localToday = new Date().toISOString().slice(0, 10);
+
+    const hasBothOnDate = (targetDate: string) => {
+      let myMsg = false;
+      let partnerMsg = false;
+      for (const msg of messages) {
+        const timeStr = msg.createdAt || msg.timestamp;
+        if (!timeStr) continue;
+        const msgPht = new Date(new Date(timeStr).getTime() + 8 * 3600_000)
+          .toISOString()
+          .slice(0, 10);
+        const msgLocal = new Date(timeStr).toISOString().slice(0, 10);
+
+        if (msgPht === targetDate || msgLocal === targetDate) {
+          if (msg.senderId === user.id) {
+            myMsg = true;
+          } else if (msg.senderId) {
+            partnerMsg = true;
+          }
+        }
+        if (myMsg && partnerMsg) return true;
+      }
+      return myMsg && partnerMsg;
+    };
+
+    return hasBothOnDate(phtToday) || hasBothOnDate(localToday);
+  }, [messages, user?.id, activeConversation?.streakActiveToday, activeConversation?.matchInfo?.streakActiveToday]);
+
   const handleEndMatch = useCallback(async () => {
     const matchId = activeConversation?.matchInfo?.matchId;
     if (!matchId) return;
@@ -61,7 +103,16 @@ export default function MessagesPage() {
       await apiClient.endMatch(matchId);
       notify.success('Match ended');
       setShowInfoPanel(false);
-      void refreshConvs();
+      setActiveConversation((prev) =>
+        prev && prev.matchInfo?.matchId === matchId
+          ? {
+              ...prev,
+              variant: 'anonymous_ended',
+              matchInfo: prev.matchInfo ? { ...prev.matchInfo, status: 'ended', ended: true } : prev.matchInfo,
+            }
+          : prev
+      );
+      void refreshConvs(true);
     } catch (err: any) {
       notify.error('Could not end match', err?.message);
     }
@@ -147,6 +198,75 @@ export default function MessagesPage() {
 
   const useBackend = Boolean(isApiConfigured && user);
 
+  // Instant real-time confirmation and ended listeners
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onMatchConfirmed = (payload: { matchId: string; conversationId: string }) => {
+      void refreshConvs(true);
+      if (activeConversation?.id === payload.conversationId) {
+        setActiveConversation((prev) =>
+          prev
+            ? {
+                ...prev,
+                matchInfo: prev.matchInfo
+                  ? { ...prev.matchInfo, status: 'confirmed', confirmedAt: new Date().toISOString() }
+                  : prev.matchInfo,
+              }
+            : null
+        );
+      }
+    };
+
+    const onMatchEnded = (payload?: { matchId?: string }) => {
+      void refreshConvs(true);
+      setActiveConversation((prev) => {
+        if (!prev) return null;
+        if (!payload?.matchId || prev.matchInfo?.matchId === payload.matchId) {
+          return {
+            ...prev,
+            variant: 'anonymous_ended',
+            matchInfo: prev.matchInfo ? { ...prev.matchInfo, status: 'ended', ended: true } : prev.matchInfo,
+          };
+        }
+        return prev;
+      });
+    };
+
+    const onStreakUpdated = (payload: { conversationId: string; dayStreak: number }) => {
+      void refreshConvs(true);
+      setActiveConversation((prev) => {
+        if (!prev || prev.id !== payload.conversationId) return prev;
+        return {
+          ...prev,
+          dayStreak: payload.dayStreak ?? prev.dayStreak,
+          streakActiveToday: true,
+          matchInfo: prev.matchInfo
+            ? {
+                ...prev.matchInfo,
+                dayStreak: payload.dayStreak ?? prev.matchInfo.dayStreak,
+                streakActiveToday: true,
+              }
+            : prev.matchInfo,
+        };
+      });
+    };
+
+    socket.on('matchmaking:match_confirmed', onMatchConfirmed);
+    socket.on('matchmaking:match_ended', onMatchEnded);
+    socket.on('matchmaking:chat_expired', onMatchEnded);
+    socket.on('conversation:streak_updated', onStreakUpdated);
+    socket.on('matchmaking:streak_update', onStreakUpdated);
+    return () => {
+      socket.off('matchmaking:match_confirmed', onMatchConfirmed);
+      socket.off('matchmaking:match_ended', onMatchEnded);
+      socket.off('matchmaking:chat_expired', onMatchEnded);
+      socket.off('conversation:streak_updated', onStreakUpdated);
+      socket.off('matchmaking:streak_update', onStreakUpdated);
+    };
+  }, [activeConversation?.id, refreshConvs]);
+
   // ── Profile load ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (user?.id && useBackend) {
@@ -162,15 +282,29 @@ export default function MessagesPage() {
   } = useIcebreakerToggle(activeConversation?.id);
 
   // ── Icebreakers ───────────────────────────────────────────────────────────
+  const lastSentRef = useRef<{ content: string | null; time: number }>({ content: null, time: 0 });
+
   const handleSendMessage = useCallback(async (content: string | null, image?: File | null) => {
     if (!user || !activeConversationRef.current) return;
+    if (!content && !image) return;
+
+    // Prevent accidental double clicks sending duplicate text
+    const now = Date.now();
+    if (!image && content && lastSentRef.current.content === content && now - lastSentRef.current.time < 1200) {
+      return;
+    }
+    lastSentRef.current = { content, time: now };
 
     let imageUrl = null;
     if (image) {
       imageUrl = await chatService.uploadChatMedia(image);
     }
 
-    await sendMessage(user.id, content, imageUrl, replyTarget);
+    try {
+      await sendMessage(user.id, content, imageUrl, replyTarget);
+    } catch (err) {
+      console.warn('Message send failed or handled optimistically:', err);
+    }
     setReplyTarget(null);
     refreshConvs(true);
   }, [user, sendMessage, refreshConvs, replyTarget]);
@@ -465,6 +599,9 @@ export default function MessagesPage() {
 
   const isBlocked = activeConversation ? activeConversation.blockStatus !== 'none' : false;
 
+  // Lift messages + input above the mobile keyboard; header stays fixed.
+  const keyboardInset = useKeyboardInset(isMobileView && Boolean(activeConversation));
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden h-full">
@@ -472,18 +609,20 @@ export default function MessagesPage() {
 
         {/* ── Sidebar ── */}
         <div className={cn(
-          'w-full md:w-[360px] bg-white flex flex-col overflow-hidden min-h-0 flex-shrink-0',
-          'border-r border-gray-100',
+          'w-full md:w-[360px] bg-white dark:bg-[#0D131F] flex flex-col overflow-hidden min-h-0 flex-shrink-0',
+          'border-r border-gray-100 dark:border-white/10',
           activeConversation && 'hidden md:flex',
         )}>
           <div className="p-4 flex items-center justify-between flex-shrink-0">
-            <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C]">Chats</h1>
+            <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400">Chats</h1>
             <button
               type="button"
               onClick={handleToggleBrowseMode}
               className={cn(
-                'p-2 text-[#1A6B3C] rounded-full transition-all',
-                browseMode ? 'bg-[#1A6B3C]/10' : 'hover:bg-[#1A6B3C]/5',
+                'p-2 rounded-full transition-all',
+                browseMode
+                  ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
+                  : 'text-[#1A6B3C] dark:text-emerald-400 hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5',
               )}
               aria-label="Find people to message"
               aria-pressed={browseMode}
@@ -501,7 +640,7 @@ export default function MessagesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={browseMode ? 'Search allies and classmates…' : 'Search chats or people…'}
-                className="w-full bg-gray-100 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 transition-all"
+                className="w-full bg-gray-100 dark:bg-white/5 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 border border-transparent dark:border-white/10 transition-all"
               />
             </div>
           </div>
@@ -518,8 +657,8 @@ export default function MessagesPage() {
                 className={cn(
                   'px-3 py-1.5 rounded-full text-xs font-jakarta font-medium transition-colors',
                   variantFilter === opt.key
-                    ? 'bg-[#1A6B3C] text-white'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200',
+                    ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10',
                 )}
               >
                 {opt.label}
@@ -540,7 +679,7 @@ export default function MessagesPage() {
                   <div className="p-6 text-center text-sm text-gray-400 font-jakarta">Loading people…</div>
                 ) : hasBrowseResults ? (
                   <>
-                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 bg-white sticky top-0 z-10 border-b border-gray-50">
+                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-white dark:bg-[#0D131F] sticky top-0 z-10 border-b border-gray-50 dark:border-white/5">
                       {searchQuery.trim() ? 'Start a chat' : 'Allies to message'}
                     </p>
                     <ChatBrowseList
@@ -562,7 +701,7 @@ export default function MessagesPage() {
 
                 {filteredConversations.length > 0 && (
                   <>
-                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 bg-white sticky top-0 z-10 border-b border-gray-50">
+                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-white dark:bg-[#0D131F] sticky top-0 z-10 border-b border-gray-50 dark:border-white/5">
                       {searchQuery.trim() ? 'Matching chats' : 'Your chats'}
                     </p>
                     <ConversationList
@@ -599,41 +738,50 @@ export default function MessagesPage() {
 
         {/* ── Chat Area ── */}
         <div className={cn(
-          'flex-1 bg-white flex flex-col overflow-hidden min-h-0',
-          !activeConversation && 'hidden md:flex',
+          'flex-1 bg-white dark:bg-[#090D16] flex flex-col overflow-hidden min-h-0',
+          (!activeConversation && !requestedConversationId) && 'hidden md:flex',
         )}>
           {activeConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-white flex-shrink-0">
+              <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center gap-3 bg-white dark:bg-[#0D131F] flex-shrink-0">
                 <button
                   onClick={() => setActiveConversation(null)}
-                  className="md:hidden p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C]"
+                  className="md:hidden p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div className="relative">
                   {isAnonymousConversation ? (
-                    <AnonymousAvatar avatarKey={activeConversation.matchInfo?.partnerAvatar} size={40} className="rounded-xl" />
+                    <AnonymousAvatar avatarKey={activeConversation.matchInfo?.partnerAvatar} size={40} className="rounded-full" />
                   ) : (
                     <AvatarDisplay
                       src={activeConversation.participantAvatar}
                       name={activeConversation.participantName}
-                      className="w-10 h-10 rounded-xl object-cover"
+                      className="w-10 h-10 rounded-full object-cover"
                     />
                   )}
                   {!isAnonymousConversation && isParticipantOnline && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#0D131F] rounded-full" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <h3 className="font-jakarta font-bold text-gray-900 truncate">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <h3 className="font-jakarta font-bold text-gray-900 dark:text-white truncate">
                       {activeConversation.participantName}
                     </h3>
-                    {/* Streak badge — visible for any conversation with a 3+ day PHT streak */}
+                    {isAnonymousConversation && activeConversation.variant !== 'anonymous_ended' && (
+                      <ActiveAllyBadge />
+                    )}
+                    {/* Streak badge — mobile aligned, visible for any dayStreak > 0 */}
                     <ChatStreakBadge
-                      dayStreak={activeConversation.dayStreak ?? 0}
+                      dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                      isStreakActiveToday={isStreakActiveToday}
+                      onClick={
+                        isAnonymousConversation && activeConversation.variant !== 'anonymous_ended'
+                          ? () => setShowRoadmapModal(true)
+                          : undefined
+                      }
                     />
                   </div>
                   {isAnonymousConversation ? (
@@ -648,13 +796,35 @@ export default function MessagesPage() {
                     </p>
                   )}
                 </div>
+                {isAnonymousConversation && (
+                  <MatchTimerBadge
+                    chatExpiresAt={activeConversation.matchInfo?.chatExpiresAt}
+                    confirmedAt={activeConversation.matchInfo?.confirmedAt}
+                    status={activeConversation.matchInfo?.status}
+                    ended={activeConversation.variant === 'anonymous_ended'}
+                    onExpire={() => {
+                      void refreshConvs(true);
+                      setActiveConversation((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              variant: 'anonymous_ended',
+                              matchInfo: prev.matchInfo
+                                ? { ...prev.matchInfo, status: 'ended', ended: true }
+                                : prev.matchInfo,
+                            }
+                          : null
+                      );
+                    }}
+                  />
+                )}
                 <button
                   onClick={() => setShowInfoPanel((prev) => !prev)}
                   className={cn(
                     'flex p-2 rounded-full transition-all',
                     showInfoPanel
-                      ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]'
-                      : 'text-gray-400 hover:bg-gray-100 hover:text-[#1A6B3C]',
+                      ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
+                      : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-[#1A6B3C] dark:hover:text-emerald-400',
                   )}
                   aria-label="Conversation info"
                 >
@@ -662,13 +832,34 @@ export default function MessagesPage() {
                 </button>
               </div>
 
-              {/* Messages */}
+              {/* Messages + input — shift up with mobile keyboard */}
+              <div
+                className="flex-1 min-h-0 flex flex-col overflow-hidden"
+                style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
+              >
               <div className="flex-1 min-h-0 relative flex flex-col">
+                {isAnonymousConversation && activeConversation.variant !== 'anonymous_ended' && (
+                  <FloatingStatusBadge
+                    stage={activeConversation.matchInfo?.stage ?? 1}
+                    onClick={() => setShowRoadmapModal(true)}
+                  />
+                )}
                 <ChatWindow
                   messages={messages}
                   currentUserId={user?.id ?? CURRENT_USER.id}
                   participantAvatar={activeConversation.participantAvatar}
                   participantName={activeConversation.participantName}
+                  participantCourse={activeConversation.participantCourse}
+                  participantDepartment={activeConversation.participantDepartment}
+                  sharedInterests={
+                    isAnonymousConversation
+                      ? (reveal.reveal?.sharedInterests ?? activeConversation.sharedInterests ?? [])
+                      : (activeConversation.sharedInterests ?? [])
+                  }
+                  partnerAvatar={activeConversation.matchInfo?.partnerAvatar}
+                  isAnonymous={isAnonymousConversation}
+                  isLoading={loadingMessages}
+                  conversationId={activeConversation.id}
                   onRetry={retrySend}
                   onReact={handleReact}
                   onReply={handleReply}
@@ -688,18 +879,26 @@ export default function MessagesPage() {
                 />
               )}
 
+              {/* Match ended banner — informs the user that messaging is closed */}
+              {isAnonymousConversation && activeConversation.variant === 'anonymous_ended' && (
+                <div className="px-4 py-3 bg-red-500/5 dark:bg-red-500/10 border-t border-b border-red-500/20 text-center font-jakarta text-xs text-red-600 dark:text-red-400 flex items-center justify-center gap-2">
+                  <Clock size={14} className="text-red-500 flex-shrink-0" />
+                  <span>This anonymous match has ended. Messaging is disabled.</span>
+                </div>
+              )}
+
               {/* Input */}
               <div className="flex-shrink-0">
                 <MessageInput
                   onSend={handleSendMessage}
                   onTextChange={(text) => notifyTyping(text.length > 0)}
-                  disabled={loadingMessages || isBlocked}
+                  disabled={loadingMessages || isBlocked || activeConversation.variant === 'anonymous_ended'}
                   replyTo={replyTarget}
                   onCancelReply={() => setReplyTarget(null)}
                   currentUserId={user?.id ?? CURRENT_USER.id}
                   participantName={activeConversation.participantName}
                 >
-                  {icebreakersEnabled && !isBlocked && (
+                  {icebreakersEnabled && !isBlocked && activeConversation.variant !== 'anonymous_ended' && (
                     <IcebreakerSuggestions
                       suggestions={suggestions}
                       onSelect={select}
@@ -708,29 +907,50 @@ export default function MessagesPage() {
                   )}
                 </MessageInput>
               </div>
+              </div>
             </>
+          ) : loadingConvs || Boolean(requestedConversationId) || (!isMobileView && conversations.length > 0) ? (
+            <ConversationPaneSkeleton />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50/50">
-              <ConversationHeader
-                currentUser={currentStudent}
-                activeConversation={null}
-                variant="empty"
-              />
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50 dark:bg-[#090D16]">
+              <div className="w-16 h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/10 flex items-center justify-center mb-4 text-[#1A6B3C] dark:text-emerald-400">
+                <MessagesSquare className="w-8 h-8" />
+              </div>
+              <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-base">
+                No conversation selected
+              </h3>
+              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed mt-1">
+                Pick a conversation from the list or discover new allies on campus to start chatting.
+              </p>
+              <button
+                onClick={() => navigate('/discover')}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-jakarta font-semibold bg-[#1A6B3C] text-white hover:bg-[#145530] transition-colors shadow-xs cursor-pointer"
+              >
+                <UserPlus size={14} />
+                Discover Allies
+              </button>
             </div>
           )}
         </div>
 
         {/* ── Info Panel (desktop) ── */}
-        {activeConversation && showInfoPanel && !isAnonymousConversation && (
+        {activeConversation && showInfoPanel && (
           <ConversationInfoPanel
             conversation={activeConversation}
             isOnline={isParticipantOnline}
+            isStreakActiveToday={isStreakActiveToday}
             icebreakersEnabled={icebreakersEnabled}
             icebreakersLoading={icebreakersLoading}
             onIcebreakersToggle={handleIcebreakersToggle}
             blockStatus={activeConversation.blockStatus}
             onBlockChange={handleBlockChange}
             onDelete={handleDeleteConversation}
+            onEndMatch={handleEndMatch}
+            sharedInterests={
+              isAnonymousConversation
+                ? (reveal.reveal?.sharedInterests ?? activeConversation.sharedInterests ?? [])
+                : (activeConversation.sharedInterests ?? [])
+            }
             variant="desktop"
             onClose={() => setShowInfoPanel(false)}
           />
@@ -738,37 +958,37 @@ export default function MessagesPage() {
       </div>
 
       {/* ── Info Panel (mobile) ── */}
-      {activeConversation && showInfoPanel && isMobileView && !isAnonymousConversation && (
+      {activeConversation && showInfoPanel && isMobileView && (
         <ConversationInfoPanel
           conversation={activeConversation}
           isOnline={isParticipantOnline}
+          isStreakActiveToday={isStreakActiveToday}
           icebreakersEnabled={icebreakersEnabled}
           icebreakersLoading={icebreakersLoading}
           onIcebreakersToggle={handleIcebreakersToggle}
           blockStatus={activeConversation.blockStatus}
           onBlockChange={handleBlockChange}
           onDelete={handleDeleteConversation}
+          onEndMatch={handleEndMatch}
+          sharedInterests={
+            isAnonymousConversation
+              ? (reveal.reveal?.sharedInterests ?? activeConversation.sharedInterests ?? [])
+              : (activeConversation.sharedInterests ?? [])
+          }
           variant="mobile"
           onClose={() => setShowInfoPanel(false)}
         />
       )}
 
-      {/* ── Match reveal panel (anonymous conversations only) ── */}
-      {activeConversation?.matchInfo && (
-        <MatchRevealPanel
-          open={showInfoPanel && Boolean(isAnonymousConversation)}
-          onOpenChange={setShowInfoPanel}
-          matchId={activeConversation.matchInfo.matchId}
-          stage={activeConversation.matchInfo.stage}
-          reveal={reveal.reveal}
-          identity={{
-            partnerAlias: activeConversation.matchInfo.partnerAlias ?? 'your match',
-            partnerAvatar: activeConversation.matchInfo.partnerAvatar ?? '',
-          }}
-          onUseIcebreaker={(text) => void sendMessage(user?.id ?? CURRENT_USER.id, text)}
-          onFriendRequestSent={() => notify.success('Friend request sent')}
-          onEndMatch={handleEndMatch}
-          ended={activeConversation.variant === 'anonymous_ended'}
+      {/* ── Roadmap Progression Modal (anonymous conversations) ── */}
+      {isAnonymousConversation && (
+        <MatchRoadmapModal
+          open={showRoadmapModal}
+          onOpenChange={setShowRoadmapModal}
+          stage={activeConversation.matchInfo?.stage ?? 1}
+          dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+          partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
+          matchId={activeConversation.matchInfo?.matchId}
         />
       )}
       {forwardMessage && activeConversation && (

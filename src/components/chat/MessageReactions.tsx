@@ -34,8 +34,8 @@ export function MessageReactions({ reactions, currentUserId, isMe, onToggle }: M
           className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-jakarta border transition-colors',
             meta.reactedByMe
-              ? 'bg-[#1A6B3C]/10 border-[#1A6B3C]/30 text-[#1A6B3C]'
-              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+              ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 border-[#1A6B3C]/30 dark:border-emerald-500/40 text-[#1A6B3C] dark:text-emerald-300'
+              : 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10',
           )}
         >
           <span className="text-sm leading-none">{emoji}</span>

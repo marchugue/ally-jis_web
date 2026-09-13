@@ -9,13 +9,15 @@ import { useNavigate } from 'react-router-dom';
 import {
   KeyRound, ShieldOff, LogOut, Trash2, ChevronRight, Eye, EyeOff,
   UserCheck, Bell, Shield, Lock, Smartphone, Moon, Sliders,
-  Search, ArrowLeft, ShieldCheck, Zap, AlertTriangle
+  Search, ArrowLeft, ShieldCheck, Zap, AlertTriangle, Sun, Monitor, Palette
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMe } from '@/hooks/useAdminMe';
+import { useTheme } from '@/context/ThemeContext';
 import { apiClient, isApiConfigured } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
 
 type SettingsTab = 'security' | 'privacy' | 'preferences' | 'account';
 
@@ -44,10 +46,10 @@ const CATEGORIES: CategoryItem[] = [
   },
   {
     id: 'preferences',
-    title: 'Notifications & Alerts',
-    subtitle: 'Push alerts & digest preferences',
-    icon: Bell,
-    keywords: ['notifications', 'alerts', 'email', 'digest', 'match'],
+    title: 'Appearance & Preferences',
+    subtitle: 'Theme, display & notification alerts',
+    icon: Palette,
+    keywords: ['appearance', 'theme', 'dark', 'light', 'mode', 'display', 'notifications', 'alerts', 'email', 'digest', 'match'],
   },
   {
     id: 'account',
@@ -279,12 +281,14 @@ function AccountDeletionModal({
 export default function SettingsPage() {
   const { user, signOut, deleteAccount } = useAuth();
   const { role: adminRole } = useAdminMe();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   const useBackend = Boolean(isApiConfigured && user);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('security');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Password State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -365,7 +369,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex-1 flex min-h-0 h-full w-full bg-white dark:bg-[#090D16] text-gray-900 dark:text-gray-100 overflow-hidden font-sans">
+    <div className="flex-1 flex min-h-0 h-full w-full bg-[#F7F4EF] dark:bg-[#121212] text-gray-900 dark:text-[#E2E8F0] overflow-hidden font-sans">
 
       {/* Account Deletion Modal */}
       <AccountDeletionModal
@@ -596,31 +600,133 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* TAB 3: PREFERENCES & NOTIFICATIONS */}
+            {/* TAB 3: APPEARANCE & PREFERENCES */}
             {activeTab === 'preferences' && (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                <div className="border-b border-gray-100 dark:border-white/10 pb-4">
-                  <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Bell size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Notifications & Alerts
-                  </h3>
-                  <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Configure how and when Ally-jis notifies you about updates.</p>
+              <div className="space-y-6">
+                {/* Appearance Card */}
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                  <div className="border-b border-gray-100 dark:border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Palette size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Appearance & Theme
+                      </h3>
+                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Choose your interface appearance or sync automatically with your device settings.
+                      </p>
+                    </div>
+                    <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-jakarta font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 capitalize">
+                      Active: {theme === 'system' ? `System (${resolvedTheme})` : theme}
+                    </span>
+                  </div>
+
+                  {/* 3 Interactive Theme Selector Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {[
+                      {
+                        id: 'light' as const,
+                        label: 'Light Mode',
+                        desc: 'Clean daylight ivory canvas with lush forest emerald accents.',
+                        icon: Sun,
+                        previewBg: 'bg-[#F7F4EF] border-gray-300 text-gray-900',
+                        accent: 'bg-[#1A6B3C]',
+                      },
+                      {
+                        id: 'dark' as const,
+                        label: 'Dark Mode',
+                        desc: 'Deep nocturnal slate canvas with soothing jade-emerald accents.',
+                        icon: Moon,
+                        previewBg: 'bg-[#121212] border-white/20 text-gray-200',
+                        accent: 'bg-[#38C185]',
+                      },
+                      {
+                        id: 'system' as const,
+                        label: 'System Sync',
+                        desc: 'Automatically matches your device operating system theme.',
+                        icon: Monitor,
+                        previewBg: 'bg-gradient-to-br from-[#F7F4EF] to-[#121212] border-gray-400 text-gray-800',
+                        accent: 'bg-amber-500',
+                      },
+                    ].map((opt) => {
+                      const isSelected = theme === opt.id;
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setTheme(opt.id)}
+                          className={cn(
+                            'p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer group',
+                            isSelected
+                              ? 'border-[#1A6B3C] dark:border-emerald-500 ring-2 ring-[#1A6B3C]/20 dark:ring-emerald-500/20 bg-[#1A6B3C]/5 dark:bg-emerald-950/20 shadow-xs'
+                              : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 bg-gray-50/50 dark:bg-white/5'
+                          )}
+                        >
+                          <div>
+                            {/* Card Visual Preview Mini-Window */}
+                            <div className={cn(
+                              'w-full h-16 rounded-xl border mb-3 p-2 flex flex-col justify-between overflow-hidden shadow-xs',
+                              opt.previewBg
+                            )}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                                  <div className="w-2 h-2 rounded-full bg-amber-400" />
+                                  <div className="w-2 h-2 rounded-full bg-green-400" />
+                                </div>
+                                <div className={cn('w-2 h-2 rounded-full', opt.accent)} />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="w-1/2 h-2 rounded-full bg-current opacity-40" />
+                                <div className="w-3/4 h-1.5 rounded-full bg-current opacity-20" />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <Icon size={16} className={cn(isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')} />
+                                <span className={cn('font-jakarta text-sm font-bold', isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
+                                  {opt.label}
+                                </span>
+                              </div>
+                              {isSelected && (
+                                <div className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 animate-pulse" />
+                              )}
+                            </div>
+                            <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                              {opt.desc}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ToggleItem
-                    title="Match & Request Push Notifications"
-                    description="Get instant notifications for new match suggestions and ally requests."
-                    checked={matchAlerts}
-                    onChange={setMatchAlerts}
-                    icon={Bell}
-                  />
-                  <ToggleItem
-                    title="Weekly Campus Activity Digest"
-                    description="Receive a weekly summary email of popular posts and campus announcements."
-                    checked={emailDigest}
-                    onChange={setEmailDigest}
-                    icon={Moon}
-                  />
+                {/* Notifications & Alerts */}
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                  <div className="border-b border-gray-100 dark:border-white/10 pb-4">
+                    <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Bell size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Notifications & Alerts
+                    </h3>
+                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Configure how and when Ally-jis notifies you about updates.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ToggleItem
+                      title="Match & Request Push Notifications"
+                      description="Get instant notifications for new match suggestions and ally requests."
+                      checked={matchAlerts}
+                      onChange={setMatchAlerts}
+                      icon={Bell}
+                    />
+                    <ToggleItem
+                      title="Weekly Campus Activity Digest"
+                      description="Receive a weekly summary email of popular posts and campus announcements."
+                      checked={emailDigest}
+                      onChange={setEmailDigest}
+                      icon={Moon}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -678,7 +784,7 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <button
-                          onClick={handleSignOut}
+                          onClick={() => setShowLogoutConfirm(true)}
                           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/15 transition-all shadow-xs cursor-pointer"
                         >
                           <LogOut size={14} /> Log out
@@ -717,6 +823,13 @@ export default function SettingsPage() {
         </div>
 
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleSignOut}
+      />
 
     </div>
   );

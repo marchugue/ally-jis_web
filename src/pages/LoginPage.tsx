@@ -4,10 +4,8 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, ArrowLeft, Shield, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
-import type { AdminRole } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { notify } from '@/components/ui/sonner';
-import { RoleSelectionModal } from '@/components/RoleSelectionModal';
 
 export default function LoginPage() {
   const { user, loading, setMockUser, completeLogin, needsOnboarding, isPendingApproval } = useAuth();
@@ -16,7 +14,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
-  const [pendingRole, setPendingRole] = useState<AdminRole | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -61,16 +58,6 @@ export default function LoginPage() {
       notify.success('Signed in successfully', 'Welcome back!');
       setFormLoading(false);
 
-      try {
-        const adminInfo = await apiClient.getAdminMe();
-        if (adminInfo?.role) {
-          setPendingRole(adminInfo.role);
-          return;
-        }
-      } catch {
-        // Regular user, proceed normally
-      }
-
       const userNeedsOnboarding = !session.user?.user_metadata?.onboarding_complete;
       const isPending =
         session.user?.user_metadata?.pending_student_verification === true &&
@@ -103,42 +90,33 @@ export default function LoginPage() {
     }
   };
 
-  if (pendingRole) {
-    return (
-      <RoleSelectionModal
-        role={pendingRole}
-        onClose={() => setPendingRole(null)}
-      />
-    );
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] dark:border-emerald-500/20 dark:border-t-emerald-400 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-emerald-400 selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
       
       {/* ── TOP NAVIGATION ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <motion.div 
               whileHover={{ scale: 1.08, rotate: -4 }}
               whileTap={{ scale: 0.94 }}
-              className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
+              className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
             >
               A
             </motion.div>
             <div className="flex flex-col">
-              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                 Ally<span className="text-[#E8A838]">-jis</span>
               </span>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                 CHMSU Alijis
               </span>
             </div>
@@ -147,7 +125,7 @@ export default function LoginPage() {
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
             <Link 
               to="/" 
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
             >
               <ArrowLeft size={14} /> Back to Home
             </Link>
@@ -167,23 +145,23 @@ export default function LoginPage() {
             className="hidden lg:block lg:col-span-6 space-y-8"
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/70">
                 <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
                 <span>Student Secure Access</span>
               </div>
               
-              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] leading-[0.95]">
+              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] dark:text-white leading-[0.95]">
                 Welcome <br />
                 back to <br />
                 <span className="italic font-normal text-[#E8A838]">Alijis.</span>
               </h1>
             </div>
 
-            <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed max-w-lg">
+            <p className="font-jakarta text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed max-w-lg">
               Sign in to access your student network, check real-time campus match affinity, and chat securely with peers.
             </p>
 
-            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80">
+            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80 dark:text-emerald-400/80">
               <div className="flex items-center gap-2.5">
                 <Shield size={15} className="text-[#E8A838]" />
                 <span>Protected with end-to-end encrypted session tokens</span>
@@ -202,19 +180,19 @@ export default function LoginPage() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md mx-auto lg:max-w-none lg:col-span-6"
           >
-            <div className="bg-[#EDE7DB] p-6 sm:p-12 rounded-3xl sm:rounded-[36px] shadow-sm space-y-6 sm:space-y-8 border-none">
+            <div className="bg-[#EDE7DB] dark:bg-[#111827] dark:border dark:border-white/10 p-6 sm:p-12 rounded-3xl sm:rounded-[36px] shadow-sm space-y-6 sm:space-y-8 border-none">
               
-              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 pb-6">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70">
+              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-6">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/70">
                   Authentication
                 </span>
-                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C]">
+                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C] dark:text-white">
                   Sign In with Credentials
                 </h2>
               </div>
 
               {!isApiConfigured && (
-                <div className="bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-jakarta p-4 rounded-2xl">
+                <div className="bg-amber-100/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs font-jakarta p-4 rounded-2xl">
                   API is currently in local development mode. Add VITE_API_BASE_URL in your .env file or use demo mode.
                 </div>
               )}
@@ -222,7 +200,7 @@ export default function LoginPage() {
               <form onSubmit={handleLogin} className="space-y-6">
                 {/* Email Field with high-contrast label */}
                 <div className="space-y-2">
-                  <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                  <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 block">
                     Campus Email or Username
                   </label>
                   <input
@@ -230,7 +208,7 @@ export default function LoginPage() {
                     placeholder="yourname@chmsu.edu.ph"
                     value={form.email}
                     onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                    className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-400 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 font-jakarta text-sm outline-none transition-all shadow-xs"
                     autoComplete="email"
                   />
                 </div>
@@ -238,12 +216,12 @@ export default function LoginPage() {
                 {/* Password Field */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C]">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
                       Password
                     </label>
                     <Link
                       to="/forgot-password"
-                      className="font-jakarta text-xs font-bold text-[#1A6B3C] hover:underline"
+                      className="font-jakarta text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline"
                     >
                       Forgot password?
                     </Link>
@@ -254,13 +232,13 @@ export default function LoginPage() {
                       placeholder="Enter your account password"
                       value={form.password}
                       onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-                      className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-400 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 font-jakarta text-sm outline-none transition-all shadow-xs"
                       autoComplete="current-password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C] transition-colors p-1"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors p-1"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -275,8 +253,8 @@ export default function LoginPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   className={cn(
-                    'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
-                    formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                    'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                    formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D] dark:hover:bg-emerald-500'
                   )}
                 >
                   {formLoading ? (
@@ -301,11 +279,11 @@ export default function LoginPage() {
               </form>
 
               {/* Registration Prompt */}
-              <div className="pt-6 border-t border-[#1A6B3C]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-jakarta">
-                <span className="text-gray-700">Don't have an account yet?</span>
+              <div className="pt-6 border-t border-[#1A6B3C]/15 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-jakarta">
+                <span className="text-gray-700 dark:text-gray-400">Don't have an account yet?</span>
                 <Link
-                  to="/onboarding"
-                  className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] bg-white hover:bg-[#F7F4EF] px-5 py-2.5 rounded-full transition-all shadow-xs"
+                  to="/register"
+                  className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 bg-white dark:bg-white/10 hover:bg-[#F7F4EF] dark:hover:bg-white/20 px-5 py-2.5 rounded-full transition-all shadow-xs"
                 >
                   Join Circle Now →
                 </Link>
@@ -318,7 +296,7 @@ export default function LoginPage() {
       </main>
 
       {/* ── FOOTER SIMPLE STRIP ── */}
-      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 border-t border-[#1A6B3C]/10">
+      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 dark:text-gray-400 border-t border-[#1A6B3C]/10 dark:border-white/10">
         Carlos Hilado Memorial State University – Alijis Campus • Ally-jis v1.0
       </footer>
 

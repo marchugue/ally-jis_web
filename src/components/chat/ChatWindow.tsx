@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, memo, useCallback } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState, memo, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Clock, AlertCircle } from 'lucide-react';
 import { Message } from '@/types/ally';
@@ -13,12 +13,22 @@ import { MessageImageViewer } from '@/components/chat/MessageImageViewer';
 import { MessageReactions } from '@/components/chat/MessageReactions';
 import { DeleteMessageModal, MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { getReplyBubbleLabel } from '@/lib/replyLabels';
+import { ConversationWelcomeHeader } from './ConversationWelcomeHeader';
+import { ChatSkeleton } from './ChatSkeleton';
+import { dedupeMessages } from '@/hooks/useRealtimeMessages';
 
 interface ChatWindowProps {
   messages: Message[];
   currentUserId: string;
   participantAvatar?: string | null;
   participantName?: string | null;
+  participantCourse?: string | null;
+  participantDepartment?: string | null;
+  sharedInterests?: string[];
+  partnerAvatar?: string | null;
+  isAnonymous?: boolean;
+  isLoading?: boolean;
+  conversationId?: string | null;
   onRetry?: (message: Message) => void;
   onReact?: (message: Message, emoji: string) => void;
   onReply?: (message: Message) => void;
@@ -26,11 +36,99 @@ interface ChatWindowProps {
   onDelete?: (message: Message, mode?: MessageDeleteMode) => void;
 }
 
+export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
+
+const GROUPING_MAX_GAP_MS = 5 * 60 * 1000;
+
+function isConsecutiveWith(current: Message, adjacent: Message | null): boolean {
+  if (!adjacent) return false;
+  if (current.senderId !== adjacent.senderId) return false;
+  if (current.isDeleted || adjacent.isDeleted) return false;
+  if (current.status === 'failed' || adjacent.status === 'failed') return false;
+
+  const timeA = new Date(current.createdAt || current.timestamp).getTime();
+  const timeB = new Date(adjacent.createdAt || adjacent.timestamp).getTime();
+  if (isNaN(timeA) || isNaN(timeB)) return true;
+  return Math.abs(timeA - timeB) <= GROUPING_MAX_GAP_MS;
+}
+
+function getBubbleBorderRadii(isMe: boolean, groupPosition: MessageGroupPosition = 'single'): React.CSSProperties {
+  const R_LARGE = '18px';
+  const R_SMALL = '4px';
+
+  if (isMe) {
+    switch (groupPosition) {
+      case 'first':
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_SMALL,
+          borderBottomLeftRadius: R_LARGE,
+        };
+      case 'middle':
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_SMALL,
+          borderBottomRightRadius: R_SMALL,
+          borderBottomLeftRadius: R_LARGE,
+        };
+      case 'last':
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_SMALL,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_LARGE,
+        };
+      case 'single':
+      default:
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_LARGE,
+        };
+    }
+  } else {
+    switch (groupPosition) {
+      case 'first':
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_SMALL,
+        };
+      case 'middle':
+        return {
+          borderTopLeftRadius: R_SMALL,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_SMALL,
+        };
+      case 'last':
+        return {
+          borderTopLeftRadius: R_SMALL,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_LARGE,
+        };
+      case 'single':
+      default:
+        return {
+          borderTopLeftRadius: R_LARGE,
+          borderTopRightRadius: R_LARGE,
+          borderBottomRightRadius: R_LARGE,
+          borderBottomLeftRadius: R_LARGE,
+        };
+    }
+  }
+}
+
 interface MessageBubbleProps {
   msg: Message;
   isMe: boolean;
   currentUserId: string;
   showAvatar: boolean;
+  groupPosition?: MessageGroupPosition;
   participantAvatar?: string | null;
   participantName?: string | null;
   onRetry?: (message: Message) => void;
@@ -45,6 +143,7 @@ const MessageBubble = memo(function MessageBubble({
   isMe,
   currentUserId,
   showAvatar,
+  groupPosition = 'single',
   participantAvatar,
   participantName,
   onRetry,
@@ -57,6 +156,7 @@ const MessageBubble = memo(function MessageBubble({
   const isSending = msg.status === 'sending';
   const isFailed = msg.status === 'failed';
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [showTime, setShowTime] = useState(false);
   const [viewingImage, setViewingImage] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -99,7 +199,7 @@ const MessageBubble = memo(function MessageBubble({
               <AvatarDisplay
                 src={participantAvatar}
                 name={participantName}
-                className="w-8 h-8 rounded-lg overflow-hidden opacity-50"
+                className="w-8 h-8 rounded-full overflow-hidden opacity-50"
                 textClassName="text-[10px]"
               />
             ) : (
@@ -111,8 +211,8 @@ const MessageBubble = memo(function MessageBubble({
           className={cn(
             'px-4 py-2 rounded-2xl text-xs font-jakarta italic border border-dashed select-none',
             isMe
-              ? 'bg-gray-50 border-gray-200 text-gray-400 rounded-br-none'
-              : 'bg-gray-50 border-gray-200 text-gray-400 rounded-bl-none',
+              ? 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 rounded-br-none'
+              : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 rounded-bl-none',
           )}
         >
           This message was deleted
@@ -146,16 +246,34 @@ const MessageBubble = memo(function MessageBubble({
       : null;
 
   const bubbleContent = (
-    <div className="flex flex-col" style={{ maxWidth: '100%' }}>
+    <div className="flex flex-col relative" style={{ maxWidth: '100%' }}>
+      {/* Desktop hover: small flat card with only the time */}
+      {!isSending && !isFailed && (
+        <div
+          className={cn(
+            'hidden md:block absolute opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-20 whitespace-nowrap',
+            'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-[11px] font-medium px-2 py-0.5 rounded-md shadow-sm border border-gray-200 dark:border-gray-700',
+            isMe ? 'right-0 -top-6' : 'left-0 -top-6',
+          )}
+        >
+          {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </div>
+      )}
+
       <div
         ref={bubbleRef}
         {...mobileLongPressHandlers}
+        onClick={() => setShowTime((prev) => !prev)}
+        style={getBubbleBorderRadii(isMe, groupPosition)}
         className={cn(
-          'max-w-full rounded-2xl text-sm font-jakarta transition-opacity select-none',
+          'max-w-full text-sm font-jakarta transition-opacity select-none cursor-pointer',
           isImageOnly ? 'p-1' : 'px-4 py-2',
           isMe
-            ? 'bg-[#1A6B3C] text-white rounded-br-none'
-            : 'bg-gray-100 text-gray-800 rounded-bl-none',
+            ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
+            : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100',
           isSending && 'opacity-60',
           isFailed && 'opacity-80 ring-1 ring-red-400',
         )}
@@ -190,21 +308,25 @@ const MessageBubble = memo(function MessageBubble({
           )
         )}
         {msg.content && <p className={cn(isImageOnly ? 'hidden' : undefined)}>{msg.content}</p>}
-        <span
-          className={cn(
-            'text-[10px] flex items-center gap-1 mt-1',
-            isMe ? 'text-white/60' : 'text-gray-400',
-            isImageOnly && 'px-2 pb-1',
-          )}
-        >
-          {isSending && <Clock size={10} className="animate-pulse" />}
-          {isSending
-            ? 'Sending…'
-            : new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-        </span>
+
+        {/* On phone/click: expands to show the time at the bottom of the message; on sending: shows sending status */}
+        {(showTime || isSending) && (
+          <span
+            className={cn(
+              'text-[10px] flex items-center gap-1 mt-1',
+              isMe ? 'text-white/60' : 'text-gray-400',
+              isImageOnly && 'px-2 pb-1',
+            )}
+          >
+            {isSending && <Clock size={10} className="animate-pulse" />}
+            {isSending
+              ? 'Sending…'
+              : new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+          </span>
+        )}
       </div>
 
       {msg.reactions && msg.reactions.length > 0 && (
@@ -241,10 +363,28 @@ const MessageBubble = memo(function MessageBubble({
     />
   );
 
+  const itemMarginClass = useMemo(() => {
+    switch (groupPosition) {
+      case 'first':
+        return 'mt-2 mb-0.5';
+      case 'middle':
+        return 'my-0.5';
+      case 'last':
+        return 'mt-0.5 mb-2';
+      case 'single':
+      default:
+        return 'my-1.5';
+    }
+  }, [groupPosition]);
+
+  const showSenderName = (groupPosition === 'first' || groupPosition === 'single') && !msg.isDeleted;
+  const senderDisplayName = isMe ? 'Me' : (participantName || 'User');
+
   return (
     <div
       className={cn(
         'group flex items-end gap-2',
+        itemMarginClass,
         isMe ? 'flex-row-reverse' : 'flex-row',
       )}
     >
@@ -254,7 +394,7 @@ const MessageBubble = memo(function MessageBubble({
             <AvatarDisplay
               src={participantAvatar}
               name={participantName}
-              className="w-8 h-8 rounded-lg overflow-hidden"
+              className="w-8 h-8 rounded-full overflow-hidden"
               textClassName="text-[10px]"
             />
           ) : (
@@ -263,18 +403,30 @@ const MessageBubble = memo(function MessageBubble({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5" style={{ maxWidth: '75%' }}>
-        {isMe ? (
-          <>
-            {hoverActions}
-            {bubbleContent}
-          </>
-        ) : (
-          <>
-            {bubbleContent}
-            {hoverActions}
-          </>
+      <div className="flex flex-col" style={{ maxWidth: '75%' }}>
+        {showSenderName && (
+          <span
+            className={cn(
+              'text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-1 px-1 select-none',
+              isMe ? 'text-right self-end' : 'text-left self-start',
+            )}
+          >
+            {senderDisplayName}
+          </span>
         )}
+        <div className="flex items-center gap-1.5">
+          {isMe ? (
+            <>
+              {hoverActions}
+              {bubbleContent}
+            </>
+          ) : (
+            <>
+              {bubbleContent}
+              {hoverActions}
+            </>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -316,6 +468,13 @@ export function ChatWindow({
   currentUserId,
   participantAvatar,
   participantName,
+  participantCourse,
+  participantDepartment,
+  sharedInterests,
+  partnerAvatar,
+  isAnonymous,
+  isLoading = false,
+  conversationId,
   onRetry,
   onReact,
   onReply,
@@ -323,54 +482,114 @@ export function ChatWindow({
   onDelete,
 }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
 
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  const prevConvIdRef = useRef<string | null | undefined>(conversationId);
+  const prevMsgCountRef = useRef<number>(0);
+
+  // Defensive deduplication to guarantee unique React keys and eliminate duplicate bubbles
+  const uniqueMessages = useMemo(() => {
+    return dedupeMessages(messages);
+  }, [messages]);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+    } else if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [messages.length]);
+  }, []);
+
+  // When switching conversation or when messages first finish loading, instantly jump to bottom
+  useLayoutEffect(() => {
+    if (isLoading) return;
+
+    const convChanged = prevConvIdRef.current !== conversationId;
+    prevConvIdRef.current = conversationId;
+
+    if (convChanged || prevMsgCountRef.current === 0) {
+      // Instant snap to bottom so the user immediately sees the latest messages
+      scrollToBottom('auto');
+      requestAnimationFrame(() => scrollToBottom('auto'));
+    } else if (uniqueMessages.length > prevMsgCountRef.current) {
+      // New message sent or received -> smooth scroll to bottom
+      scrollToBottom('smooth');
+    }
+
+    prevMsgCountRef.current = uniqueMessages.length;
+  }, [conversationId, isLoading, uniqueMessages.length, scrollToBottom]);
 
   const handleConfirmDelete = (msg: Message, mode: MessageDeleteMode) => {
     setMessageToDelete(null);
     onDelete?.(msg, mode);
   };
 
+  if (isLoading) {
+    return <ChatSkeleton />;
+  }
+
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4 h-full min-h-0 custom-scrollbar"
-    >
-      {messages.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-40">
-          <div className="text-4xl mb-2">💬</div>
-          <p className="font-jakarta text-sm">No messages yet. Say hi!</p>
-        </div>
-      ) : (
-        messages.map((msg, idx) => {
-          const isMe = msg.senderId === currentUserId;
-          const showAvatar =
-            !isMe && (idx === 0 || messages[idx - 1].senderId !== msg.senderId);
-
-          return (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              isMe={isMe}
-              currentUserId={currentUserId}
-              showAvatar={showAvatar}
-              participantAvatar={participantAvatar}
-              participantName={participantName}
-              onRetry={onRetry}
-              onReact={onReact}
-              onReply={onReply}
-              onForward={onForward}
-              onDelete={(targetMsg) => setMessageToDelete(targetMsg)}
-            />
-          );
-        })
+      className={cn(
+        'flex-1 overflow-y-auto p-4 h-full min-h-0 custom-scrollbar flex flex-col',
+        uniqueMessages.length === 0 && 'justify-center'
       )}
+    >
+      {/* Centered conversation welcome header at the top */}
+      <ConversationWelcomeHeader
+        participantName={participantName ?? 'User'}
+        participantAvatar={participantAvatar}
+        participantCourse={participantCourse}
+        participantDepartment={participantDepartment}
+        sharedInterests={sharedInterests}
+        partnerAvatar={partnerAvatar}
+        isAnonymous={isAnonymous}
+        className={uniqueMessages.length === 0 ? 'my-auto' : 'mb-4'}
+      />
+
+      {uniqueMessages.map((msg, idx) => {
+        const isMe = msg.senderId === currentUserId;
+        const prev = idx > 0 ? uniqueMessages[idx - 1] : null;
+        const next = idx < uniqueMessages.length - 1 ? uniqueMessages[idx + 1] : null;
+
+        const hasPrev = isConsecutiveWith(msg, prev);
+        const hasNext = isConsecutiveWith(msg, next);
+
+        let groupPosition: MessageGroupPosition = 'single';
+        if (!hasPrev && hasNext) {
+          groupPosition = 'first';
+        } else if (hasPrev && hasNext) {
+          groupPosition = 'middle';
+        } else if (hasPrev && !hasNext) {
+          groupPosition = 'last';
+        }
+
+        const showAvatar =
+          !isMe && (idx === 0 || uniqueMessages[idx - 1].senderId !== msg.senderId);
+
+        return (
+          <MessageBubble
+            key={msg.id}
+            msg={msg}
+            isMe={isMe}
+            currentUserId={currentUserId}
+            showAvatar={showAvatar}
+            groupPosition={groupPosition}
+            participantAvatar={participantAvatar}
+            participantName={participantName}
+            onRetry={onRetry}
+            onReact={onReact}
+            onReply={onReply}
+            onForward={onForward}
+            onDelete={(targetMsg) => setMessageToDelete(targetMsg)}
+          />
+        );
+      })}
+
+      {/* Sentinel for auto-scrolling straight to bottom */}
+      <div ref={messagesEndRef} className="h-px w-full pointer-events-none flex-shrink-0" />
 
       {/* Individual Message Delete Modal */}
       {messageToDelete && (

@@ -215,8 +215,8 @@ export default function RequestsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-32 md:pb-12 w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-fraunces text-3xl font-bold text-[#1A6B3C]">Requests</h1>
-            <p className="font-jakarta text-[#1A6B3C]/60 mt-1">
+            <h1 className="font-fraunces text-3xl font-bold text-[#1A6B3C] dark:text-emerald-400">Requests</h1>
+            <p className="font-jakarta text-[#1A6B3C]/60 dark:text-gray-400 mt-1">
               {pendingCount > 0
                 ? `You have ${pendingCount} pending connection request${pendingCount === 1 ? '' : 's'}`
                 : 'No new requests at the moment.'}
@@ -224,7 +224,7 @@ export default function RequestsPage() {
           </div>
           <button
             onClick={() => loadRequests()}
-            className="p-2.5 rounded-xl border border-[#1A6B3C]/10 bg-white text-[#1A6B3C] shadow-sm hover:bg-[#1A6B3C]/5 transition-all"
+            className="p-2.5 rounded-xl border border-[#1A6B3C]/10 dark:border-white/10 bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-sm hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5 transition-all"
             title="Refresh requests"
           >
             <RefreshCcw size={18} className={cn(loading && "animate-spin")} />
@@ -242,22 +242,22 @@ export default function RequestsPage() {
 
         <div className="space-y-4">
           {loading && requests.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-[#1A6B3C]/6 card-shadow">
-              <div className="w-12 h-12 border-4 border-[#1A6B3C]/10 border-t-[#1A6B3C] rounded-full animate-spin mx-auto mb-4" />
+            <div className="bg-white dark:bg-[#111827] rounded-3xl p-12 text-center border border-[#1A6B3C]/6 dark:border-white/10 card-shadow">
+              <div className="w-12 h-12 border-4 border-[#1A6B3C]/10 dark:border-white/10 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin mx-auto mb-4" />
               <p className="font-jakarta text-gray-400">Loading your requests...</p>
             </div>
           ) : requests.length === 0 ? (
-            <div className="bg-white rounded-3xl p-16 text-center border border-[#1A6B3C]/6 card-shadow">
-              <div className="w-20 h-20 bg-[#1A6B3C]/5 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                <UserPlus size={40} className="text-[#1A6B3C]/20" />
+            <div className="bg-white dark:bg-[#111827] rounded-3xl p-16 text-center border border-[#1A6B3C]/6 dark:border-white/10 card-shadow">
+              <div className="w-20 h-20 bg-[#1A6B3C]/5 dark:bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <UserPlus size={40} className="text-[#1A6B3C]/20 dark:text-emerald-400/40" />
               </div>
-              <h3 className="font-fraunces text-2xl font-bold text-gray-700 mb-2">All caught up!</h3>
+              <h3 className="font-fraunces text-2xl font-bold text-gray-700 dark:text-white mb-2">All caught up!</h3>
               <p className="font-jakarta text-gray-400 max-w-sm mx-auto mb-8">
                 You don't have any pending requests. Why not explore the community and find new allies?
               </p>
               <button
                 onClick={() => navigate('/discover')}
-                className="bg-[#1A6B3C] text-white font-jakarta font-bold px-8 py-3 rounded-2xl hover:bg-[#155a33] transition-all shadow-lg"
+                className="bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold px-8 py-3 rounded-2xl transition-all shadow-lg"
               >
                 Discover New Allies
               </button>
@@ -272,7 +272,7 @@ export default function RequestsPage() {
                 <div
                   key={request.id}
                   className={cn(
-                    "bg-white rounded-3xl p-5 border border-[#1A6B3C]/6 card-shadow transition-all duration-300",
+                    "bg-white dark:bg-[#111827] rounded-3xl p-5 border border-[#1A6B3C]/6 dark:border-white/10 card-shadow transition-all duration-300",
                     isBusy && "opacity-70 grayscale-[0.5]"
                   )}
                 >
@@ -285,33 +285,33 @@ export default function RequestsPage() {
                           className="w-16 h-16 rounded-2xl object-cover shadow-md"
                         />
                         {isOnline(request.fromUserId) && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-sm" title="Online" />
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#111827] rounded-full shadow-sm" title="Online" />
                         )}
                         {request.status === 'pending' && !isOnline(request.fromUserId) && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#E8A838] border-2 border-white rounded-full animate-pulse" />
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#E8A838] border-2 border-white dark:border-[#111827] rounded-full animate-pulse" />
                         )}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-jakarta font-bold text-gray-900 truncate">
+                          <h3 className="font-jakarta font-bold text-gray-900 dark:text-white truncate">
                             {request.fromName}
                           </h3>
                           <span className={cn(
                             "text-[10px] font-jakarta font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
-                            isAccepted ? "bg-emerald-100 text-emerald-700" :
-                            isRejected ? "bg-gray-100 text-gray-500" :
-                            "bg-amber-100 text-amber-700"
+                            isAccepted ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300" :
+                            isRejected ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" :
+                            "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
                           )}>
                             {request.status}
                           </span>
                         </div>
-                        <p className="font-jakarta text-xs text-gray-500 mb-2">
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mb-2">
                           {request.course || 'CHMSU Student'}
                         </p>
-                        <p className="font-jakarta text-sm text-gray-600 leading-relaxed line-clamp-2 italic">
+                        <p className="font-jakarta text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-2 italic">
                           "{request.description || request.title}"
                         </p>
-                        <p className="text-[10px] text-[#3B8C7E] mt-2 font-medium">
+                        <p className="text-[10px] text-[#3B8C7E] dark:text-emerald-400/80 mt-2 font-medium">
                           Sent {request.timestamp}
                         </p>
                       </div>
@@ -323,14 +323,14 @@ export default function RequestsPage() {
                           <button
                             onClick={() => handleAccept(request)}
                             disabled={isBusy}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl hover:bg-[#155a33] transition-all shadow-md active:scale-95 disabled:opacity-50"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-50"
                           >
                             <Check size={16} /> Accept
                           </button>
                           <button
                             onClick={() => handleReject(request)}
                             disabled={isBusy}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gray-50 text-gray-600 font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl hover:bg-gray-100 transition-all active:scale-95 disabled:opacity-50"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
                           >
                             <X size={16} /> Ignore
                           </button>
@@ -339,7 +339,7 @@ export default function RequestsPage() {
                         <div className="flex flex-col gap-2">
                           <div className={cn(
                             "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-jakarta font-bold text-xs border w-full",
-                            isAccepted ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-gray-50 text-gray-400 border-gray-100"
+                            isAccepted ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800/30" : "bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-400 border-gray-100 dark:border-white/10"
                           )}>
                             {isAccepted ? (
                               <><Check size={14} /> Connected</>

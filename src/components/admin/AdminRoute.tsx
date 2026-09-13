@@ -10,8 +10,8 @@ export function AdminRoute() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#F7F4EF]">
-        <Loader2 className="animate-spin text-[#1A6B3C]" size={28} />
+      <div className="h-screen flex items-center justify-center bg-[#F7F4EF] dark:bg-[#0F1512] transition-colors">
+        <Loader2 className="animate-spin text-[#1A6B3C] dark:text-emerald-400" size={28} />
       </div>
     );
   }

@@ -24,8 +24,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   // ── Still loading session — show spinner ──────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center transition-colors">
+        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 dark:border-emerald-500/20 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin" />
       </div>
     );
   }
@@ -47,10 +47,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   // ── Verified but onboarding not complete ──────────────────────────────
-  // Send them back to finish onboarding (Steps 2-4). Allow /onboarding through
+  // Send them back to finish onboarding (Steps 2-4). Allow /onboarding and /register through
   // to avoid an infinite redirect loop.
-  if (needsOnboarding && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
+  if (needsOnboarding && location.pathname !== '/onboarding' && location.pathname !== '/register') {
+    return <Navigate to="/register" replace />;
   }
 
   // ── External-email student pending admin approval ─────────────────────

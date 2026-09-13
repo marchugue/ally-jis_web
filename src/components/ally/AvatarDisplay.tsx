@@ -26,7 +26,7 @@ export function AvatarDisplay({ src, name, alt, className, textClassName }: Avat
 
   if (src && !imgError && isEmojiAvatar(src)) {
     return (
-      <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 text-[#1A6B3C] flex-shrink-0 overflow-hidden select-none', className)}>
+      <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 dark:bg-transparent text-[#1A6B3C] dark:text-white flex-shrink-0 overflow-hidden select-none', className)}>
         <span className={cn('text-lg leading-none', textClassName)}>{src}</span>
       </div>
     );
@@ -46,7 +46,7 @@ export function AvatarDisplay({ src, name, alt, className, textClassName }: Avat
   const fallback = name?.trim().slice(0, 1).toUpperCase() || '👤';
 
   return (
-    <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 text-[#1A6B3C] font-bold flex-shrink-0 overflow-hidden', className)}>
+    <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-white font-bold flex-shrink-0 overflow-hidden', className)}>
       <span className={cn('text-sm leading-none select-none', textClassName)}>{fallback}</span>
     </div>
   );

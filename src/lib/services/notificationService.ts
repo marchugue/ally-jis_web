@@ -3,15 +3,30 @@ import { Notification } from '@/types/ally';
 
 const EXCLUDED_TYPES: Notification['type'][] = ['message'];
 
-export const mapNotification = (row: NotificationRow): Notification => ({
-  id: row.id,
-  type: row.type as Notification['type'],
-  title: row.title,
-  description: row.description ?? '',
-  timestamp: new Date(row.created_at).toLocaleString(),
-  isRead: row.is_read,
-  fromUserId: row.from_user_id ?? undefined,
-});
+/** Strip the legacy <!--meta:{...}--> prefix written by older feed.service versions. */
+function stripMetaPrefix(desc: string | undefined | null): string {
+  if (!desc) return '';
+  return desc.replace(/^<!--meta:\{[^}]*\}-->/i, '').trim();
+}
+
+export const mapNotification = (row: NotificationRow): Notification => {
+  const userObj = Array.isArray(row.from_user) ? row.from_user[0] : row.from_user;
+  return {
+    id: row.id,
+    type: row.type as Notification['type'],
+    title: row.title,
+    description: stripMetaPrefix(row.description),
+    timestamp: row.created_at || new Date().toISOString(),
+    isRead: row.is_read,
+    fromUserId: row.from_user_id ?? userObj?.id ?? undefined,
+    fromUserName: userObj?.username || userObj?.full_name || undefined,
+    fromUserAvatar: userObj?.avatar_url || undefined,
+    postId: row.post_id ?? undefined,
+    commentId: row.comment_id ?? undefined,
+    targetId: row.target_id ?? undefined,
+    redirection: row.redirection ?? undefined,
+  };
+};
 
 export const notificationService = {
   async list(limit = 20) {

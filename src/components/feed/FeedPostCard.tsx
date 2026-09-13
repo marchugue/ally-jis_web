@@ -1,10 +1,13 @@
 // src/components/feed/FeedPostCard.tsx
 
-import { useState } from 'react';
-import { ThumbsUp, MessageCircle, Globe2, Users, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { apiClient } from '@/api/client';
+import { notify } from '@/components/ui/sonner';
+import ReportPostModal from './ReportPostModal';
 import type { FeedPost } from '@/types/feed';
 import type { Student } from '@/types/ally';
 
@@ -18,18 +21,25 @@ interface FeedPostCardProps {
    * and navigates to their profile. Omitted (e.g. on ProfilePage, which
    * only ever shows one author's posts) it's just not clickable. */
   onAuthorClick?: (authorId: string) => void;
+  onToggleFollow?: (authorId: string, isFollowing: boolean) => void;
   showBorder?: boolean;
   className?: string;
 }
 
-function MediaGrid({ media }: { media: FeedPost['media'] }) {
+function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaClick?: () => void }) {
   if (!media || media.length === 0) return null;
 
   const sorted = [...media].sort((a, b) => a.position - b.position);
 
   if (sorted.length === 1) {
     return (
-      <div className="mt-3 rounded-xl overflow-hidden border border-gray-100/80 w-full bg-black/5 flex items-center justify-center">
+      <div
+        onClick={onMediaClick}
+        className={cn(
+          "mt-3 rounded-xl overflow-hidden border border-gray-100/80 dark:border-white/10 w-full bg-black/5 flex items-center justify-center",
+          onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
+        )}
+      >
         <img src={sorted[0].url} alt="" className="w-full h-auto max-h-[550px] object-cover" />
       </div>
     );
@@ -37,7 +47,13 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 2) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
+      <div
+        onClick={onMediaClick}
+        className={cn(
+          "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
+          onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
+        )}
+      >
         {sorted.map((m) => (
           <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
         ))}
@@ -47,7 +63,13 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   if (sorted.length === 3) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
+      <div
+        onClick={onMediaClick}
+        className={cn(
+          "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
+          onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
+        )}
+      >
         <img src={sorted[0].url} alt="" className="w-full object-cover row-span-2 h-full aspect-square" />
         <img src={sorted[1].url} alt="" className="w-full object-cover aspect-square" />
         <img src={sorted[2].url} alt="" className="w-full object-cover aspect-square" />
@@ -57,7 +79,13 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 
   // 4 images
   return (
-    <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80">
+    <div
+      onClick={onMediaClick}
+      className={cn(
+        "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
+        onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
+      )}
+    >
       {sorted.slice(0, 4).map((m) => (
         <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
       ))}
@@ -72,13 +100,66 @@ export default function FeedPostCard({
   onCommentClick,
   onDelete,
   onAuthorClick,
+  onToggleFollow,
   showBorder = true,
   className,
 }: FeedPostCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const author = post.author;
   const displayName = author?.full_name || author?.username || 'Ally member';
   const isOwn = post.author_id === currentUser.id;
+
+  const [isFollowing, setIsFollowing] = useState(Boolean(author?.is_following));
+  const [followBusy, setFollowBusy] = useState(false);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  const handleCopyLink = () => {
+    setShowMenu(false);
+    const url = `${window.location.origin}/feed#post-${post.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      notify.success('Link copied', 'Post link copied to clipboard.');
+    }).catch(() => {
+      notify.error('Could not copy link');
+    });
+  };
+
+  useEffect(() => {
+    setIsFollowing(Boolean(author?.is_following));
+  }, [author?.is_following]);
+
+  const handleToggleFollow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!post.author_id || followBusy) return;
+    const next = !isFollowing;
+    setIsFollowing(next);
+    onToggleFollow?.(post.author_id, next);
+    setFollowBusy(true);
+    try {
+      if (next) {
+        await apiClient.followUser(post.author_id);
+      } else {
+        await apiClient.unfollowUser(post.author_id);
+      }
+    } catch (err: any) {
+      console.warn('Failed to toggle follow:', err);
+      setIsFollowing(!next);
+      onToggleFollow?.(post.author_id, !next);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   const timeAgo = (() => {
     try {
@@ -90,11 +171,12 @@ export default function FeedPostCard({
 
   return (
     <article
+      id={`post-${post.id}`}
       className={cn(
-        'bg-white p-4',
+        'bg-white dark:bg-[#181818] p-5 sm:p-6 transition-colors',
         showBorder
-          ? 'border-b border-[#1A6B3C]/6 lg:rounded-xl lg:border lg:shadow-[0_1px_4px_rgba(0,0,0,0.06)]'
-          : 'rounded-xl border-0 shadow-none',
+          ? 'border-0 border-b sm:border border-gray-200/80 dark:border-white/10 rounded-none sm:rounded-2xl shadow-none sm:shadow-2xs'
+          : 'rounded-none sm:rounded-2xl border-0 shadow-none',
         className
       )}
     >
@@ -107,68 +189,117 @@ export default function FeedPostCard({
           <AvatarDisplay
             src={author?.avatar_url}
             name={displayName}
-            className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
           />
           <div className="min-w-0">
-            <p className="font-jakarta font-bold text-sm text-gray-900 truncate">{displayName}</p>
+            <p className="font-jakarta font-bold text-sm text-gray-900 dark:text-white truncate">{displayName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="font-jakarta text-[11px] text-gray-400">{timeAgo}</span>
-              <span className="text-gray-200">·</span>
+              <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">{timeAgo}</span>
+              <span className="text-gray-200 dark:text-gray-700">·</span>
               {post.audience === 'public' ? (
-                <Globe2 size={11} className="text-gray-400" />
+                <Globe2 size={11} className="text-gray-400 dark:text-gray-500" />
               ) : (
-                <Users size={11} className="text-gray-400" />
+                <Users size={11} className="text-gray-400 dark:text-gray-500" />
               )}
             </div>
           </div>
         </div>
 
-        {isOwn && onDelete && (
-          <div className="relative flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!isOwn && post.author_id && (
             <button
-              onClick={() => setShowMenu((v) => !v)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+              type="button"
+              onClick={handleToggleFollow}
+              disabled={followBusy}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-jakarta font-semibold transition-all flex items-center gap-1 disabled:opacity-60",
+                isFollowing
+                  ? "bg-gray-100 hover:bg-gray-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
+                  : "bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/15 text-[#1A6B3C] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30"
+              )}
             >
-              <MoreHorizontal size={16} />
+              {isFollowing ? "Following" : "+ Follow"}
+            </button>
+          )}
+
+          {/* Postcard Settings Menu */}
+          <div ref={menuRef} className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowMenu((v) => !v)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              aria-label="Post settings"
+            >
+              <MoreHorizontal size={17} />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-gray-100 z-10 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#1A2234] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-20 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onDelete(post.id);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-red-500 hover:bg-red-50 font-jakarta text-sm transition-colors"
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 font-jakarta text-xs transition-colors text-left font-medium"
                 >
-                  <Trash2 size={14} />
-                  Delete post
+                  <Link2 size={14} className="text-gray-400" />
+                  Copy link to post
                 </button>
+
+                {!isOwn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowReportModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold"
+                  >
+                    <Flag size={14} className="text-red-500" />
+                    Report post
+                  </button>
+                )}
+
+                {isOwn && onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete(post.id);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold"
+                  >
+                    <Trash2 size={14} className="text-red-500" />
+                    Delete post
+                  </button>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Content */}
-      <p className="mt-3 font-jakarta text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+      <p className="mt-3 font-jakarta text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words">
         {post.content}
       </p>
 
       {/* Media */}
-      <MediaGrid media={post.media} />
+      <MediaGrid media={post.media} onMediaClick={() => onCommentClick(post)} />
 
       {/* Divider */}
-      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1">
-        {/* Like */}
+      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/10 flex items-center gap-1">
+        {/* Like (Heart) */}
         <button
           onClick={() => onToggleLike(post)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold transition-colors flex-1 justify-center ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold transition-all active:scale-[0.98] flex-1 justify-center ${
             post.liked_by_me
-              ? 'bg-[#1A6B3C]/8 text-[#1A6B3C]'
-              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-rose-600 dark:hover:text-rose-400'
           }`}
         >
-          <ThumbsUp size={16} strokeWidth={post.liked_by_me ? 2.5 : 2} />
+          <Heart
+            size={16}
+            className={`transition-transform duration-150 ${post.liked_by_me ? 'fill-current scale-105' : ''}`}
+            strokeWidth={post.liked_by_me ? 2.5 : 2}
+          />
           <span>
             {post.likes_count > 0 ? post.likes_count : ''} {post.liked_by_me ? 'Liked' : 'Like'}
           </span>
@@ -177,7 +308,7 @@ export default function FeedPostCard({
         {/* Comment */}
         <button
           onClick={() => onCommentClick(post)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-1 justify-center"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-1 justify-center"
         >
           <MessageCircle size={16} />
           <span>
@@ -185,6 +316,13 @@ export default function FeedPostCard({
           </span>
         </button>
       </div>
+
+      {showReportModal && (
+        <ReportPostModal
+          post={post}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
     </article>
   );
 }

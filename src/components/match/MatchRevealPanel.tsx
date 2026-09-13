@@ -36,16 +36,16 @@ interface MatchRevealPanelProps {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">{children}</span>
+    <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 text-xs font-medium">{children}</span>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-      <span className="text-xs text-gray-400 font-jakarta">{label}</span>
-      <span className="text-sm font-medium text-gray-800 font-jakarta">{value}</span>
+    <div className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-white/5 last:border-0">
+      <span className="text-xs text-gray-400 dark:text-gray-500 font-jakarta">{label}</span>
+      <span className="text-sm font-medium text-gray-800 dark:text-gray-100 font-jakarta">{value}</span>
     </div>
   );
 }
@@ -88,12 +88,12 @@ function TimelineTab({ matchId, stage, partnerAlias }: { matchId: string; stage:
   return (
     <div className={`space-y-3 py-2 ${timeline.blurred ? 'blur-sm select-none pointer-events-none' : ''}`}>
       {timeline.posts.map((post) => (
-        <div key={post.id} className="bg-gray-50 rounded-2xl p-3">
-          <p className="text-sm text-gray-800 whitespace-pre-wrap break-words mb-2">{post.content}</p>
+        <div key={post.id} className="bg-gray-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-2xl p-3">
+          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words mb-2">{post.content}</p>
           {post.mediaUrls[0] && (
             <img src={post.mediaUrls[0]} alt="" className="rounded-xl max-h-48 w-full object-cover mb-2" />
           )}
-          <div className="flex gap-3 text-xs text-gray-400">
+          <div className="flex gap-3 text-xs text-gray-400 dark:text-gray-500">
             <span>{post.likesCount} likes</span>
             <span>{post.commentsCount} comments</span>
           </div>
@@ -167,9 +167,9 @@ export function MatchRevealPanel({
             {stage >= 1 && (
               <>
                 {reveal?.compatibilityScore !== null && (
-                  <div className="bg-[#1A6B3C]/5 rounded-2xl p-3 text-center">
-                    <p className="text-2xl font-bold text-[#1A6B3C]">{reveal?.compatibilityScore}%</p>
-                    <p className="text-xs text-gray-500">compatible</p>
+                  <div className="bg-[#1A6B3C]/5 dark:bg-emerald-500/10 border border-transparent dark:border-white/10 rounded-2xl p-3 text-center">
+                    <p className="text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400">{reveal?.compatibilityScore}%</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">compatible</p>
                   </div>
                 )}
 
@@ -221,20 +221,20 @@ export function MatchRevealPanel({
 
                 {reveal?.conversationInsights && (
                   <div className="flex gap-4 text-center">
-                    <div className="flex-1 bg-gray-50 rounded-xl py-2">
-                      <p className="text-base font-semibold text-gray-800">{reveal.conversationInsights.totalMessages}</p>
-                      <p className="text-[11px] text-gray-400">messages</p>
+                    <div className="flex-1 bg-gray-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-xl py-2">
+                      <p className="text-base font-semibold text-gray-800 dark:text-white">{reveal.conversationInsights.totalMessages}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">messages</p>
                     </div>
-                    <div className="flex-1 bg-gray-50 rounded-xl py-2">
-                      <p className="text-base font-semibold text-gray-800">{reveal.conversationInsights.daysActive}</p>
-                      <p className="text-[11px] text-gray-400">days talked</p>
+                    <div className="flex-1 bg-gray-50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-xl py-2">
+                      <p className="text-base font-semibold text-gray-800 dark:text-white">{reveal.conversationInsights.daysActive}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">days talked</p>
                     </div>
                   </div>
                 )}
 
                 {(reveal?.icebreakers.length ?? 0) > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Icebreakers</p>
+                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Icebreakers</p>
                     <div className="flex flex-col gap-2">
                       {reveal?.icebreakers.map((text) => (
                         <button
@@ -243,9 +243,9 @@ export function MatchRevealPanel({
                             onUseIcebreaker(text);
                             onOpenChange(false);
                           }}
-                          className="flex items-center gap-2 text-left text-sm bg-gray-50 hover:bg-gray-100 rounded-xl px-3 py-2.5 transition-colors"
+                          className="flex items-center gap-2 text-left text-sm bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-transparent dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-xl px-3 py-2.5 transition-colors"
                         >
-                          <MessageSquareText size={14} className="text-[#1A6B3C] shrink-0" />
+                          <MessageSquareText size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
                           {text}
                         </button>
                       ))}
@@ -257,7 +257,7 @@ export function MatchRevealPanel({
                   <button
                     onClick={handleFriendRequest}
                     disabled={sendingRequest}
-                    className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-semibold py-3 rounded-2xl hover:bg-[#155a33] transition-colors disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-semibold py-3 rounded-2xl hover:bg-[#155a33] dark:hover:bg-emerald-500 transition-colors disabled:opacity-60"
                   >
                     <UserPlus size={16} />
                     {sendingRequest ? 'Sending…' : `Add ${partner.fullName ?? partnerAlias}`}
@@ -271,7 +271,7 @@ export function MatchRevealPanel({
             {onEndMatch && !ended && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center justify-center gap-2 text-red-500 font-medium py-3 rounded-2xl hover:bg-red-50 transition-colors">
+                  <button className="w-full flex items-center justify-center gap-2 text-red-500 font-medium py-3 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
                     <LogOut size={16} />
                     End match
                   </button>

@@ -41,23 +41,23 @@ export function BlockModal({
       />
 
       {/* Modal card */}
-      <div className="relative bg-white rounded-3xl shadow-xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-3xl shadow-xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+        <div className="p-5 border-b border-gray-100 dark:border-white/10 flex items-center gap-3 flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center flex-shrink-0">
             <ShieldOff size={18} className="text-red-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-jakarta font-bold text-gray-900 text-sm">
+            <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-sm">
               Block {participantName}
             </h3>
-            <p className="font-jakarta text-xs text-gray-400">
+            <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">
               Confirm user restriction
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0"
+            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-shrink-0"
             aria-label="Close"
           >
             <X size={18} />
@@ -66,14 +66,14 @@ export function BlockModal({
 
         {/* Body */}
         <div className="p-6">
-          <div className="bg-red-50/70 border border-red-100 rounded-2xl p-4 mb-4">
+          <div className="bg-red-50/70 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-2xl p-4 mb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-jakarta font-semibold text-sm text-red-900 mb-1">
+                <p className="font-jakarta font-semibold text-sm text-red-900 dark:text-red-200 mb-1">
                   Are you sure you want to block {participantName}?
                 </p>
-                <p className="font-jakarta text-xs text-red-600 leading-relaxed">
+                <p className="font-jakarta text-xs text-red-600 dark:text-red-300 leading-relaxed">
                   Blocking will immediately stop {participantName} from sending you messages or finding your profile on Ally-jis.
                 </p>
               </div>
@@ -81,19 +81,19 @@ export function BlockModal({
           </div>
 
           <ul className="space-y-2 mb-2 px-1">
-            <li className="font-jakarta text-xs text-gray-500 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+            <li className="font-jakarta text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
               They will not be notified that you blocked them.
             </li>
-            <li className="font-jakarta text-xs text-gray-500 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+            <li className="font-jakarta text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
               You can unblock them anytime from conversation settings.
             </li>
           </ul>
 
           {submitState === 'error' && (
-            <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3">
-              <p className="font-jakarta text-xs text-red-600">
+            <div className="mt-3 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-xl p-3">
+              <p className="font-jakarta text-xs text-red-600 dark:text-red-300">
                 Something went wrong while blocking. Please try again.
               </p>
             </div>
@@ -101,11 +101,11 @@ export function BlockModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-100 flex gap-3 bg-gray-50/50 flex-shrink-0">
+        <div className="p-5 border-t border-gray-100 dark:border-white/10 flex gap-3 bg-gray-50/50 dark:bg-white/5 flex-shrink-0">
           <button
             onClick={onClose}
             disabled={submitState === 'loading'}
-            className="flex-1 font-jakarta font-medium text-xs text-gray-600 py-2.5 px-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+            className="flex-1 font-jakarta font-medium text-xs text-gray-600 dark:text-gray-300 py-2.5 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
           >
             Cancel
           </button>

@@ -1,7 +1,7 @@
 // src/api/routes/interactions.ts
 
 import { request } from '../http';
-import type { InteractionRow, PaginatedAllyList, RelationshipStatusResponse } from '../types';
+import type { AllyFilterOptions, InteractionRow, PaginatedAllyList, RelationshipStatusResponse } from '../types';
 
 export function listMyInteractions() {
   return request<InteractionRow[]>('/interactions');
@@ -52,8 +52,25 @@ export function getRelationshipStatus(targetUserId: string) {
   return request<RelationshipStatusResponse>(`/interactions/relationship/${targetUserId}`);
 }
 
-export function listAllies(userId: string, cursor?: string | null) {
-  const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+function buildAllyQuery(options?: AllyFilterOptions | string | null): string {
+  if (!options) return '';
+  if (typeof options === 'string') {
+    return `?cursor=${encodeURIComponent(options)}`;
+  }
+  const params = new URLSearchParams();
+  if (options.cursor) params.set('cursor', options.cursor);
+  if (options.search) params.set('search', options.search);
+  if (options.department) params.set('department', options.department);
+  if (options.course) params.set('course', options.course);
+  if (options.year_level) params.set('year_level', options.year_level);
+  if (options.sortBy) params.set('sortBy', options.sortBy);
+  if (options.limit) params.set('limit', String(options.limit));
+  const str = params.toString();
+  return str ? `?${str}` : '';
+}
+
+export function listAllies(userId: string, options?: AllyFilterOptions | string | null) {
+  const qs = buildAllyQuery(options);
   return request<PaginatedAllyList>(`/interactions/allies/${userId}${qs}`);
 }
 

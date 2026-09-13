@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ALLY-JIS Level 1 Data Flow Diagram (DFD)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --primary: #10b981;
+        --primary-dark: #059669;
+        --bg: #0b1120;
+        --card-bg: #151e32;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #2e3d5a;
+        --accent: #38bdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 32px 20px;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+
+      .badge {
+        display: inline-block;
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        padding: 6px 16px;
+        border-radius: 9999px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin: 0 0 10px 0;
+        background: linear-gradient(135deg, #ffffff 40%, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 18px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        padding: 28px;
+        margin-bottom: 32px;
+      }
+
+      .card-header-flex {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .card h2 {
+        font-size: 22px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #ffffff;
+      }
+
+      .card h2 span.icon {
+        background: rgba(56, 189, 248, 0.18);
+        color: var(--accent);
+        border-radius: 10px;
+        padding: 6px 12px;
+        font-size: 20px;
+      }
+
+      /* Zoom and Controls Toolbar */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+
+      .toolbar button {
+        background: #1e293b;
+        color: #f1f5f9;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .toolbar button:hover {
+        background: #334155;
+        border-color: #64748b;
+        color: #ffffff;
+      }
+
+      .toolbar .zoom-display {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent);
+        min-width: 60px;
+        text-align: center;
+      }
+
+      /* Mermaid Scroll Canvas */
+      .mermaid-viewport {
+        background: #070a12;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 32px 24px;
+        overflow: auto;
+        max-height: 850px;
+        position: relative;
+      }
+
+      .mermaid-canvas {
+        min-width: 1550px;
+        transform-origin: top left;
+        transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+      }
+
+      /* Force High-Legibility Font Sizes on Mermaid Elements */
+      .mermaid svg {
+        width: 100% !important;
+        height: auto !important;
+        font-family: 'Inter', system-ui, sans-serif !important;
+      }
+
+      /* Process and entity nodes */
+      .mermaid .node rect,
+      .mermaid .node circle,
+      .mermaid .node polygon,
+      .mermaid .node path {
+        rx: 12px !important;
+        ry: 12px !important;
+        stroke-width: 2.5px !important;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+      }
+
+      /* Node Labels - Extra Large & Crisp */
+      .mermaid .node .label {
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        line-height: 1.45 !important;
+        color: #ffffff !important;
+        text-align: center;
+      }
+
+      .mermaid .node b {
+        font-size: 19px !important;
+        font-weight: 800 !important;
+        color: #f8fafc !important;
+        display: inline-block;
+        margin-bottom: 4px;
+      }
+
+      /* Cluster / Subgraph Labels */
+      .mermaid .cluster-label span,
+      .mermaid .cluster-label text {
+        font-size: 19px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        fill: #38bdf8 !important;
+        color: #38bdf8 !important;
+      }
+
+      .mermaid .cluster rect {
+        stroke-width: 2px !important;
+        rx: 16px !important;
+        stroke-dasharray: 6 6 !important;
+      }
+
+      /* Edge Labels (Flow Descriptions) - Large Pill Style */
+      .mermaid .edgeLabel {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        line-height: 1.4 !important;
+        color: #f8fafc !important;
+        background-color: #0f172a !important;
+        padding: 8px 14px !important;
+        border-radius: 8px !important;
+        border: 1.5px solid #475569 !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5) !important;
+      }
+
+      .mermaid .edgeLabel span {
+        background-color: transparent !important;
+      }
+
+      .mermaid .flowchart-link {
+        stroke-width: 2.5px !important;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        font-size: 15px;
+        color: var(--text-muted);
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+      }
+
+      .legend-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 20px;
+        margin-top: 24px;
+      }
+
+      .audit-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 22px;
+      }
+
+      .audit-box h3 {
+        margin: 0 0 10px 0;
+        font-size: 17px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .audit-box.warning h3 {
+        color: #f87171;
+      }
+
+      .audit-box.success h3 {
+        color: #4ade80;
+      }
+
+      .audit-box p {
+        margin: 0;
+        font-size: 15px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 16px 10px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        .card {
+          padding: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="badge">Architecture & System Modeling</div>
+        <h1>ALLY-JIS: Level 1 & Level 2 Data Flow Diagrams (DFD)</h1>
+        <p class="subtitle">
+          Comprehensive capstone architectural view mapping Student Clients, Admin Dashboard (Process 5.0), Core Express Engines, and PostgreSQL/Redis Data Stores.
+        </p>
+      </div>
+
+      <!-- Level 1 Diagram Card with Zoom Controls -->
+      <div class="card">
+        <div class="card-header-flex">
+          <h2>
+            <span class="icon">📊</span>
+            Level 1 Data Flow Diagram: Overall System (with Admin Subsystem 5.0)
+          </h2>
+          <div class="toolbar">
+            <button onclick="zoomDiagram('l1', -0.15)" title="Zoom Out">🔍 -</button>
+            <span class="zoom-display" id="zoomLevel1">100%</span>
+            <button onclick="zoomDiagram('l1', 0.15)" title="Zoom In">🔍 +</button>
+            <button onclick="resetZoom('l1')" title="Reset Zoom">↺ Reset</button>
+            <button onclick="toggleScroll('l1')" id="expandBtn1">⛶ Fit / Wide</button>
+          </div>
+        </div>
+
+        <div class="mermaid-viewport" id="viewport1">
+          <div class="mermaid-canvas" id="canvas1">
+            <div class="mermaid">
+flowchart LR
+    %% Class Styles
+    classDef entity fill:#1e3a8a,stroke:#3b82f6,stroke-width:2.5px,color:#ffffff;
+    classDef adminEntity fill:#7c2d12,stroke:#f97316,stroke-width:2.5px,color:#ffffff;
+    classDef client fill:#1e293b,stroke:#64748b,stroke-width:2.5px,color:#f8fafc;
+    classDef process fill:#064e3b,stroke:#10b981,stroke-width:2.5px,color:#ffffff;
+    classDef store fill:#312e81,stroke:#818cf8,stroke-width:2.5px,color:#ffffff;
+
+    %% Column 1: Client & External Entities
+    subgraph ClientBoundary ["Client Layer Interface"]
+        User["👤 <b>STUDENT USER</b><br/>Verified College Student"]:::entity
+        ClientApp["💻 <b>ALLY-JIS Web App</b><br/>📱 <b>Mobile App (Expo)</b>"]:::client
+        User <-->|User Inputs, Credentials & Chat| ClientApp
+
+        Admin["🛡️ <b>ADMINISTRATOR</b><br/>System Admin / Moderator"]:::adminEntity
+        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.xyz)"]:::client
+        Admin <-->|Moderation Actions & Query Filters| AdminPortal
+    end
+
+    %% Column 2: Backend Numbered Processes
+    subgraph BackendCore ["ALLY-JIS Backend Services (Express / Node.js)"]
+        P1["<b>1.0</b><br/><b>USER & ADMIN AUTH</b><br/>& RBAC VERIFICATION"]:::process
+        P2["<b>2.0</b><br/><b>PROFILE & PREFERENCE</b><br/>MANAGEMENT"]:::process
+        P3["<b>3.0</b><br/><b>MATCHMAKING &</b><br/>DISCOVERY ENGINE"]:::process
+        P4["<b>4.0</b><br/><b>REAL-TIME MESSAGING</b><br/>& PROGRESSION"]:::process
+        P5["<b>5.0</b><br/><b>SYSTEM ADMINISTRATION</b><br/>& MODERATION"]:::process
+    end
+
+    %% Column 3: Data Stores
+    subgraph DatabaseLayer ["Data Stores (PostgreSQL & Redis)"]
+        D1[("<b>D1</b> USER ACCOUNTS & RBAC")]:::store
+        D2[("<b>D2</b> STUDENT PROFILES & TAGS")]:::store
+        D3[("<b>D3</b> MATCH QUEUE & PAIRINGS")]:::store
+        D4[("<b>D4</b> CHAT LOGS & STREAKS")]:::store
+        D5[("<b>D5</b> REPORTS & AUDIT LOGS")]:::store
+    end
+
+    %% 1.0 Auth Flows
+    ClientApp -->|1. Sign up, Login & OTP Code| P1
+    P1 -->|Save Credentials & OTP State| D1
+    D1 -->|Verify Credentials & Active Session| P1
+    P1 -->|Initialize Profile Record| D2
+    P1 -->|Auth Token & Verification Status| ClientApp
+
+    AdminPortal -->|Admin Credentials & 2FA| P1
+    D1 -->|Verify Admin Role & Permissions| P1
+    P1 -->|Admin Session Token & RBAC Claims| AdminPortal
+
+    %% 2.0 Profile Flows
+    ClientApp -->|2. Bio, Course, Avatar & Interests| P2
+    P2 -->|Save Profile, Avatar URL & Interests| D2
+    D2 -->|Load Profile & Available Interest List| P2
+    P2 -->|Profile Update Confirmation| ClientApp
+
+    %% 3.0 Matchmaking Flows
+    ClientApp -->|3. Join Match Queue / Accept / Decline| P3
+    D2 -->|Candidate Profile & Interest Vector| P3
+    P3 -->|Push / Pop Queue, Form Match Pairing| D3
+    D3 -->|Queue State & Active Match Details| P3
+    P3 -->|Initialize Match Chat Session| P4
+    P3 -->|Match Found Notification & Anonymous Alias| ClientApp
+
+    %% 4.0 Messaging Flows
+    ClientApp -->|4. Send Message / Read / Emoji Reaction| P4
+    P4 -->|Save Message & Update Daily Streak| D4
+    D4 -->|Message History & Streak Milestones| P4
+    P4 -->|Tally Messages for Identity Reveal| D3
+    P4 -->|Live WebSocket Message & Streak Notice| ClientApp
+
+    %% 5.0 Admin & Moderation Flows
+    ClientApp -->|5. Flag User / Submit Violation Report| P5
+    P5 -->|Store Report Ticket & Evidence| D5
+    AdminPortal -->|6. Moderation Queries, Bans & Settings| P5
+    D5 -->|Pending Reports & Audit Trail| P5
+    D1 -->|Account Metadata & Current Status| P5
+    P5 -->|Update User Status - Ban or Suspend| D1
+    P5 -->|Write Admin Activity Log & Resolution| D5
+    P5 -->|Moderation Results, Audit Logs & Metrics| AdminPortal
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #3b82f6;"></div>
+            <span>External Entity (Student / User)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #f97316;"></div>
+            <span>External Entity (Administrator / Moderator)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #64748b;"></div>
+            <span>Client Interface Layer (Student App / Admin Portal)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #10b981;"></div>
+            <span>Numbered Core Processes (1.0 - 5.0)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #818cf8;"></div>
+            <span>Data Stores (PostgreSQL / Redis / Supabase)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Level 2 Diagram Card: Subsystem 5.0 (Admin & Moderation) -->
+      <div class="card">
+        <div class="card-header-flex">
+          <h2>
+            <span class="icon">🛡️</span>
+            Level 2 Data Flow Diagram: Subsystem 5.0 (System Administration & Moderation)
+          </h2>
+          <div class="toolbar">
+            <button onclick="zoomDiagram('l2', -0.15)" title="Zoom Out">🔍 -</button>
+            <span class="zoom-display" id="zoomLevel2">100%</span>
+            <button onclick="zoomDiagram('l2', 0.15)" title="Zoom In">🔍 +</button>
+            <button onclick="resetZoom('l2')" title="Reset Zoom">↺ Reset</button>
+            <button onclick="toggleScroll('l2')" id="expandBtn2">⛶ Fit / Wide</button>
+          </div>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 15px; margin: -4px 0 18px 0;">
+          Detailed decomposition of Process 5.0 into functional sub-processes: Account Management (5.1), Report Moderation (5.2), and System Config & Audit (5.3).
+        </p>
+
+        <div class="mermaid-viewport" id="viewport2">
+          <div class="mermaid-canvas" id="canvas2">
+            <div class="mermaid">
+flowchart LR
+    %% Class Styles
+    classDef adminEntity fill:#7c2d12,stroke:#f97316,stroke-width:2.5px,color:#ffffff;
+    classDef client fill:#1e293b,stroke:#64748b,stroke-width:2.5px,color:#f8fafc;
+    classDef process fill:#064e3b,stroke:#10b981,stroke-width:2.5px,color:#ffffff;
+    classDef store fill:#312e81,stroke:#818cf8,stroke-width:2.5px,color:#ffffff;
+
+    %% Column 1: Admin Actor & Portal
+    subgraph AdminBoundary ["Admin Interface Layer"]
+        Admin["🛡️ <b>ADMINISTRATOR</b><br/>System Admin / Moderator"]:::adminEntity
+        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.xyz)"]:::client
+        Admin <-->|Moderation Queries, Actions & Toggles| AdminPortal
+    end
+
+    %% Column 2: Decomposed Sub-processes (5.1 - 5.3)
+    subgraph AdminSubsystem ["Subsystem 5.0: Administration & Moderation Decomposed"]
+        P51["<b>5.1</b><br/><b>USER & ACCOUNT</b><br/>MANAGEMENT"]:::process
+        P52["<b>5.2</b><br/><b>INCIDENT & REPORT</b><br/>RESOLUTION"]:::process
+        P53["<b>5.3</b><br/><b>PLATFORM SETTINGS &</b><br/>AUDIT MONITORING"]:::process
+    end
+
+    %% Column 3: Data Stores
+    subgraph AdminStores ["Associated Data Stores"]
+        D1[("<b>D1</b> USER ACCOUNTS & RBAC")]:::store
+        D4[("<b>D4</b> CHAT LOGS (EVIDENCE)")]:::store
+        D5[("<b>D5</b> USER REPORTS")]:::store
+        D6[("<b>D6</b> ADMIN AUDIT LOGS")]:::store
+    end
+
+    %% 5.1 User Management Flows
+    AdminPortal -->|5.1 Search User, Ban/Suspend/Verify| P51
+    D1 -->|Account Info, Role & Ban Status| P51
+    P51 -->|Apply Suspension / Ban / Force Logout| D1
+    P51 -->|Write Moderation Audit Entry| D6
+    P51 -->|User Management Results & Updated State| AdminPortal
+
+    %% 5.2 Report Resolution Flows
+    AdminPortal -->|5.2 Review Report & Issue Verdict| P52
+    D5 -->|Pending Incident Reports & Flagged Target| P52
+    D4 -->|Chat Snippets & Incident Context| P52
+    P52 -->|Execute Penalty on Offending User| D1
+    P52 -->|Update Report Status - Resolved or Dismissed| D5
+    P52 -->|Log Resolution & Action Taken| D6
+    P52 -->|Report Resolution Feedback & Updated Queue| AdminPortal
+
+    %% 5.3 Platform Settings & Audit Flows
+    AdminPortal -->|5.3 Toggle Maintenance & Update Parameters| P53
+    D6 -->|Fetch System Audit History & Activity Logs| P53
+    P53 -->|Save System Configuration & Flags| D1
+    P53 -->|Record Configuration Change Entry| D6
+    P53 -->|Platform Usage Metrics & Audit Stream| AdminPortal
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #f97316;"></div>
+            <span>External Entity (Administrator / Moderator)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #64748b;"></div>
+            <span>Client Interface Layer (Admin Web Portal)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #10b981;"></div>
+            <span>Decomposed Sub-processes (5.1 - 5.3)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #818cf8;"></div>
+            <span>Data Stores (Accounts, Evidence, Reports, Audit Logs)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rendered Image Version Card -->
+      <div class="card">
+        <h2>
+          <span class="icon">🖼️</span>
+          Rendered Diagram Image (Gane & Sarson Format)
+        </h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin: 8px 0 16px 0;">
+          Clean classical 3-tier Gane & Sarson style layout matching your original student-focused diagram structure.
+        </p>
+        <div style="text-align: center; background: #070a12; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <img
+            src="./public/dfd-level-1.jpg"
+            onerror="this.src='/dfd-level-1.jpg'"
+            alt="Data Flow Diagram (Level 1) of Ally-jis"
+            style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.6);"
+          />
+        </div>
+      </div>
+
+      <!-- Critical Analysis & Comparison -->
+      <div class="card">
+        <h2>
+          <span class="icon">🔍</span>
+          Capstone Architecture Defense & Audit Notes
+        </h2>
+
+        <div class="grid">
+          <div class="audit-box success">
+            <h3>✅ Process 5.0: Administration & Moderation</h3>
+            <p>
+              Provides complete data loop closure: student user reports flow into <b>D5 (Reports)</b>, which are fetched and resolved by <b>Process 5.0</b> via the <b>Admin Portal</b>. Prevents the "black hole / orphan data" objection from panelists.
+            </p>
+          </div>
+
+          <div class="audit-box success">
+            <h3>✅ Role-Based Access Control (RBAC)</h3>
+            <p>
+              Accurately models dual-entry points: Student Mobile/Web clients communicate with <b>1.0 User Auth</b>, while privileged staff authenticate via <b>Admin RBAC (admin.ally-jis.xyz)</b> with session claims verified against <b>D1</b>.
+            </p>
+          </div>
+
+          <div class="audit-box success">
+            <h3>✅ Level 2 Subsystem Decomposition</h3>
+            <p>
+              Adheres to strict Gane & Sarson standards: <b>Process 5.0</b> decomposes cleanly into <b>5.1</b> (Account Management & Bans), <b>5.2</b> (Report Triage & Chat Evidence), and <b>5.3</b> (Settings & Audit Logs).
+            </p>
+          </div>
+
+          <div class="audit-box warning">
+            <h3>⚠️ Passive Data Store Rule Compliance</h3>
+            <p>
+              In standard DFD rules, data stores (<b>D1–D6</b>) remain strictly passive. Communication between stores (e.g. evaluating chat logs during report triage) is always mediated through active processes (<b>5.2 Incident Resolution</b>).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        themeVariables: {
+          fontSize: '18px',
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+          edgeLabelBackground: '#0f172a',
+          lineColor: '#64748b'
+        },
+        flowchart: {
+          curve: 'basis',
+          htmlLabels: true,
+          nodeSpacing: 75,
+          rankSpacing: 130,
+          useMaxWidth: false
+        }
+      });
+
+      // Interactive Zoom Controls for multiple canvases
+      const controllers = {
+        l1: {
+          scale: 1.0,
+          isWide: false,
+          get canvas() { return document.getElementById('canvas1'); },
+          get display() { return document.getElementById('zoomLevel1'); },
+          get viewport() { return document.getElementById('viewport1'); },
+          get expandBtn() { return document.getElementById('expandBtn1'); }
+        },
+        l2: {
+          scale: 1.0,
+          isWide: false,
+          get canvas() { return document.getElementById('canvas2'); },
+          get display() { return document.getElementById('zoomLevel2'); },
+          get viewport() { return document.getElementById('viewport2'); },
+          get expandBtn() { return document.getElementById('expandBtn2'); }
+        }
+      };
+
+      function updateZoom(id) {
+        const c = controllers[id];
+        if (!c || !c.canvas || !c.display) return;
+        c.canvas.style.transform = `scale(${c.scale})`;
+        c.display.innerText = `${Math.round(c.scale * 100)}%`;
+      }
+
+      function zoomDiagram(id, delta) {
+        const c = controllers[id];
+        if (!c) return;
+        c.scale = Math.min(Math.max(0.6, c.scale + delta), 2.2);
+        updateZoom(id);
+      }
+
+      function resetZoom(id) {
+        const c = controllers[id];
+        if (!c) return;
+        c.scale = 1.0;
+        updateZoom(id);
+      }
+
+      function toggleScroll(id) {
+        const c = controllers[id];
+        if (!c || !c.viewport || !c.expandBtn) return;
+        c.isWide = !c.isWide;
+        if (c.isWide) {
+          c.viewport.style.maxHeight = 'none';
+          c.expandBtn.innerText = '⊟ Collapse';
+        } else {
+          c.viewport.style.maxHeight = '850px';
+          c.expandBtn.innerText = '⛶ Fit / Wide';
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -89,7 +89,7 @@ export function MobileReactionPopup({
           onOpenPicker={() => setShowFullPicker(true)}
         />
 
-        <div className="flex flex-col bg-white/95 backdrop-blur-2xl rounded-2xl border border-black/[0.06] shadow-[0_12px_32px_rgba(0,0,0,0.18)] overflow-hidden w-full">
+        <div className="flex flex-col bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl rounded-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.18)] overflow-hidden w-full">
           <ActionRow icon={<Reply size={16} />} label="Reply" onClick={onReply} />
           <ActionRow icon={<Forward size={16} />} label="Forward" onClick={onForward} />
           <ActionRow icon={<Trash2 size={16} />} label="Delete" onClick={onDelete} destructive />
@@ -126,8 +126,8 @@ function ActionRow({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-4 py-2.5 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04]',
-        destructive ? 'text-red-500' : 'text-gray-700',
+        'flex items-center gap-3 px-4 py-2.5 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5',
+        destructive ? 'text-red-500' : 'text-gray-700 dark:text-gray-200',
       )}
     >
       {icon}
@@ -229,7 +229,7 @@ export function DesktopHoverActions({
             setShowFullPicker(false);
           }}
           aria-label="More actions"
-          className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
         >
           <MoreHorizontal size={16} />
         </button>
@@ -242,7 +242,7 @@ export function DesktopHoverActions({
               exit={{ opacity: 0, scale: 0.95, y: 4 }}
               transition={{ duration: 0.12 }}
               className={cn(
-                'absolute bottom-full mb-2 flex flex-col bg-white rounded-xl border border-black/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.14)] overflow-hidden min-w-[160px] z-50',
+                'absolute bottom-full mb-2 flex flex-col bg-white dark:bg-[#111827] rounded-xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.14)] overflow-hidden min-w-[160px] z-50',
                 side === 'right' ? 'right-0' : 'left-0',
               )}
             >

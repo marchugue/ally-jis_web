@@ -117,11 +117,13 @@ export function MessageInput({
     setShowEmojiPicker(false);
   };
 
+  const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
   return (
-    <div className="p-4 border-t bg-white">
+    <div className="p-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#0D131F]">
       {children}
       {replyTo && currentUserId && participantName && (
-        <div className="mb-3 flex items-start gap-3 rounded-xl bg-[#1A6B3C]/5 px-3 py-2.5">
+        <div className="mb-3 flex items-start gap-3 rounded-xl bg-[#1A6B3C]/5 dark:bg-white/5 border border-transparent dark:border-white/10 px-3 py-2.5">
           <ReplyQuote
             variant="compose"
             label={getReplyComposeLabel(replyTo.senderId, currentUserId, participantName)}
@@ -130,7 +132,7 @@ export function MessageInput({
           />
           <button
             onClick={onCancelReply}
-            className="p-1 rounded-full text-gray-400 hover:bg-white hover:text-gray-600 transition-colors flex-shrink-0"
+            className="p-1 rounded-full text-gray-400 hover:bg-white dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex-shrink-0"
             aria-label="Cancel reply"
           >
             <X size={14} />
@@ -142,11 +144,11 @@ export function MessageInput({
           {isVideoFile ? (
             <video
               src={imagePreview}
-              className="h-20 w-32 object-cover rounded-xl border border-gray-100"
+              className="h-20 w-32 object-cover rounded-xl border border-gray-100 dark:border-white/10"
               muted
             />
           ) : (
-            <img src={imagePreview} alt="Preview" className="h-20 w-20 object-cover rounded-xl border border-gray-100" />
+            <img src={imagePreview} alt="Preview" className="h-20 w-20 object-cover rounded-xl border border-gray-100 dark:border-white/10" />
           )}
           <button
             onClick={() => { setImage(null); setImagePreview(null); setIsVideoFile(false); }}
@@ -159,7 +161,7 @@ export function MessageInput({
       <div className="flex items-center gap-2">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-2.5 text-gray-400 hover:text-[#3B8C7E] hover:bg-[#3B8C7E]/5 rounded-xl transition-all"
+          className="p-2.5 text-gray-400 hover:text-[#3B8C7E] dark:hover:text-emerald-400 hover:bg-[#3B8C7E]/5 dark:hover:bg-white/5 rounded-xl transition-all"
         >
           <ImageIcon size={20} />
         </button>
@@ -178,8 +180,8 @@ export function MessageInput({
             aria-expanded={showEmojiPicker}
             className={`p-2.5 rounded-xl transition-all ${
               showEmojiPicker
-                ? 'text-[#1A6B3C] bg-[#1A6B3C]/10'
-                : 'text-gray-400 hover:text-[#3B8C7E] hover:bg-[#3B8C7E]/5'
+                ? 'text-[#1A6B3C] dark:text-emerald-400 bg-[#1A6B3C]/10 dark:bg-emerald-500/20'
+                : 'text-gray-400 hover:text-[#3B8C7E] dark:hover:text-emerald-400 hover:bg-[#3B8C7E]/5 dark:hover:bg-white/5'
             }`}
           >
             <Smile size={20} />
@@ -192,12 +194,12 @@ export function MessageInput({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="absolute bottom-full left-0 mb-2 z-50 rounded-[20px] overflow-hidden border border-black/[0.06] shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-2xl bg-white/80"
+                className="absolute bottom-full left-0 mb-2 z-50 rounded-[20px] overflow-hidden border border-black/[0.06] dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-2xl bg-white/80 dark:bg-[#111827]/95"
               >
                 <Picker
                   data={data}
                   onEmojiSelect={handleEmojiSelect}
-                  theme="light"
+                  theme={isDarkMode ? 'dark' : 'light'}
                   previewPosition="none"
                   skinTonePosition="search"
                   maxFrequentRows={2}
@@ -207,12 +209,12 @@ export function MessageInput({
                   emojiSize={20}
                   style={
                     {
-                      '--rgb-background': '255, 255, 255',
-                      '--rgb-input': '243, 244, 246',
-                      '--rgb-color': '55, 65, 81',
+                      '--rgb-background': isDarkMode ? '17, 24, 39' : '255, 255, 255',
+                      '--rgb-input': isDarkMode ? '31, 41, 55' : '243, 244, 246',
+                      '--rgb-color': isDarkMode ? '243, 244, 246' : '55, 65, 81',
                       '--rgb-accent': '26, 107, 60',
-                      '--color-border': 'rgba(0, 0, 0, 0.04)',
-                      '--color-border-over': 'rgba(0, 0, 0, 0.06)',
+                      '--color-border': isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                      '--color-border-over': isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
                       '--font-family':
                         '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", sans-serif',
                       '--font-size': '14px',
@@ -237,14 +239,16 @@ export function MessageInput({
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={replyTo ? 'Write a reply…' : 'Write a message...'}
-            className="w-full bg-gray-50 border-none rounded-2xl py-2.5 px-4 text-sm font-jakarta focus:ring-2 focus:ring-[#1A6B3C]/20 focus:bg-white transition-all outline-none"
+            className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-2.5 px-4 text-sm font-jakarta text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-white/10 transition-all outline-none"
             disabled={disabled}
           />
         </div>
         <button
+          type="button"
           onClick={handleSend}
           disabled={disabled || (!text.trim() && !image)}
-          className="bg-[#1A6B3C] text-white p-2.5 rounded-xl hover:bg-[#155a33] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+          aria-label="Send message"
+          className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#E2DED7] dark:disabled:bg-white/10 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
         >
           <Send size={18} />
         </button>

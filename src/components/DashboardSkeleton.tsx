@@ -12,7 +12,7 @@ export function DashboardSkeleton() {
           </div>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 flex items-center gap-4 border border-[#1A6B3C]/6">
+              <div key={i} className="bg-white dark:bg-[#111827] rounded-2xl p-4 flex items-center gap-4 border border-[#1A6B3C]/6 dark:border-white/10">
                 <Skeleton className="w-14 h-14 rounded-2xl flex-shrink-0" />
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
@@ -34,7 +34,7 @@ export function DashboardSkeleton() {
 
         {/* Sidebar Skeleton */}
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-[#1A6B3C]/6">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 border border-[#1A6B3C]/6 dark:border-white/10">
             <Skeleton className="h-5 w-32 mb-3" />
             <div className="flex flex-wrap gap-2">
               {[1, 2, 3, 4, 5].map(i => (
@@ -42,7 +42,7 @@ export function DashboardSkeleton() {
               ))}
             </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 border border-[#1A6B3C]/6">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 border border-[#1A6B3C]/6 dark:border-white/10">
             <Skeleton className="h-5 w-32 mb-3" />
             <div className="space-y-3">
               {[1, 2, 3].map(i => (

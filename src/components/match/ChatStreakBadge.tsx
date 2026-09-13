@@ -1,104 +1,104 @@
 // src/components/match/ChatStreakBadge.tsx
 //
-// Renders a TikTok-style streak badge — visible only when the pair has
-// chatted on 3+ consecutive days. Below that threshold nothing is shown
-// so new / cold conversations aren't cluttered with a "0-day streak".
+// Renders the mobile-aligned streak badge:
+// - Visible for any active streak (dayStreak > 0)
+// - Active today: warm orange tint background, orange Flame icon & text
+// - Pending today: soft gray pill, muted gray Flame icon & text
+// - Interactive tooltip & pop animation on update
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Flame } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface ChatStreakBadgeProps {
-  /** Calendar-day consecutive-chat count (UTC). Hide badge when < 3. */
+export interface ChatStreakBadgeProps {
+  /** Consecutive day streak count. Badge is visible when dayStreak > 0. */
   dayStreak: number;
-  /** Extra class names for positioning / spacing from the parent. */
+  /** True when both participants have chatted today (or streak confirmed today). */
+  isStreakActiveToday?: boolean;
+  /** Size variant: 'sm' (header default, 11px font) or 'md' (12px font). */
+  size?: 'sm' | 'md';
+  /** Whether to append 'd' to the number (e.g. "3d" instead of "3"). Default false. */
+  showDaysSuffix?: boolean;
+  /** Extra CSS classes. */
   className?: string;
+  /** Optional click handler. */
+  onClick?: () => void;
 }
 
-/** Minimum consecutive days before the badge becomes visible. */
-const STREAK_THRESHOLD = 3;
+export const ChatStreakBadge: React.FC<ChatStreakBadgeProps> = ({
+  dayStreak,
+  isStreakActiveToday = false,
+  size = 'sm',
+  showDaysSuffix = false,
+  className = '',
+  onClick,
+}) => {
+  const badgeRef = useRef<any>(null);
 
-export function ChatStreakBadge({ dayStreak, className = '' }: ChatStreakBadgeProps) {
-  const glowRef = useRef<HTMLSpanElement>(null);
-
-  // Kick a quick scale-bounce whenever the streak count increases.
+  // Trigger pop animation whenever the streak count increases or status changes
   useEffect(() => {
-    const el = glowRef.current;
-    if (!el || dayStreak < STREAK_THRESHOLD) return;
+    const el = badgeRef.current;
+    if (!el || dayStreak <= 0) return;
     el.classList.remove('streak-pop');
-    // Force reflow so removing + re-adding the class triggers the animation.
-    void el.offsetWidth;
+    void el.offsetWidth; // Force reflow
     el.classList.add('streak-pop');
-  }, [dayStreak]);
+  }, [dayStreak, isStreakActiveToday]);
 
-  if (dayStreak < STREAK_THRESHOLD) return null;
+  if (!dayStreak || dayStreak <= 0) return null;
 
-  // Colour ramps: orange at 3, deeper amber at 7, red-hot at 14+.
-  const hot = dayStreak >= 14;
-  const warm = dayStreak >= 7;
+  const isSm = size === 'sm';
+  const iconSize = isSm ? 12 : 14;
 
-  const gradientFrom = hot ? '#ff3b30' : warm ? '#ff9500' : '#ff6b00';
-  const gradientTo   = hot ? '#ff6b00' : warm ? '#ffcc00' : '#ffaa00';
+  const tooltipText = isStreakActiveToday
+    ? `${dayStreak}-day streak • Active today! 🔥`
+    : `${dayStreak}-day streak • Pending today (send a message to maintain)`;
+
+  const Comp = onClick ? 'button' : 'span';
 
   return (
     <>
-      {/* Inline keyframes — avoids a separate CSS file dependency. */}
       <style>{`
-        @keyframes streak-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 ${gradientFrom}55; }
-          50%       { box-shadow: 0 0 0 6px ${gradientFrom}00; }
-        }
-        @keyframes streak-flame {
-          0%, 100% { transform: scaleY(1)   rotate(-2deg); }
-          25%       { transform: scaleY(1.1) rotate(2deg); }
-          75%       { transform: scaleY(0.95) rotate(-1deg); }
-        }
         @keyframes streak-pop-anim {
           0%   { transform: scale(1); }
-          40%  { transform: scale(1.25); }
-          70%  { transform: scale(0.92); }
+          40%  { transform: scale(1.15); }
+          75%  { transform: scale(0.95); }
           100% { transform: scale(1); }
         }
-        .streak-pop { animation: streak-pop-anim 0.4s ease-out forwards; }
+        .streak-pop {
+          animation: streak-pop-anim 0.35s ease-out forwards;
+        }
       `}</style>
 
-      <span
-        ref={glowRef}
-        className={`inline-flex items-center gap-1 select-none ${className}`}
-        style={{
-          background: `linear-gradient(135deg, ${gradientFrom}, ${gradientTo})`,
-          borderRadius: '999px',
-          padding: '2px 8px 2px 6px',
-          animation: 'streak-pulse 2s ease-in-out infinite',
-        }}
-        title={`${dayStreak}-day chat streak 🔥`}
+      <Comp
+        ref={badgeRef}
+        type={onClick ? 'button' : undefined}
+        onClick={onClick}
+        title={tooltipText}
+        aria-label={tooltipText}
+        className={cn(
+          'group inline-flex items-center select-none font-jakarta font-bold transition-all duration-200',
+          isSm ? 'gap-1 px-2 py-0.5 rounded-lg text-[11px] leading-tight' : 'gap-1.5 px-2.5 py-1 rounded-lg text-xs',
+          isStreakActiveToday
+            ? 'bg-[#eb5600]/10 text-[#eb5600] border border-[#eb5600]/20 dark:bg-[#eb5600]/20 dark:text-orange-400 dark:border-[#eb5600]/30'
+            : 'bg-gray-100 text-gray-500 border border-gray-200/60 dark:bg-white/10 dark:text-gray-400 dark:border-white/5',
+          onClick && 'cursor-pointer hover:opacity-90 active:scale-95',
+          className
+        )}
       >
-        {/* Animated flame emoji */}
-        <span
-          style={{
-            display: 'inline-block',
-            fontSize: '13px',
-            lineHeight: 1,
-            animation: 'streak-flame 1.2s ease-in-out infinite',
-            transformOrigin: 'bottom center',
-          }}
-          aria-hidden
-        >
-          🔥
-        </span>
-
-        {/* Streak count */}
-        <span
-          style={{
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#fff',
-            letterSpacing: '0.01em',
-            lineHeight: 1,
-            fontFamily: 'inherit',
-          }}
-        >
+        <Flame
+          size={iconSize}
+          className={cn(
+            'flex-shrink-0 transition-transform duration-200 group-hover:scale-110',
+            isStreakActiveToday
+              ? 'text-[#eb5600] dark:text-orange-400 fill-[#eb5600] dark:fill-orange-400'
+              : 'text-gray-400 dark:text-gray-500 fill-gray-300 dark:fill-gray-600'
+          )}
+        />
+        <span>
           {dayStreak}
+          {showDaysSuffix ? 'd' : ''}
         </span>
-      </span>
+      </Comp>
     </>
   );
-}
+};

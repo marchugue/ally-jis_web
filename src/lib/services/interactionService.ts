@@ -5,6 +5,10 @@ export const interactionService = {
     await apiClient.sendConnectionRequest(targetUserId);
   },
 
+  async sendFriendRequest(targetUserId: string) {
+    await apiClient.sendConnectionRequest(targetUserId);
+  },
+
   async acceptRequest(_userId: string, requesterId: string) {
     return apiClient.acceptConnection(requesterId);
   },

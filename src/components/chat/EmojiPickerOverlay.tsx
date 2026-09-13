@@ -17,6 +17,8 @@ interface EmojiPickerOverlayProps {
 export function EmojiPickerOverlay({ open, onClose, onSelect, className }: EmojiPickerOverlayProps) {
   if (!open) return null;
 
+  const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -27,7 +29,7 @@ export function EmojiPickerOverlay({ open, onClose, onSelect, className }: Emoji
       onClick={onClose}
     >
       <div
-        className="rounded-[20px] overflow-hidden border border-black/[0.06] shadow-[0_12px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl bg-white/95 max-w-[min(100vw-2rem,360px)]"
+        className="rounded-[20px] overflow-hidden border border-black/[0.06] dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.2)] backdrop-blur-2xl bg-white/95 dark:bg-[#111827]/95 max-w-[min(100vw-2rem,360px)]"
         onClick={(e) => e.stopPropagation()}
       >
         <Picker
@@ -36,7 +38,7 @@ export function EmojiPickerOverlay({ open, onClose, onSelect, className }: Emoji
             onSelect(emoji.native);
             onClose();
           }}
-          theme="light"
+          theme={isDarkMode ? 'dark' : 'light'}
           previewPosition="none"
           skinTonePosition="search"
           maxFrequentRows={2}
@@ -46,12 +48,12 @@ export function EmojiPickerOverlay({ open, onClose, onSelect, className }: Emoji
           emojiSize={20}
           style={
             {
-              '--rgb-background': '255, 255, 255',
-              '--rgb-input': '243, 244, 246',
-              '--rgb-color': '55, 65, 81',
+              '--rgb-background': isDarkMode ? '17, 24, 39' : '255, 255, 255',
+              '--rgb-input': isDarkMode ? '31, 41, 55' : '243, 244, 246',
+              '--rgb-color': isDarkMode ? '243, 244, 246' : '55, 65, 81',
               '--rgb-accent': '26, 107, 60',
-              '--color-border': 'rgba(0, 0, 0, 0.04)',
-              '--color-border-over': 'rgba(0, 0, 0, 0.06)',
+              '--color-border': isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+              '--color-border-over': isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
               '--font-family':
                 '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", sans-serif',
               '--font-size': '14px',

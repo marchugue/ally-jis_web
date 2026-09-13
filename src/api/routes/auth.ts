@@ -80,9 +80,35 @@ export async function confirmEmail(tokenHash: string): Promise<AuthSession> {
   return session;
 }
 
+export async function refreshToken(): Promise<AuthSession> {
+  const session = await request<AuthSession>('/auth/refresh', {
+    method: 'POST',
+    auth: false,
+  });
+  if (session?.accessToken) {
+    setStoredToken(session.accessToken);
+  }
+  return session;
+}
+
 export async function getSession(): Promise<AuthSession | null> {
-  const token = getStoredToken();
-  if (!token) return null;
+  let token = getStoredToken();
+
+  // If no token in local storage (e.g. fresh browser visit), attempt silent refresh from HttpOnly cookie
+  if (!token) {
+    try {
+      const refreshed = await request<AuthSession>('/auth/refresh', {
+        method: 'POST',
+        auth: false,
+      });
+      if (refreshed?.accessToken) {
+        setStoredToken(refreshed.accessToken);
+        return refreshed;
+      }
+    } catch {
+      return null;
+    }
+  }
 
   try {
     return await request<AuthSession>('/auth/session');
@@ -145,9 +171,14 @@ export async function getOtpStatus(userId: string): Promise<OtpStatus> {
  * Uploads a student ID image to R2 before registration.
  * Returns the public URL of the uploaded file.
  */
-export async function uploadStudentId(userId: string, file: File): Promise<{ url: string }> {
+export async function uploadStudentId(
+  userId: string,
+  file: File | Blob,
+  side: 'front' | 'back' = 'front'
+): Promise<{ url: string; side?: string }> {
   const formData = new FormData();
   formData.append('userId', userId);
+  formData.append('side', side);
   formData.append('file', file);
 
   // Use raw fetch since request() adds Content-Type: application/json

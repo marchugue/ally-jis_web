@@ -14,6 +14,8 @@ import type { FeedPost, PostAudience } from '@/types/feed';
 
 const PAGE_SIZE = 10;
 
+export type FeedFilterTab = 'popular' | 'allies' | 'following';
+
 export function useNewsfeed() {
   const { user, loading: authLoading } = useAuth();
   const useBackend = Boolean(isApiConfigured && user);
@@ -21,6 +23,7 @@ export function useNewsfeed() {
   const [profile, setProfile] = useState<Student | null>(null);
   const [allies, setAllies] = useState<Student[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FeedFilterTab>('popular');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -47,7 +50,7 @@ export function useNewsfeed() {
         const [current, interactions, feedPage] = await Promise.all([
           profileService.getProfile(user.id),
           apiClient.listMyInteractions(),
-          apiClient.listFeed({ limit: PAGE_SIZE }),
+          apiClient.listFeed({ limit: PAGE_SIZE, filter: activeFilter }),
         ]);
 
         if (!isMounted) return;
@@ -77,13 +80,17 @@ export function useNewsfeed() {
     return () => {
       isMounted = false;
     };
-  }, [useBackend, user?.id]);
+  }, [useBackend, user?.id, activeFilter]);
 
   const loadMore = useCallback(async () => {
     if (!useBackend || isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     try {
-      const nextPage = await apiClient.listFeed({ limit: PAGE_SIZE, before: cursorRef.current });
+      const nextPage = await apiClient.listFeed({
+        limit: PAGE_SIZE,
+        before: cursorRef.current,
+        filter: activeFilter,
+      });
       setPosts((prev) => [...prev, ...nextPage]);
       setHasMore(nextPage.length === PAGE_SIZE);
       if (nextPage.length > 0) {
@@ -94,7 +101,7 @@ export function useNewsfeed() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [useBackend, isLoadingMore, hasMore]);
+  }, [useBackend, isLoadingMore, hasMore, activeFilter]);
 
   const createPost = useCallback(
     async ({ content, audience, files }: { content: string; audience: PostAudience; files: File[] }) => {
@@ -137,10 +144,22 @@ export function useNewsfeed() {
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, comments_count: p.comments_count + delta } : p)));
   }, []);
 
+  const toggleFollow = useCallback((authorId: string, isFollowing: boolean) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.author_id === authorId && p.author
+          ? { ...p, author: { ...p.author, is_following: isFollowing } }
+          : p
+      )
+    );
+  }, []);
+
   return {
     currentUser,
     allies,
     posts,
+    activeFilter,
+    setActiveFilter,
     isLoading,
     isLoadingMore,
     hasMore,
@@ -149,6 +168,7 @@ export function useNewsfeed() {
     loadMore,
     createPost,
     toggleLike,
+    toggleFollow,
     bumpCommentCount,
   };
 }

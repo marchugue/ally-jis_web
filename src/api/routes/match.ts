@@ -1,10 +1,15 @@
 // src/api/routes/match.ts
 
 import { request } from '../http';
-import type { AcceptMatchResponse, MatchmakingStatusResponse, QueueRow, RevealData, TimelineData } from '../types';
+import type { AcceptMatchResponse, MatchmakingPreferences, MatchmakingStatusResponse, QueueRow, RevealData, TimelineData } from '../types';
 
-export function joinQueue() {
-  return request<QueueRow>('/match/queue', { method: 'POST' });
+// TODO: Backend Integration - When backend updates /match/queue, it will parse preferences:
+// { department?: string, course?: string, strictCourse?: boolean, specialization?: string, matchType?: 'anonymous' | 'direct' }
+export function joinQueue(preferences?: MatchmakingPreferences) {
+  return request<QueueRow>('/match/queue', {
+    method: 'POST',
+    body: preferences,
+  });
 }
 
 export function leaveQueue() {

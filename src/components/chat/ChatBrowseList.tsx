@@ -30,27 +30,27 @@ function BrowseRow({
       onClick={() => onSelect(user)}
       disabled={starting}
       className={cn(
-        'w-full p-4 flex items-center gap-3 transition-colors border-b border-gray-50',
-        'hover:bg-gray-50 disabled:opacity-60',
+        'w-full p-4 flex items-center gap-3 transition-colors border-b border-gray-50 dark:border-white/5',
+        'hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-60',
       )}
     >
       <div className="relative flex-shrink-0">
         <AvatarDisplay
           src={user.avatar ?? undefined}
           name={user.name}
-          className="w-12 h-12 rounded-2xl object-cover"
+          className="w-12 h-12 rounded-full object-cover"
         />
         {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#0D131F] rounded-full" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <h4 className="font-jakarta font-bold text-gray-900 truncate">{user.name}</h4>
-        <p className="text-xs text-gray-500 truncate">
+        <h4 className="font-jakarta font-bold text-gray-900 dark:text-white truncate">{user.name}</h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
           {user.course ?? (user.isAlly ? 'Your ally' : 'Start a conversation')}
         </p>
       </div>
-      <div className="flex-shrink-0 text-[#1A6B3C]">
+      <div className="flex-shrink-0 text-[#1A6B3C] dark:text-emerald-400">
         <MessageCircle size={18} />
       </div>
     </button>
@@ -74,7 +74,7 @@ function Section({
 
   return (
     <div>
-      <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 bg-gray-50/80 sticky top-0 z-10">
+      <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-gray-50/80 dark:bg-[#0D131F]/95 sticky top-0 z-10 border-b border-gray-100/50 dark:border-white/5">
         {title}
       </p>
       {users.map((user) => (

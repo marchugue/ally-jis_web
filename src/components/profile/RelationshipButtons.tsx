@@ -138,7 +138,7 @@ export function RelationshipButtons({
         <button
           onClick={handleAddAlly}
           disabled={allyBusy}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] text-white font-jakarta text-sm font-semibold hover:bg-[#155a33] transition-colors shadow-md disabled:opacity-60"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
         >
           <UserPlus size={14} /> Add Ally
         </button>
@@ -148,7 +148,7 @@ export function RelationshipButtons({
         <button
           onClick={handleCancelRequest}
           disabled={allyBusy}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-jakarta text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-60"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-jakarta text-sm font-semibold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-60"
         >
           <Clock size={14} /> Request Sent
         </button>
@@ -159,14 +159,14 @@ export function RelationshipButtons({
           <button
             onClick={handleAccept}
             disabled={allyBusy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] text-white font-jakarta text-sm font-semibold hover:bg-[#155a33] transition-colors shadow-md disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
           >
             <Check size={14} /> Accept
           </button>
           <button
             onClick={handleReject}
             disabled={allyBusy}
-            className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-60"
+            className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-60"
             aria-label="Decline request"
           >
             <X size={14} />
@@ -179,7 +179,7 @@ export function RelationshipButtons({
           <button
             onClick={handleMessage}
             disabled={messageBusy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] text-white font-jakarta text-sm font-semibold hover:bg-[#155a33] transition-colors shadow-md disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
           >
             <MessageCircle size={14} /> Message
           </button>
@@ -187,7 +187,7 @@ export function RelationshipButtons({
           <AlertDialogTrigger asChild>
             <button
               disabled={allyBusy}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-jakarta text-sm font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-60"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/40 font-jakarta text-sm font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors disabled:opacity-60"
             >
               <UserCheck size={14} /> Allies
             </button>
@@ -216,8 +216,8 @@ export function RelationshipButtons({
         disabled={followBusy}
         className={
           isFollowing
-            ? 'px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-jakarta text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-60'
-            : 'px-4 py-2 rounded-xl border-2 border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-colors disabled:opacity-60'
+            ? 'px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-jakarta text-sm font-semibold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-60'
+            : 'px-4 py-2 rounded-xl border-2 border-[#1A6B3C]/20 dark:border-emerald-500/30 text-[#1A6B3C] dark:text-emerald-400 font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 dark:hover:border-emerald-500/50 hover:bg-[#1A6B3C]/5 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-60'
         }
       >
         {isFollowing ? 'Following' : isFollowedBy ? 'Follow Back' : 'Follow'}

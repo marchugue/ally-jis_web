@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Download, Shield, FileText, HelpCircle, Info, Heart } from 'lucide-react';
+import { Download, Shield, FileText, HelpCircle, Info, Heart, Cookie } from 'lucide-react';
+import { openCookieSettings } from '@/components/CookieConsentCard';
 
 export function Footer() {
   return (
-    <footer className="bg-[#13502D] text-white/80 py-12 px-4 sm:px-6 border-t border-white/10">
+    <footer className="bg-[#13502D] dark:bg-[#090D16] text-white/80 py-12 px-4 sm:px-6 border-t border-white/10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand Info */}
         <div className="space-y-4 md:col-span-1">
@@ -54,6 +55,16 @@ export function Footer() {
                 <FileText size={14} className="text-[#E8A838]" />
                 Terms & Conditions
               </Link>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={openCookieSettings}
+                className="flex items-center gap-2 hover:text-[#E8A838] transition-colors text-left"
+              >
+                <Cookie size={14} className="text-[#E8A838]" />
+                Cookie Preferences
+              </button>
             </li>
           </ul>
         </div>

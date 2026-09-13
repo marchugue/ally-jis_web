@@ -5,14 +5,14 @@ import { Footer } from '@/components/Footer';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] dark:selection:bg-emerald-500 selection:text-white flex flex-col justify-between overflow-x-hidden">
       <div>
         {/* ── TOP NAVIGATION ── */}
         <motion.header 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all"
+          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
             {/* Logo */}
@@ -25,10 +25,10 @@ export default function PrivacyPage() {
                 A
               </motion.div>
               <div className="flex flex-col">
-                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                   CHMSU Alijis
                 </span>
               </div>
@@ -36,16 +36,16 @@ export default function PrivacyPage() {
 
             {/* Nav & Back */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 mr-4">
-                <Link to="/about" className="hover:text-[#1A6B3C] transition-colors">About</Link>
-                <Link to="/terms" className="hover:text-[#1A6B3C] transition-colors">Terms</Link>
-                <Link to="/privacy" className="text-[#1A6B3C] font-bold underline underline-offset-8 decoration-[#E8A838] decoration-2">Privacy</Link>
-                <Link to="/download" className="hover:text-[#1A6B3C] transition-colors">App</Link>
+              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 dark:text-gray-300 mr-4">
+                <Link to="/about" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">About</Link>
+                <Link to="/terms" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">Terms</Link>
+                <Link to="/privacy" className="text-[#1A6B3C] dark:text-white font-bold underline underline-offset-8 decoration-[#E8A838] decoration-2">Privacy</Link>
+                <Link to="/download" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">App</Link>
               </div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link 
                   to="/" 
-                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
                 >
                   <ArrowLeft size={14} /> Back
                 </Link>
@@ -61,9 +61,9 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 pb-4"
+              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 dark:border-white/10 pb-4"
             >
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/80">
                 Data Protection & Privacy Policy • 2026 Edition
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] tracking-tight leading-[0.92]"
+              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] dark:text-white tracking-tight leading-[0.92]"
             >
               Privacy & <br />
               <span className="italic font-normal text-[#E8A838]">Integrity.</span>
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="font-fraunces text-2xl sm:text-3xl text-gray-800 leading-snug italic font-normal max-w-3xl pt-4"
+              className="font-fraunces text-2xl sm:text-3xl text-gray-800 dark:text-gray-200 leading-snug italic font-normal max-w-3xl pt-4"
             >
               “We respect your personal privacy and are committed to safeguarding the data of our campus student community.”
             </motion.p>
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
         <div className="space-y-0">
 
           {/* Commitment & What We Collect */}
-          <section className="border-t border-[#1A6B3C]/15 py-16 sm:py-24 px-4 sm:px-8">
+          <section className="border-t border-[#1A6B3C]/15 dark:border-white/10 py-16 sm:py-24 px-4 sm:px-8">
             <div className="max-w-7xl mx-auto space-y-16">
               
               {/* Campus Commitment */}
@@ -111,22 +111,22 @@ export default function PrivacyPage() {
                   <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#E8A838] font-bold block mb-2">
                     Core Guarantee
                   </span>
-                  <h2 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                  <h2 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                     Campus Privacy Commitment
                   </h2>
                 </div>
-                <div className="lg:col-span-8 font-jakarta text-gray-800 text-base sm:text-lg leading-relaxed space-y-4">
-                  <p className="font-semibold text-[#1A6B3C] text-xl">
+                <div className="lg:col-span-8 font-jakarta text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed space-y-4">
+                  <p className="font-semibold text-[#1A6B3C] dark:text-emerald-400 text-xl">
                     Ally-jis is built exclusively for students of Carlos Hilado Memorial State University – Alijis Campus.
                   </p>
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     We believe connecting with peers should never compromise your privacy. We collect only what is necessary to help you discover friends and interact safely within campus life.
                   </p>
                 </div>
               </motion.div>
 
               {/* 01: Information We Collect */}
-              <div className="pt-12 border-t border-[#1A6B3C]/15 space-y-10">
+              <div className="pt-12 border-t border-[#1A6B3C]/15 dark:border-white/10 space-y-10">
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -134,14 +134,14 @@ export default function PrivacyPage() {
                   transition={{ duration: 0.6 }}
                   className="flex items-center gap-4"
                 >
-                  <span className="font-fraunces text-6xl sm:text-7xl font-bold text-[#1A6B3C]/20 leading-none">
+                  <span className="font-fraunces text-6xl sm:text-7xl font-bold text-[#1A6B3C]/20 dark:text-white/20 leading-none">
                     01
                   </span>
                   <div>
-                    <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                    <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                       Information We Collect
                     </h3>
-                    <p className="font-jakarta text-gray-600 text-sm mt-1">
+                    <p className="font-jakarta text-gray-600 dark:text-gray-400 text-sm mt-1">
                       To help you create a profile and connect with matching peers across campus:
                     </p>
                   </div>
@@ -160,11 +160,11 @@ export default function PrivacyPage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: 0.1 * i, duration: 0.5 }}
-                      className="space-y-2 border-t-2 border-[#1A6B3C] pt-4"
+                      className="space-y-2 border-t-2 border-[#1A6B3C] dark:border-emerald-400 pt-4"
                     >
                       <span className="font-mono text-xs text-[#E8A838] font-bold uppercase tracking-wider block">{col.tag}</span>
-                      <h4 className="font-fraunces font-bold text-xl text-[#1A6B3C]">{col.title}</h4>
-                      <p className="font-jakarta text-xs sm:text-sm text-gray-700 leading-relaxed">
+                      <h4 className="font-fraunces font-bold text-xl text-[#1A6B3C] dark:text-white">{col.title}</h4>
+                      <p className="font-jakarta text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {col.desc}
                       </p>
                     </motion.div>
@@ -176,7 +176,7 @@ export default function PrivacyPage() {
           </section>
 
           {/* Tonal Shift: 02 & 03 (#EDE7DB) */}
-          <section className="bg-[#EDE7DB] py-20 sm:py-28 px-4 sm:px-8">
+          <section className="bg-[#EDE7DB] dark:bg-[#0D131F] py-20 sm:py-28 px-4 sm:px-8">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
               
               {/* 02: How We Use Your Information (6 cols) */}
@@ -187,17 +187,17 @@ export default function PrivacyPage() {
                 transition={{ duration: 0.6 }}
                 className="lg:col-span-6 space-y-6"
               >
-                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 leading-none block">
+                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 dark:text-white/20 leading-none block">
                   02
                 </span>
                 <div className="space-y-4">
-                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                     How We Use Your Information
                   </h3>
-                  <p className="font-jakarta text-gray-800 text-sm sm:text-base leading-relaxed">
+                  <p className="font-jakarta text-gray-800 dark:text-gray-200 text-sm sm:text-base leading-relaxed">
                     We use your information strictly for student life and peer discovery:
                   </p>
-                  <ul className="space-y-3 font-jakarta text-sm sm:text-base text-gray-800 pt-2">
+                  <ul className="space-y-3 font-jakarta text-sm sm:text-base text-gray-800 dark:text-gray-200 pt-2">
                     <li className="flex items-start gap-3">
                       <span className="font-mono text-xs text-[#E8A838] font-bold pt-1">•</span>
                       <span><strong>Matching:</strong> Suggesting potential friends based on shared interests, courses, and student orgs.</span>
@@ -226,14 +226,14 @@ export default function PrivacyPage() {
                   03
                 </span>
                 <div className="space-y-4">
-                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                     We Never Sell Your Data
                   </h3>
-                  <div className="font-jakarta text-gray-800 text-base sm:text-lg leading-relaxed space-y-4">
-                    <p className="font-semibold text-xl text-[#1A6B3C]">
+                  <div className="font-jakarta text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed space-y-4">
+                    <p className="font-semibold text-xl text-[#1A6B3C] dark:text-emerald-400">
                       We never sell your personal information to third parties, advertising networks, or data brokers.
                     </p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       Your profile and activities are strictly visible to registered students within the Carlos Hilado Memorial State University – Alijis Campus platform.
                     </p>
                   </div>
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
           </section>
 
           {/* Chapters 04 & 05: Security and Control */}
-          <section className="py-20 sm:py-28 px-4 sm:px-8 border-b border-[#1A6B3C]/15">
+          <section className="py-20 sm:py-28 px-4 sm:px-8 border-b border-[#1A6B3C]/15 dark:border-white/10">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
               
               {/* 04: Security & Storage (6 cols) */}
@@ -255,18 +255,18 @@ export default function PrivacyPage() {
                 transition={{ duration: 0.6 }}
                 className="lg:col-span-6 space-y-6"
               >
-                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 leading-none block">
+                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 dark:text-white/20 leading-none block">
                   04
                 </span>
                 <div className="space-y-4">
-                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                     Security & Storage
                   </h3>
-                  <div className="font-jakarta text-gray-800 text-base sm:text-lg leading-relaxed space-y-3">
+                  <div className="font-jakarta text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed space-y-3">
                     <p>
                       All network communication is protected with modern HTTPS encryption. Passwords and sensitive session tokens are securely hashed and stored.
                     </p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       We implement technical and organizational measures to safeguard your information against unauthorized access, loss, or alteration.
                     </p>
                   </div>
@@ -279,18 +279,18 @@ export default function PrivacyPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="lg:col-span-6 space-y-6 lg:border-l lg:border-[#1A6B3C]/15 lg:pl-16"
+                className="lg:col-span-6 space-y-6 lg:border-l lg:border-[#1A6B3C]/15 dark:lg:border-white/10 lg:pl-16"
               >
-                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 leading-none block">
+                <span className="font-fraunces text-7xl sm:text-8xl font-bold text-[#1A6B3C]/20 dark:text-white/20 leading-none block">
                   05
                 </span>
                 <div className="space-y-4">
-                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C]">
+                  <h3 className="font-fraunces text-3xl sm:text-4xl font-bold text-[#1A6B3C] dark:text-white">
                     Your Rights and Control
                   </h3>
-                  <div className="font-jakarta text-gray-800 text-sm sm:text-base leading-relaxed space-y-3">
+                  <div className="font-jakarta text-gray-800 dark:text-gray-200 text-sm sm:text-base leading-relaxed space-y-3">
                     <p>As an Ally-jis user, you maintain complete ownership and control over your profile:</p>
-                    <ul className="space-y-2 text-gray-700">
+                    <ul className="space-y-2 text-gray-700 dark:text-gray-300">
                       <li>• Edit or update your profile details and hobbies anytime in Settings.</li>
                       <li>• Unmatch or block users who make you uncomfortable.</li>
                       <li>• Request account deletion or data removal by contacting our support team.</li>
@@ -303,7 +303,7 @@ export default function PrivacyPage() {
           </section>
 
           {/* ── BORDERLESS HIGH CONTRAST BLOCK: CONTACT ── */}
-          <section className="bg-[#1A6B3C] text-[#F7F4EF] py-20 sm:py-28 px-4 sm:px-8">
+          <section className="bg-[#1A6B3C] dark:bg-[#111827] text-[#F7F4EF] dark:text-white py-20 sm:py-28 px-4 sm:px-8 border-y border-[#1A6B3C] dark:border-white/10">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
               <motion.div 
                 initial={{ opacity: 0, y: 25 }}

@@ -60,6 +60,8 @@ export interface Conversation {
   participantId: string;
   participantName: string;
   participantAvatar: string;
+  participantCourse?: string | null;
+  participantDepartment?: string | null;
   lastMessage: string;
   lastMessageTime: string;
   lastMessageSenderId: string;
@@ -71,13 +73,18 @@ export interface Conversation {
   variant: 'regular' | 'anonymous' | 'anonymous_ended';
   /** PHT consecutive-day streak for this conversation (all types, including regular DMs). */
   dayStreak: number;
+  streakActiveToday?: boolean;
   matchInfo: {
     matchId: string;
     stage: number;
     dayStreak: number;
+    streakActiveToday?: boolean;
     partnerAlias: string | null;
     partnerAvatar: string | null;
     ended: boolean;
+    status?: string | null;
+    chatExpiresAt?: string | null;
+    confirmedAt?: string | null;
   } | null;
 }
 
@@ -89,9 +96,35 @@ export interface MatchCard {
   connectionStatus: 'none' | 'pending' | 'accepted';
 }
 
+export type NotificationType =
+  | 'match'
+  | 'friend_request'
+  | 'connection_request'
+  | 'message'
+  | 'accepted'
+  | 'connection_accepted'
+  | 'anon_match'
+  | 'new_follower'
+  | 'post_comment'
+  | 'comment'
+  | 'comment_reply'
+  | 'comment_like'
+  | 'post_like'
+  | 'like'
+  | 'comment_mention'
+  | string;
+
+export interface NotificationRedirection {
+  entityType: 'post' | 'comment' | 'conversation' | 'profile' | 'requests' | 'discover';
+  targetId: string;
+  route: string;
+  params?: Record<string, string>;
+  webUrl?: string;
+}
+
 export interface Notification {
   id: string;
-  type: 'match' | 'friend_request' | 'message' | 'accepted' | 'anon_match' | 'new_follower';
+  type: NotificationType;
   title: string;
   description: string;
   timestamp: string;
@@ -99,6 +132,10 @@ export interface Notification {
   fromUserId?: string;
   fromUserName?: string;
   fromUserAvatar?: string;
+  postId?: string;
+  commentId?: string;
+  targetId?: string;
+  redirection?: NotificationRedirection;
 }
 
 export type OnboardingStep = 1 | 2 | 3 | 4;

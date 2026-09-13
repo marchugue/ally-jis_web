@@ -50,6 +50,7 @@ export type {
   BlockStatus,
   UnblockUserResponse,
   BlockedUserRow,
+  MatchmakingPreferences,
   QueueRow,
   MatchRow,
   MatchStatus,
@@ -65,10 +66,14 @@ export type {
   FollowCounts,
   FollowListItem,
   PaginatedFollowList,
+  FollowSortBy,
+  FollowFilterOptions,
   RelationshipStatus,
   RelationshipStatusResponse,
   AllyListItem,
   PaginatedAllyList,
+  AllySortBy,
+  AllyFilterOptions,
   ProfileRelationshipSummary,
   AdminRole,
   Permission,
@@ -204,6 +209,7 @@ export const apiClient = {
   adminWarnReportedUser: admin.warnReportedUser,
   adminBanReportedUser: admin.banReportedUser,
   adminSuspendReportedUser: admin.suspendReportedUser,
+  adminDeleteReportedPost: admin.deleteReportedPost,
 
   // ─── Admin: Global Search ────────────────────────────────────────────────
   adminSearch: admin.search,
@@ -251,6 +257,7 @@ export const apiClient = {
 
   // ─── Feed ────────────────────────────────────────────────────────────────
   listFeed: feed.listFeed,
+  listDiscoverFeed: feed.listDiscoverFeed,
   listPostsByAuthor: feed.listPostsByAuthor,
   getPost: feed.getPost,
   createPost: feed.createPost,

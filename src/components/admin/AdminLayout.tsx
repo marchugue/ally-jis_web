@@ -1,7 +1,7 @@
 // src/components/admin/AdminLayout.tsx
 
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Bot, Flag, BarChart3, ShieldCheck,
   ScrollText, Bell, Search, Settings, Sun, Moon, ChevronRight, LogOut, UserCog, ImageIcon,
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { apiClient } from '@/api/client';
 import type { Permission } from '@/api/client';
+import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
 
 interface NavItem {
   label: string;
@@ -43,8 +44,10 @@ export function AdminLayout() {
   const { role, hasPermission } = useAdminMe();
   const { theme, toggleTheme } = useAdminTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
   const currentItem = NAV_ITEMS.find((item) => item.path === location.pathname);
@@ -137,8 +140,11 @@ export function AdminLayout() {
           <span>Account Settings</span>
         </Link>
         <button
-          onClick={signOut}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-medium active:scale-[0.98]"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            setShowLogoutConfirm(true);
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-medium active:scale-[0.98] cursor-pointer"
         >
           <LogOut size={16} />
           <span>Log out</span>
@@ -236,7 +242,7 @@ export function AdminLayout() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-gray-100 dark:bg-white/5" />
                 <DropdownMenuItem
-                  onClick={signOut}
+                  onSelect={() => setShowLogoutConfirm(true)}
                   className="cursor-pointer text-xs text-red-600 dark:text-red-400 flex items-center gap-2 py-2 rounded-xl focus:bg-red-50 dark:focus:bg-red-950/20"
                 >
                   <LogOut size={14} /> Sign out
@@ -254,6 +260,16 @@ export function AdminLayout() {
 
       {/* Global Search Dialog */}
       <AdminGlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={async () => {
+          await signOut();
+          navigate('/', { replace: true });
+        }}
+      />
     </div>
   );
 }

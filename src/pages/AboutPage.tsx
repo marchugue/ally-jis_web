@@ -10,14 +10,14 @@ export default function AboutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] dark:selection:bg-emerald-500 selection:text-white flex flex-col justify-between overflow-x-hidden">
       <div>
         {/* ── TOP NAVIGATION (GLASSMORPHISM) ── */}
         <motion.header 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all"
+          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
             {/* Logo */}
@@ -30,10 +30,10 @@ export default function AboutPage() {
                 A
               </motion.div>
               <div className="flex flex-col">
-                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                   CHMSU Alijis
                 </span>
               </div>
@@ -41,16 +41,16 @@ export default function AboutPage() {
 
             {/* Nav & Back */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 mr-4">
-                <Link to="/about" className="text-[#1A6B3C] font-bold underline underline-offset-8 decoration-[#E8A838] decoration-2">About</Link>
-                <Link to="/terms" className="hover:text-[#1A6B3C] transition-colors">Terms</Link>
-                <Link to="/privacy" className="hover:text-[#1A6B3C] transition-colors">Privacy</Link>
-                <Link to="/download" className="hover:text-[#1A6B3C] transition-colors">App</Link>
+              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 dark:text-gray-300 mr-4">
+                <Link to="/about" className="text-[#1A6B3C] dark:text-white font-bold underline underline-offset-8 decoration-[#E8A838] decoration-2">About</Link>
+                <Link to="/terms" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">Terms</Link>
+                <Link to="/privacy" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">Privacy</Link>
+                <Link to="/download" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">App</Link>
               </div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link 
                   to="/" 
-                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
                 >
                   <ArrowLeft size={14} /> Back
                 </Link>
@@ -67,9 +67,9 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 pb-4"
+              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 dark:border-white/10 pb-4"
             >
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/80">
                 Alijis Campus • Student Life Edition • 2026
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
@@ -81,7 +81,7 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] tracking-tight leading-[0.92]"
+              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] dark:text-white tracking-tight leading-[0.92]"
             >
               Beyond the <br />
               <span className="italic font-normal text-[#E8A838]">Classroom.</span>
@@ -98,11 +98,11 @@ export default function AboutPage() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="lg:col-span-5 space-y-6"
             >
-              <div className="w-16 h-1 bg-[#1A6B3C]" />
-              <p className="font-fraunces text-2xl sm:text-3xl text-[#1A6B3C] leading-snug italic font-normal">
+              <div className="w-16 h-1 bg-[#1A6B3C] dark:bg-emerald-400" />
+              <p className="font-fraunces text-2xl sm:text-3xl text-[#1A6B3C] dark:text-emerald-300 leading-snug italic font-normal">
                 “Connecting with peers should be simple, accessible, and rooted in shared student life.”
               </p>
-              <div className="pt-2 flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/60">
+              <div className="pt-2 flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/60 dark:text-gray-400">
                 <span>CHMSU Alijis Platform</span>
                 <span>•</span>
                 <span>Established 2026</span>
@@ -114,12 +114,12 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="lg:col-span-7 space-y-6 font-jakarta text-gray-800 text-base sm:text-lg leading-relaxed"
+              className="lg:col-span-7 space-y-6 font-jakarta text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed"
             >
-              <p className="font-semibold text-xl sm:text-2xl text-[#1A6B3C] leading-snug">
+              <p className="font-semibold text-xl sm:text-2xl text-[#1A6B3C] dark:text-emerald-400 leading-snug">
                 Ally-jis is a friend-finding platform designed exclusively for students of Carlos Hilado Memorial State University – Alijis Campus.
               </p>
-              <p className="text-gray-700 leading-relaxed text-base sm:text-lg">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base sm:text-lg">
                 We believe connecting with peers should be simple and accessible. By matching students based on shared interests, course details, personal preferences, and campus organizations, Ally-jis helps you expand your network and build meaningful friendships beyond your immediate classroom setting.
               </p>
 
@@ -127,14 +127,14 @@ export default function AboutPage() {
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                   <Link
                     to="/download"
-                    className="inline-flex items-center gap-2 bg-[#1A6B3C] hover:bg-[#13502D] text-white px-7 py-3.5 rounded-full font-mono text-xs uppercase tracking-wider font-semibold transition-all shadow-md"
+                    className="inline-flex items-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white px-7 py-3.5 rounded-full font-mono text-xs uppercase tracking-wider font-semibold transition-all shadow-md"
                   >
                     <Download size={16} /> Download Android APK <ArrowUpRight size={14} />
                   </Link>
                 </motion.div>
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-2 text-[#1A6B3C] hover:text-[#E8A838] font-mono text-xs uppercase tracking-wider font-bold transition-colors underline underline-offset-4"
+                  className="inline-flex items-center gap-2 text-[#1A6B3C] dark:text-emerald-400 hover:text-[#E8A838] font-mono text-xs uppercase tracking-wider font-bold transition-colors underline underline-offset-4"
                 >
                   Open Web Portal
                 </Link>
@@ -145,7 +145,7 @@ export default function AboutPage() {
         </section>
 
         {/* ── BORDERLESS TONAL BLOCK: KEY FEATURES ── */}
-        <section className="bg-[#EDE7DB] text-[#1A6B3C] py-20 sm:py-32 px-4 sm:px-8">
+        <section className="bg-[#EDE7DB] dark:bg-[#0D131F] text-[#1A6B3C] dark:text-gray-100 py-20 sm:py-32 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto space-y-16">
             
             {/* Section Header */}
@@ -154,17 +154,17 @@ export default function AboutPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.6 }}
-              className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-[#1A6B3C]/15 pb-8"
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-8"
             >
               <div>
-                <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 block mb-2">
+                <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 dark:text-gray-400 block mb-2">
                   Feature Architecture
                 </span>
                 <h2 className="font-fraunces text-4xl sm:text-6xl font-bold tracking-tight">
                   Key Features.
                 </h2>
               </div>
-              <p className="font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/70 max-w-xs">
+              <p className="font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/70 dark:text-gray-400 max-w-xs">
                 Essential capabilities engineered for student networking at Alijis.
               </p>
             </motion.div>
@@ -184,14 +184,14 @@ export default function AboutPage() {
                   01
                 </div>
                 <div className="space-y-3">
-                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] leading-tight">
+                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white leading-tight">
                     Create your Profile
                   </h3>
-                  <p className="font-jakarta text-gray-700 text-sm sm:text-base leading-relaxed">
+                  <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                     Highlight your personality, hobbies, course, year level, and active student organizations.
                   </p>
                 </div>
-                <div className="w-12 h-0.5 bg-[#1A6B3C]/30" />
+                <div className="w-12 h-0.5 bg-[#1A6B3C]/30 dark:bg-white/20" />
               </motion.div>
 
               {/* Feature 02 (Offset Vertical Position for Grid-Breaking Feel) */}
@@ -202,18 +202,18 @@ export default function AboutPage() {
                 transition={{ duration: 0.6, delay: 0.2 }}
                 className="space-y-6 md:pt-10"
               >
-                <div className="font-fraunces text-6xl sm:text-7xl font-bold text-[#1A6B3C]/30 leading-none">
+                <div className="font-fraunces text-6xl sm:text-7xl font-bold text-[#1A6B3C]/30 dark:text-white/30 leading-none">
                   02
                 </div>
                 <div className="space-y-3">
-                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] leading-tight">
+                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white leading-tight">
                     Find potential Friends
                   </h3>
-                  <p className="font-jakarta text-gray-700 text-sm sm:text-base leading-relaxed">
+                  <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                     Effortlessly discover fellow students who share your passions and background.
                   </p>
                 </div>
-                <div className="w-12 h-0.5 bg-[#1A6B3C]/30" />
+                <div className="w-12 h-0.5 bg-[#1A6B3C]/30 dark:bg-white/20" />
               </motion.div>
 
               {/* Feature 03 (Further Offset) */}
@@ -228,14 +228,14 @@ export default function AboutPage() {
                   03
                 </div>
                 <div className="space-y-3">
-                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] leading-tight">
+                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white leading-tight">
                     Connect and Chat
                   </h3>
-                  <p className="font-jakarta text-gray-700 text-sm sm:text-base leading-relaxed">
+                  <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                     Send friend requests and start conversations through real-time chat.
                   </p>
                 </div>
-                <div className="w-12 h-0.5 bg-[#1A6B3C]/30" />
+                <div className="w-12 h-0.5 bg-[#1A6B3C]/30 dark:bg-white/20" />
               </motion.div>
 
             </div>
@@ -243,7 +243,7 @@ export default function AboutPage() {
         </section>
 
         {/* ── BORDERLESS HIGH CONTRAST BLOCK: CALL TO ACTION ── */}
-        <section className="bg-[#1A6B3C] text-[#F7F4EF] py-20 sm:py-28 px-4 sm:px-8">
+        <section className="bg-[#1A6B3C] dark:bg-[#111827] text-[#F7F4EF] dark:text-white py-20 sm:py-28 px-4 sm:px-8 border-y border-[#1A6B3C] dark:border-white/10">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <motion.div 
               initial={{ opacity: 0, y: 25 }}

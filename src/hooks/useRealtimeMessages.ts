@@ -26,6 +26,47 @@ function reactionsEqual(a?: MessageReaction[], b?: MessageReaction[]): boolean {
   return JSON.stringify(sortKey(left)) === JSON.stringify(sortKey(right));
 }
 
+export function dedupeMessages(list: Message[]): Message[] {
+  const seenIds = new Set<string>();
+  const realMessages: Message[] = [];
+
+  for (const m of list) {
+    if (!m.id) continue;
+    if (!m.id.startsWith(TEMP_ID_PREFIX)) {
+      realMessages.push(m);
+    }
+  }
+
+  const result: Message[] = [];
+  for (const m of list) {
+    if (!m.id || seenIds.has(m.id)) continue;
+
+    // If this is an optimistic / temp message, check if a saved message with the
+    // exact same content, sender, and media already exists in the list
+    if (m.id.startsWith(TEMP_ID_PREFIX)) {
+      const alreadySaved = realMessages.some((real) => {
+        if (real.senderId !== m.senderId) return false;
+        if ((real.content ?? null) !== (m.content ?? null)) return false;
+        if ((real.imageUrl ?? null) !== (m.imageUrl ?? null)) return false;
+
+        const timeReal = new Date(real.createdAt || real.timestamp).getTime();
+        const timeTemp = new Date(m.createdAt || m.timestamp).getTime();
+        if (isNaN(timeReal) || isNaN(timeTemp)) return true;
+        return Math.abs(timeReal - timeTemp) < 120_000;
+      });
+
+      if (alreadySaved) {
+        continue; // Drop the duplicate temp message
+      }
+    }
+
+    seenIds.add(m.id);
+    result.push(m);
+  }
+
+  return result;
+}
+
 function mergeMessages(prev: Message[], next: Message[]): Message[] {
   const prevById = new Map(prev.map((m) => [m.id, m]));
   let anyChanged = next.length !== prev.length;
@@ -45,7 +86,7 @@ function mergeMessages(prev: Message[], next: Message[]): Message[] {
     return existing;
   });
 
-  return anyChanged ? merged : prev;
+  return dedupeMessages(anyChanged ? merged : prev);
 }
 
 function applyReactionToggle(
@@ -77,6 +118,10 @@ export function useRealtimeMessages(conversationId: string | null) {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const hasLoadedOnceRef = useRef(false);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentConvIdRef = useRef<string | null>(conversationId);
+  useEffect(() => {
+    currentConvIdRef.current = conversationId;
+  }, [conversationId]);
 
   const loadMessages = useCallback(async (silent = false) => {
     if (!conversationId || !isApiConfigured) return;
@@ -89,31 +134,48 @@ export function useRealtimeMessages(conversationId: string | null) {
 
     try {
       const data = await chatService.getMessages(conversationId);
+      // Guard against race conditions when switching conversations rapidly
+      if (currentConvIdRef.current !== conversationId) return;
+
       setMessages((prev) => {
-        const pending = prev.filter((m) => m.id.startsWith(TEMP_ID_PREFIX));
+        const pending = prev.filter((m) => {
+          if (!m.id.startsWith(TEMP_ID_PREFIX)) return false;
+          const alreadyInServerData = data.some(
+            (d) =>
+              d.senderId === m.senderId &&
+              (d.content ?? null) === (m.content ?? null) &&
+              (d.imageUrl ?? null) === (m.imageUrl ?? null)
+          );
+          return !alreadyInServerData;
+        });
         const merged = mergeMessages(prev, data);
-        return pending.length === 0 ? merged : [...merged, ...pending];
+        return dedupeMessages(pending.length === 0 ? merged : [...merged, ...pending]);
       });
       hasLoadedOnceRef.current = true;
     } catch (err: any) {
+      if (currentConvIdRef.current !== conversationId) return;
       if (!silent) {
         setError(err.message);
       }
     } finally {
-      if (showSpinner) {
+      if (currentConvIdRef.current === conversationId && showSpinner) {
         setIsLoading(false);
       }
     }
   }, [conversationId]);
 
   useEffect(() => {
+    // Immediately clear messages and trigger skeleton loader when switching conversation
+    setMessages([]);
+    hasLoadedOnceRef.current = false;
+    setError(null);
+
     if (!conversationId || !isApiConfigured) {
-      setMessages([]);
-      hasLoadedOnceRef.current = false;
+      setIsLoading(false);
       return;
     }
 
-    hasLoadedOnceRef.current = false;
+    setIsLoading(true);
     void loadMessages();
   }, [conversationId, loadMessages]);
 
@@ -129,10 +191,27 @@ export function useRealtimeMessages(conversationId: string | null) {
 
     const onMessageNew = (payload: { conversationId: string; message: MessageRow }) => {
       if (payload.conversationId !== conversationId) return;
-      setMessages((prev) =>
-        prev.some((m) => m.id === payload.message.id) ? prev : [...prev, mapMessageRow(payload.message)],
-      );
       setPartnerTyping(false);
+      setMessages((prev) => {
+        const incoming = mapMessageRow(payload.message);
+        if (prev.some((m) => m.id === incoming.id)) {
+          return prev;
+        }
+        // If there is an optimistic temp message matching this incoming socket message, reconcile it
+        const pendingIndex = prev.findIndex(
+          (m) =>
+            m.id.startsWith(TEMP_ID_PREFIX) &&
+            m.senderId === incoming.senderId &&
+            (m.content ?? null) === (incoming.content ?? null) &&
+            (m.imageUrl ?? null) === (incoming.imageUrl ?? null)
+        );
+        if (pendingIndex !== -1) {
+          const updated = [...prev];
+          updated[pendingIndex] = incoming;
+          return dedupeMessages(updated);
+        }
+        return dedupeMessages([...prev, incoming]);
+      });
     };
     const onTyping = (payload: { conversationId: string; isTyping: boolean }) => {
       if (payload.conversationId !== conversationId) return;
@@ -249,18 +328,39 @@ export function useRealtimeMessages(conversationId: string | null) {
         replyTo?.id ?? null
       );
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId
-            ? (saved ? { ...saved, status: 'sent' as const } : { ...m, status: 'sent' as const })
-            : m
-        )
-      );
+      setMessages((prev) => {
+        if (!saved) {
+          return prev.map((m) => (m.id === tempId ? { ...m, status: 'sent' as const } : m));
+        }
+        // If the saved message was already inserted by socket or poll, drop tempId and ensure status is sent
+        if (prev.some((m) => m.id === saved.id)) {
+          return dedupeMessages(
+            prev
+              .filter((m) => m.id !== tempId)
+              .map((m) => (m.id === saved.id ? { ...m, status: 'sent' as const } : m))
+          );
+        }
+        return dedupeMessages(
+          prev.map((m) => (m.id === tempId ? { ...saved, status: 'sent' as const } : m))
+        );
+      });
     } catch (err: any) {
       const isBlocked = err instanceof ApiError && err.status === 403;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' as const, blocked: isBlocked } : m))
-      );
+      setMessages((prev) => {
+        // If a real message matching this content and sender is already present in state,
+        // it means the backend actually saved it before an error; clean up tempId
+        const alreadyReceived = prev.some(
+          (m) =>
+            !m.id.startsWith(TEMP_ID_PREFIX) &&
+            m.senderId === senderId &&
+            (m.content ?? null) === (content ?? null) &&
+            (m.imageUrl ?? null) === (imageUrl ?? null)
+        );
+        if (alreadyReceived) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' as const, blocked: isBlocked } : m));
+      });
       setError(err.message);
       throw err;
     }
@@ -285,18 +385,36 @@ export function useRealtimeMessages(conversationId: string | null) {
         failedMessage.replyTo?.id ?? null
       );
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId
-            ? (saved ? { ...saved } : { ...m, status: 'sent' as const })
-            : m
-        )
-      );
+      setMessages((prev) => {
+        if (!saved) {
+          return prev.map((m) => (m.id === tempId ? { ...m, status: 'sent' as const } : m));
+        }
+        if (prev.some((m) => m.id === saved.id)) {
+          return dedupeMessages(
+            prev
+              .filter((m) => m.id !== tempId)
+              .map((m) => (m.id === saved.id ? { ...m, status: 'sent' as const } : m))
+          );
+        }
+        return dedupeMessages(
+          prev.map((m) => (m.id === tempId ? { ...saved, status: 'sent' as const } : m))
+        );
+      });
     } catch (err: any) {
       const isBlocked = err instanceof ApiError && err.status === 403;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' as const, blocked: isBlocked } : m))
-      );
+      setMessages((prev) => {
+        const alreadyReceived = prev.some(
+          (m) =>
+            !m.id.startsWith(TEMP_ID_PREFIX) &&
+            m.senderId === failedMessage.senderId &&
+            (m.content ?? null) === (failedMessage.content ?? null) &&
+            (m.imageUrl ?? null) === (failedMessage.imageUrl ?? null)
+        );
+        if (alreadyReceived) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' as const, blocked: isBlocked } : m));
+      });
       setError(err.message);
     }
   };

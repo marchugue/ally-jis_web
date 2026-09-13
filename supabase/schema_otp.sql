@@ -9,6 +9,7 @@ begin
   alter table public.profiles add column if not exists email_type text default 'unknown';
   alter table public.profiles add column if not exists chmsu_auto_verified boolean default false;
   alter table public.profiles add column if not exists student_id_url text;
+  alter table public.profiles add column if not exists student_id_back_url text;
   alter table public.profiles add column if not exists pending_student_verification boolean default false;
   alter table public.profiles add column if not exists student_verification_status text default 'none';
   -- 'none' | 'pending' | 'approved' | 'rejected'

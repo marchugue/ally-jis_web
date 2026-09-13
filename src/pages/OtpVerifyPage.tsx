@@ -176,11 +176,11 @@ export default function OtpVerifyPage() {
 
   if (!userId || !email) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-          <p className="text-[#6B7280]">Invalid verification link. Please register again.</p>
-          <button onClick={() => navigate('/onboarding')} className="mt-4 text-[#1A6B3C] underline text-sm">
+          <p className="text-[#6B7280] dark:text-gray-400">Invalid verification link. Please register again.</p>
+          <button onClick={() => navigate('/onboarding')} className="mt-4 text-[#1A6B3C] dark:text-emerald-400 underline text-sm">
             Go to Registration
           </button>
         </div>
@@ -189,7 +189,7 @@ export default function OtpVerifyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex flex-col items-center justify-center px-4 py-12">
       {/* Background blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#1A6B3C]/6 blur-3xl" />
@@ -205,14 +205,14 @@ export default function OtpVerifyPage() {
         {/* Back link */}
         <button
           onClick={() => navigate('/login')}
-          className="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1A6B3C] transition-colors mb-6"
+          className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to login
         </button>
 
         {/* Card */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[#F0EDE8] overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] rounded-3xl shadow-sm border border-[#F0EDE8] dark:border-white/10 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#1A6B3C] to-[#2d8a56] px-8 pt-8 pb-6">
             <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
@@ -236,9 +236,9 @@ export default function OtpVerifyPage() {
                   key="success"
                   className="text-center py-4"
                 >
-                  <CheckCircle2 className="w-16 h-16 text-[#1A6B3C] mx-auto mb-3" />
-                  <p className="text-lg font-bold text-[#1A6B3C]">Email verified!</p>
-                  <p className="text-sm text-[#6B7280] mt-1">
+                  <CheckCircle2 className="w-16 h-16 text-[#1A6B3C] dark:text-emerald-400 mx-auto mb-3" />
+                  <p className="text-lg font-bold text-[#1A6B3C] dark:text-emerald-400">Email verified!</p>
+                  <p className="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
                     {isPendingApproval
                       ? 'Redirecting to your approval status…'
                       : 'Redirecting to your dashboard…'}
@@ -246,8 +246,8 @@ export default function OtpVerifyPage() {
                 </div>
               ) : (
                 <motion.div key="form">
-                  <p className="text-sm text-[#6B7280] mb-6 leading-relaxed">
-                    Enter the 6-digit verification code. The code expires in <strong className="text-[#111827]">10 minutes</strong>.
+                  <p className="text-sm text-[#6B7280] dark:text-gray-300 mb-6 leading-relaxed">
+                    Enter the 6-digit verification code. The code expires in <strong className="text-[#111827] dark:text-white">10 minutes</strong>.
                   </p>
 
                   {/* OTP Input Boxes */}
@@ -266,9 +266,9 @@ export default function OtpVerifyPage() {
                         onKeyDown={(e) => handleKeyDown(i, e)}
                         className={[
                           'w-12 h-14 text-center text-xl font-bold rounded-xl border-2 outline-none transition-all',
-                          'text-[#111827] bg-[#F7F4EF]',
-                          d ? 'border-[#1A6B3C] bg-[#F0FDF4]' : 'border-[#E2DED7]',
-                          'focus:border-[#1A6B3C] focus:bg-[#F0FDF4]',
+                          'text-[#111827] dark:text-white bg-[#F7F4EF] dark:bg-[#0D131F]',
+                          d ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40' : 'border-[#E2DED7] dark:border-white/10',
+                          'focus:border-[#1A6B3C] dark:focus:border-emerald-500 focus:bg-[#F0FDF4] dark:focus:bg-emerald-950/30',
                           isVerifying ? 'opacity-50 cursor-not-allowed' : '',
                           error ? 'border-red-400 bg-red-50' : '',
                         ].join(' ')}
@@ -283,7 +283,7 @@ export default function OtpVerifyPage() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 mb-5 text-sm text-red-700"
+                        className="flex items-start gap-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 rounded-xl p-3 mb-5 text-sm text-red-700 dark:text-red-400"
                       >
                         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         {error}
@@ -298,8 +298,8 @@ export default function OtpVerifyPage() {
                     className={[
                       'w-full h-12 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2',
                       fullCode.length === OTP_LENGTH && !isVerifying
-                        ? 'bg-[#1A6B3C] text-white hover:bg-[#155a32] shadow-md shadow-[#1A6B3C]/20'
-                        : 'bg-[#E2DED7] text-[#9CA3AF] cursor-not-allowed',
+                        ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a32] dark:hover:bg-emerald-500 shadow-md shadow-[#1A6B3C]/20'
+                        : 'bg-[#E2DED7] dark:bg-white/10 text-[#9CA3AF] dark:text-gray-500 cursor-not-allowed',
                     ].join(' ')}
                   >
                     {isVerifying ? (
@@ -316,15 +316,15 @@ export default function OtpVerifyPage() {
                   </button>
 
                   {/* Resend section */}
-                  <div className="mt-5 pt-5 border-t border-[#F0EDE8] text-center">
+                  <div className="mt-5 pt-5 border-t border-[#F0EDE8] dark:border-white/10 text-center">
                     {resendCount >= resendLimit ? (
-                      <p className="text-sm text-[#9CA3AF]">
+                      <p className="text-sm text-[#9CA3AF] dark:text-gray-400">
                         Maximum resends reached. Please wait or{' '}
-                        <a href="mailto:support@ally-jis.xyz" className="text-[#1A6B3C] underline">contact support</a>.
+                        <a href="mailto:support@ally-jis.xyz" className="text-[#1A6B3C] dark:text-emerald-400 underline">contact support</a>.
                       </p>
                     ) : (
                       <div>
-                        <p className="text-xs text-[#9CA3AF] mb-2">
+                        <p className="text-xs text-[#9CA3AF] dark:text-gray-400 mb-2">
                           Didn't receive it? {resendsLeft} resend{resendsLeft !== 1 ? 's' : ''} remaining.
                         </p>
                         <button
@@ -333,8 +333,8 @@ export default function OtpVerifyPage() {
                           className={[
                             'flex items-center gap-1.5 mx-auto text-sm font-medium transition-all',
                             canResend
-                              ? 'text-[#1A6B3C] hover:text-[#155a32]'
-                              : 'text-[#9CA3AF] cursor-not-allowed',
+                              ? 'text-[#1A6B3C] dark:text-emerald-400 hover:text-[#155a32]'
+                              : 'text-[#9CA3AF] dark:text-gray-500 cursor-not-allowed',
                           ].join(' ')}
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
@@ -350,7 +350,7 @@ export default function OtpVerifyPage() {
         </div>
 
         {/* Footer hint */}
-        <p className="text-center text-xs text-[#9CA3AF] mt-5">
+        <p className="text-center text-xs text-[#9CA3AF] dark:text-gray-500 mt-5">
           Check your spam folder if you don't see the email.
         </p>
       </motion.div>

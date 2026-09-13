@@ -32,86 +32,82 @@ const PAGE_SIZE = 10;
 
 function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden h-full w-full bg-white">
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 h-full w-full overflow-hidden">
-        {/* Left column stream skeleton */}
-        <div className="flex-1 min-w-0 h-full flex flex-col overflow-y-auto custom-scrollbar bg-white">
-          {/* Cover gradient */}
-          <div className="h-44 sm:h-56 bg-gradient-to-r from-[#0A331C]/60 via-[#1A6B3C]/50 to-[#185E35]/60 relative flex-shrink-0 animate-pulse">
+    <div className="flex-1 overflow-y-auto custom-scrollbar w-full bg-[#F7F4EF] dark:bg-[#121212] transition-colors duration-200">
+      <div className="max-w-7xl xl:max-w-[1440px] mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 w-full">
+        {/* Header Card Skeleton */}
+        <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] overflow-hidden mb-0 sm:mb-6 shadow-none sm:shadow-2xs animate-pulse">
+          <div className="h-44 sm:h-56 lg:h-64 bg-gradient-to-r from-[#0A331C]/60 via-[#1A6B3C]/50 to-[#185E35]/60 relative flex-shrink-0">
             <div className="absolute bottom-0 left-6 sm:left-8 translate-y-1/2">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gray-200 border-4 border-white shadow-md" />
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 dark:bg-white/10 border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15" />
             </div>
           </div>
-
-          {/* Profile Identity Row */}
-          <div className="pt-16 sm:pt-18 pb-5 px-6 sm:px-8 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap animate-pulse">
+          <div className="pt-16 sm:pt-18 pb-5 px-6 sm:px-8 border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between gap-4 flex-wrap">
             <div className="space-y-2">
-              <div className="h-7 w-48 bg-gray-200 rounded-md" />
-              <div className="h-4 w-32 bg-gray-100 rounded-md" />
+              <div className="h-7 w-48 bg-gray-200 dark:bg-white/10 rounded-md" />
+              <div className="h-4 w-32 bg-gray-100 dark:bg-white/5 rounded-md" />
             </div>
-            <div className="h-10 w-32 bg-gray-100 rounded-xl" />
+            <div className="h-10 w-32 bg-gray-100 dark:bg-white/10 rounded-xl" />
           </div>
-
-          {/* Stats Bar */}
-          <div className="px-6 sm:px-8 py-3.5 border-b border-gray-100 flex items-center gap-6 animate-pulse">
-            <div className="h-4 w-20 bg-gray-100 rounded-md" />
-            <div className="h-4 w-20 bg-gray-100 rounded-md" />
-            <div className="h-4 w-20 bg-gray-100 rounded-md" />
+          <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6">
+            <div className="h-4 w-20 bg-gray-100 dark:bg-white/5 rounded-md" />
+            <div className="h-4 w-20 bg-gray-100 dark:bg-white/5 rounded-md" />
+            <div className="h-4 w-20 bg-gray-100 dark:bg-white/5 rounded-md" />
           </div>
+        </div>
 
-          {/* Feed & Media Sub-Tabs Skeleton */}
-          <div className="px-6 sm:px-8 py-3.5 border-b border-gray-100 flex items-center gap-8 animate-pulse">
-            <div className="h-4 w-16 bg-gray-200 rounded-md" />
-            <div className="h-4 w-16 bg-gray-200 rounded-md" />
-          </div>
-
-          {/* Post composer skeleton (if own profile) */}
-          {isOwnProfile && (
-            <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center gap-3 animate-pulse">
-              <div className="w-9 h-9 rounded-xl bg-gray-200 flex-shrink-0" />
-              <div className="h-10 bg-gray-100 rounded-xl flex-1" />
+        {/* 2-Column Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 sm:gap-6 items-start">
+          {/* Left Column Skeleton */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-0 sm:space-y-4 divide-y divide-gray-200/80 dark:divide-white/10 sm:divide-y-0">
+            <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 flex items-center gap-8 shadow-none sm:shadow-2xs animate-pulse">
+              <div className="h-4 w-16 bg-gray-200 dark:bg-white/10 rounded-md" />
+              <div className="h-4 w-16 bg-gray-200 dark:bg-white/10 rounded-md" />
             </div>
-          )}
 
-          {/* Post Skeletons */}
-          <div className="divide-y divide-gray-100">
+            {isOwnProfile && (
+              <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 flex items-center gap-3 shadow-none sm:shadow-2xs animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 flex-shrink-0" />
+                <div className="h-10 bg-gray-100 dark:bg-white/5 rounded-full flex-1" />
+              </div>
+            )}
+
             {[1, 2, 3].map((i) => (
-              <div key={i} className="p-6 space-y-4 animate-pulse">
+              <div key={i} className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 space-y-4 shadow-none sm:shadow-2xs animate-pulse">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-xl flex-shrink-0" />
+                  <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-xl flex-shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-3.5 bg-gray-200 rounded-md w-1/3" />
-                    <div className="h-2.5 bg-gray-100 rounded-md w-1/4" />
+                    <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-md w-1/3" />
+                    <div className="h-2.5 bg-gray-100 dark:bg-white/5 rounded-md w-1/4" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-100 rounded-md w-full" />
-                  <div className="h-3 bg-gray-100 rounded-md w-4/5" />
-                  <div className="h-3 bg-gray-100 rounded-md w-2/3" />
+                  <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-full" />
+                  <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-4/5" />
+                  <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-2/3" />
                 </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Right column skeleton */}
-        <div className="hidden lg:flex w-[480px] xl:w-[540px] 2xl:w-[600px] bg-white border-l border-gray-100 flex-col p-6 space-y-6 overflow-y-auto flex-shrink-0 animate-pulse">
-          <div className="h-5 w-24 bg-gray-200 rounded-md" />
-          <div className="space-y-2">
-            <div className="h-3 bg-gray-100 rounded-md w-full" />
-            <div className="h-3 bg-gray-100 rounded-md w-3/4" />
-          </div>
-          <div className="pt-4 border-t border-gray-100 space-y-3">
-            <div className="h-4 w-32 bg-gray-200 rounded-md" />
-            <div className="h-4 w-48 bg-gray-100 rounded-md" />
-            <div className="h-4 w-40 bg-gray-100 rounded-md" />
-          </div>
-          <div className="pt-4 border-t border-gray-100 space-y-3">
-            <div className="h-4 w-28 bg-gray-200 rounded-md" />
-            <div className="flex flex-wrap gap-2">
-              <div className="h-7 w-20 bg-gray-100 rounded-lg" />
-              <div className="h-7 w-24 bg-gray-100 rounded-lg" />
-              <div className="h-7 w-16 bg-gray-100 rounded-lg" />
+          {/* Right Column Skeleton */}
+          <div className="hidden lg:block lg:col-span-5 xl:col-span-4 space-y-4">
+            <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 space-y-3 shadow-2xs animate-pulse">
+              <div className="h-4 w-20 bg-gray-200 dark:bg-white/10 rounded-md" />
+              <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-full" />
+              <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-3/4" />
+            </div>
+            <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 space-y-3 shadow-2xs animate-pulse">
+              <div className="h-4 w-28 bg-gray-200 dark:bg-white/10 rounded-md" />
+              <div className="h-4 w-44 bg-gray-100 dark:bg-white/5 rounded-md" />
+              <div className="h-4 w-36 bg-gray-100 dark:bg-white/5 rounded-md" />
+            </div>
+            <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 space-y-3 shadow-2xs animate-pulse">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-white/10 rounded-md" />
+              <div className="flex flex-wrap gap-2">
+                <div className="h-7 w-20 bg-gray-100 dark:bg-white/5 rounded-lg" />
+                <div className="h-7 w-24 bg-gray-100 dark:bg-white/5 rounded-lg" />
+                <div className="h-7 w-16 bg-gray-100 dark:bg-white/5 rounded-lg" />
+              </div>
             </div>
           </div>
         </div>
@@ -359,59 +355,59 @@ export default function ProfilePage() {
 
   // ── Right Side Blended Information Panel Content ─────────────────────────
   const rightSideInfoContent = (
-    <div className="flex flex-col divide-y divide-gray-100">
-      {/* Bio / About */}
-      <div className="p-6">
-        <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
-          <MessageSquare size={13} className="text-[#1A6B3C]" /> About
+    <div className="space-y-0 sm:space-y-4 divide-y divide-gray-200/80 dark:divide-white/10 sm:divide-y-0">
+      {/* Bio / About Card */}
+      <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs">
+        <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 mb-3 flex items-center gap-1.5">
+          <MessageSquare size={13} className="text-[#1A6B3C] dark:text-emerald-400" /> About
         </h3>
         {profile.bio ? (
-          <p className="font-jakarta text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+          <p className="font-jakarta text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">
             {profile.bio}
           </p>
         ) : (
-          <p className="font-jakarta text-sm text-gray-400 italic">
+          <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 italic">
             {isOwnProfile ? 'No bio yet. Click "Edit profile" to introduce yourself.' : 'No bio provided.'}
           </p>
         )}
       </div>
 
-      {/* Academic Details */}
-      <div className="p-6 space-y-4">
-        <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-          <GraduationCap size={14} className="text-[#1A6B3C]" /> Academic Journey
+      {/* Academic Details Card */}
+      <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs">
+        <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 mb-4 flex items-center gap-1.5">
+          <GraduationCap size={14} className="text-[#1A6B3C] dark:text-emerald-400" /> Academic Journey
         </h3>
         <div className="space-y-3 font-jakarta text-sm">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <GraduationCap size={15} className="text-[#1A6B3C]" />
+          <div className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <GraduationCap size={15} />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{profile.course || 'Not specified'}</p>
-              <p className="text-xs text-gray-400">{profile.yearLevel || 'Student'}</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{profile.course || 'Not specified'}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{profile.yearLevel || 'Student'}</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Building2 size={15} className="text-[#1A6B3C]" />
+          <div className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Building2 size={15} />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">
+              <p className="font-semibold text-gray-900 dark:text-white">
                 {(profile.department || 'CHMSU College').replace('College of ', '')}
               </p>
-              <p className="text-xs text-gray-400">Campus Department</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Campus Department</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Interests */}
-      <div className="p-6">
+      {/* Interests Card */}
+      <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-[#1A6B3C]" /> Campus Interests
+          <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5">
+            <Sparkles size={13} className="text-[#1A6B3C] dark:text-emerald-400" /> Campus Interests
           </h3>
-          <span className="text-xs font-jakarta font-semibold text-[#1A6B3C] bg-[#1A6B3C]/10 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-jakarta font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 border border-gray-200/60 dark:border-white/10 px-2.5 py-0.5 rounded-full">
             {profile.interests?.length || 0}
           </span>
         </div>
@@ -421,24 +417,24 @@ export default function ProfilePage() {
             {profile.interests.map((interest) => (
               <span
                 key={interest}
-                className="px-3 py-1 rounded-lg bg-gray-50 text-gray-700 font-jakarta text-xs font-medium border border-gray-200/80"
+                className="px-3 py-1 rounded-lg bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-200 font-jakarta text-xs font-medium border border-gray-200/80 dark:border-white/10"
               >
                 {interest}
               </span>
             ))}
           </div>
         ) : (
-          <p className="font-jakarta text-xs text-gray-400 italic">No interests selected yet.</p>
+          <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 italic">No interests selected yet.</p>
         )}
       </div>
 
-      {/* Organizations */}
-      <div className="p-6">
+      {/* Organizations Card */}
+      <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-            <Users size={13} className="text-[#1A6B3C]" /> Campus Organizations
+          <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5">
+            <Users size={13} className="text-[#1A6B3C] dark:text-emerald-400" /> Campus Organizations
           </h3>
-          <span className="text-xs font-jakarta font-semibold text-[#1A6B3C] bg-[#1A6B3C]/10 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-jakarta font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 border border-gray-200/60 dark:border-white/10 px-2.5 py-0.5 rounded-full">
             {profile.organizations?.length || 0}
           </span>
         </div>
@@ -446,30 +442,30 @@ export default function ProfilePage() {
         {(profile.organizations?.length ?? 0) > 0 ? (
           <div className="space-y-2">
             {profile.organizations.map((org) => (
-              <div key={org} className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-[#1A6B3C]/10 flex items-center justify-center flex-shrink-0">
-                  <Users size={12} className="text-[#1A6B3C]" />
+              <div key={org} className="flex items-center gap-2.5 p-2 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+                <div className="w-6 h-6 rounded-md bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <Users size={12} />
                 </div>
-                <span className="font-jakarta text-xs font-medium text-gray-800">{org}</span>
+                <span className="font-jakarta text-xs font-medium text-gray-800 dark:text-gray-200">{org}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="font-jakarta text-xs text-gray-400 italic">No organizations listed.</p>
+          <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 italic">No organizations listed.</p>
         )}
       </div>
 
       {/* People you may know (own profile only) */}
       {isOwnProfile && suggested.length > 0 && (
-        <div className="p-6">
-          <h3 className="font-fraunces text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <UserPlus size={16} className="text-[#1A6B3C]" /> People You May Know
+        <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs">
+          <h3 className="font-fraunces text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <UserPlus size={16} className="text-[#1A6B3C] dark:text-emerald-400" /> People You May Know
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             {suggested.map((person) => {
               const status = connections[person.id] || 'none';
               return (
-                <div key={person.id} className="flex items-start gap-3">
+                <div key={person.id} className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/40 dark:bg-white/5">
                   <button
                     type="button"
                     onClick={() => navigate(`/profile/${person.id}`)}
@@ -479,7 +475,7 @@ export default function ProfilePage() {
                     <AvatarDisplay
                       src={person.avatar}
                       name={person.name || person.username}
-                      className="w-10 h-10 rounded-xl object-cover"
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200/60 dark:border-white/10"
                       textClassName="text-lg"
                     />
                   </button>
@@ -488,21 +484,21 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => navigate(`/profile/${person.id}`)}
-                        className="font-jakarta text-sm font-semibold text-gray-900 truncate hover:underline hover:text-[#1A6B3C] text-left"
+                        className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 text-left"
                       >
                         {person.username ? `@${person.username}` : person.name}
                       </button>
-                      {person.isVerified && <Shield size={10} className="text-[#1A6B3C] flex-shrink-0" />}
+                      {person.isVerified && <Shield size={10} className="text-[#1A6B3C] dark:text-emerald-400 flex-shrink-0" />}
                     </div>
-                    <p className="font-jakarta text-xs text-gray-400 truncate">{person.course}</p>
-                    <p className="font-jakarta text-xs text-gray-400">{person.yearLevel}</p>
+                    <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 truncate">{person.course}</p>
+                    <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">{person.yearLevel}</p>
                     <button
                       type="button"
                       onClick={() => toggleConnect(person.id)}
                       disabled={status === 'accepted'}
                       className={cn(
                         'mt-2 flex items-center gap-1.5 px-3 py-1 rounded-lg font-jakarta text-xs font-semibold transition-all disabled:cursor-default',
-                        status === 'none' && 'border border-gray-200 text-gray-700 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] hover:bg-[#1A6B3C]/5',
+                        status === 'none' && 'border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5',
                         status === 'pending' && 'bg-[#E8A838]/10 text-[#E8A838] border border-[#E8A838]/30',
                         status === 'accepted' && 'bg-[#1A6B3C]/10 text-[#1A6B3C] border border-[#1A6B3C]/20',
                       )}
@@ -523,48 +519,16 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden h-full w-full bg-white">
-      {/* ── Mobile Tab Segment Switcher (visible only < lg) ── */}
-      <div className="lg:hidden flex border-b border-gray-100 bg-white flex-shrink-0 z-10">
-        <button
-          type="button"
-          onClick={() => setMobileTab('posts')}
-          className={cn(
-            'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors',
-            mobileTab === 'posts'
-              ? 'text-[#1A6B3C] border-[#1A6B3C]'
-              : 'text-gray-400 border-transparent hover:text-gray-600'
-          )}
-        >
-          Timeline & Posts
-        </button>
-        <button
-          type="button"
-          onClick={() => setMobileTab('about')}
-          className={cn(
-            'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors',
-            mobileTab === 'about'
-              ? 'text-[#1A6B3C] border-[#1A6B3C]'
-              : 'text-gray-400 border-transparent hover:text-gray-600'
-          )}
-        >
-          About & Info
-        </button>
-      </div>
-
-      {/* ── Edge-to-Edge 2-Column Split Workspace ── */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 h-full w-full overflow-hidden">
+    <div className="flex-1 overflow-y-auto custom-scrollbar w-full bg-[#F7F4EF] dark:bg-[#121212] transition-colors duration-200 pb-24 md:pb-12">
+      <div className="max-w-7xl xl:max-w-[1440px] mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 w-full">
 
         {/* ══════════════════════════════════════════════════════════
-            LEFT COLUMN: Banner, Identity, Composer & Posts Stream
+            ROCK-STILL PROFILE HEADER CARD (Cover, Avatar, Identity, Stats)
         ══════════════════════════════════════════════════════════ */}
-        <div className={cn(
-          'flex-1 min-w-0 h-full flex flex-col overflow-y-auto custom-scrollbar bg-white',
-          mobileTab !== 'posts' && 'hidden lg:flex'
-        )}>
+        <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] overflow-hidden mb-0 sm:mb-6 shadow-none sm:shadow-2xs">
           {/* Cover Banner */}
           <div className="relative flex-shrink-0">
-            <div className="h-44 sm:h-56 bg-gradient-to-r from-[#1A6B3C] via-[#247946] to-[#3B8C7E] overflow-hidden relative">
+            <div className="h-44 sm:h-56 lg:h-64 bg-gradient-to-r from-[#1A6B3C] via-[#247946] to-[#3B8C7E] overflow-hidden relative">
               <div
                 className="absolute inset-0 opacity-15"
                 style={{
@@ -575,11 +539,11 @@ export default function ProfilePage() {
 
             {/* Avatar overhanging cover */}
             <div className="absolute bottom-0 left-6 sm:left-8 translate-y-1/2 z-10">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-[#181818] border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center">
                 <AvatarDisplay
                   src={profile.avatar}
                   name={profile.username || profile.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-full"
                   textClassName="text-4xl sm:text-5xl"
                 />
               </div>
@@ -587,21 +551,21 @@ export default function ProfilePage() {
           </div>
 
           {/* Identity Bar */}
-          <div className="pt-16 sm:pt-18 pb-5 px-6 sm:px-8 border-b border-gray-100 flex items-start justify-between gap-4 flex-wrap bg-white flex-shrink-0">
+          <div className="pt-16 sm:pt-18 pb-5 px-6 sm:px-8 border-b border-gray-200/80 dark:border-white/10 flex items-start justify-between gap-4 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
                   {profile.name || (profile.username ? `@${profile.username}` : 'Student')}
                 </h1>
                 {profile.isVerified && (
-                  <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 text-[#1A6B3C] px-2.5 py-0.5 rounded-md">
+                  <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-md">
                     <Shield size={11} />
                     <span className="font-jakarta text-xs font-semibold">CHMSU VERIFIED</span>
                   </span>
                 )}
               </div>
               {profile.username && (
-                <p className="font-jakarta text-sm text-gray-400 font-medium mt-0.5">
+                <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
                   @{profile.username}
                 </p>
               )}
@@ -611,7 +575,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 flex-shrink-0 mt-1">
               {!isOwnProfile ? (
                 relationshipLoading ? (
-                  <div className="h-9 w-40 rounded-xl bg-gray-100 animate-pulse" />
+                  <div className="h-9 w-40 rounded-xl bg-gray-100 dark:bg-white/5 animate-pulse" />
                 ) : relationship && viewedUserId ? (
                   <RelationshipButtons
                     targetUserId={viewedUserId}
@@ -632,7 +596,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#1A6B3C]/20 text-[#1A6B3C] font-jakarta text-sm font-semibold hover:border-[#1A6B3C]/40 hover:bg-[#1A6B3C]/5 transition-all shadow-xs"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
                 >
                   <Pencil size={13} /> Edit profile
                 </button>
@@ -642,34 +606,34 @@ export default function ProfilePage() {
 
           {/* Stats Bar */}
           {(isOwnProfile ? true : !!relationship) && (
-            <div className="px-6 sm:px-8 py-3.5 border-b border-gray-100 flex items-center gap-6 flex-wrap bg-white flex-shrink-0">
+            <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
               <button
                 type="button"
                 onClick={() => viewedUserId && setListModal('followers')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] transition-colors"
+                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
               >
-                <span className="font-bold text-gray-900">{relationship?.followersCount ?? 0}</span>{' '}
-                <span className="text-gray-500 font-medium">Followers</span>
+                <span className="font-bold text-gray-900 dark:text-white">{relationship?.followersCount ?? 0}</span>{' '}
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Followers</span>
               </button>
               <button
                 type="button"
                 onClick={() => viewedUserId && setListModal('following')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] transition-colors"
+                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
               >
-                <span className="font-bold text-gray-900">{relationship?.followingCount ?? 0}</span>{' '}
-                <span className="text-gray-500 font-medium">Following</span>
+                <span className="font-bold text-gray-900 dark:text-white">{relationship?.followingCount ?? 0}</span>{' '}
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Following</span>
               </button>
               <button
                 type="button"
                 onClick={() => viewedUserId && setListModal('allies')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] transition-colors"
+                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
               >
-                <span className="font-bold text-gray-900">{relationship?.alliesCount ?? 0}</span>{' '}
-                <span className="text-gray-500 font-medium">Allies</span>
+                <span className="font-bold text-gray-900 dark:text-white">{relationship?.alliesCount ?? 0}</span>{' '}
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Allies</span>
               </button>
 
               {!isOwnProfile && relationship && (relationship.mutualAlliesCount > 0 || relationship.mutualFollowersCount > 0) && (
-                <span className="font-jakarta text-xs text-gray-400 ml-auto">
+                <span className="font-jakarta text-xs text-gray-400 dark:text-gray-500 ml-auto">
                   {relationship.mutualAlliesCount > 0 && `${relationship.mutualAlliesCount} Mutual Allies`}
                   {relationship.mutualAlliesCount > 0 && relationship.mutualFollowersCount > 0 && ' · '}
                   {relationship.mutualFollowersCount > 0 && `${relationship.mutualFollowersCount} Mutual Followers`}
@@ -678,108 +642,146 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ── Feed & Media Sub-Tabs (Bottom of followers, following, allies) ── */}
-          <div className="px-6 sm:px-8 border-b border-gray-100 flex items-center gap-8 bg-white flex-shrink-0">
+          {/* ── Mobile Tab Segment Switcher (visible only < lg, anchored right here inside header) ── */}
+          <div className="lg:hidden flex border-t border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818]">
             <button
               type="button"
-              onClick={() => setStreamTab('feed')}
+              onClick={() => setMobileTab('posts')}
               className={cn(
-                'py-3.5 font-jakarta text-sm font-semibold flex items-center gap-2 border-b-2 transition-all -mb-px',
-                streamTab === 'feed'
-                  ? 'border-[#1A6B3C] text-[#1A6B3C]'
-                  : 'border-transparent text-gray-400 hover:text-gray-700'
+                'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer',
+                mobileTab === 'posts'
+                  ? 'text-[#1A6B3C] dark:text-emerald-400 border-[#1A6B3C] dark:border-emerald-400 bg-[#1A6B3C]/5 dark:bg-emerald-500/5'
+                  : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
-              <Newspaper size={16} />
-              <span>Feed</span>
-              <span className={cn(
-                'px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
-                streamTab === 'feed' ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]' : 'bg-gray-100 text-gray-400'
-              )}>
-                {posts.length}
-              </span>
+              Timeline & Posts
             </button>
-
             <button
               type="button"
-              onClick={() => setStreamTab('media')}
+              onClick={() => setMobileTab('about')}
               className={cn(
-                'py-3.5 font-jakarta text-sm font-semibold flex items-center gap-2 border-b-2 transition-all -mb-px',
-                streamTab === 'media'
-                  ? 'border-[#1A6B3C] text-[#1A6B3C]'
-                  : 'border-transparent text-gray-400 hover:text-gray-700'
+                'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer',
+                mobileTab === 'about'
+                  ? 'text-[#1A6B3C] dark:text-emerald-400 border-[#1A6B3C] dark:border-emerald-400 bg-[#1A6B3C]/5 dark:bg-emerald-500/5'
+                  : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
-              <ImageIcon size={16} />
-              <span>Media</span>
-              <span className={cn(
-                'px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
-                streamTab === 'media' ? 'bg-[#1A6B3C]/10 text-[#1A6B3C]' : 'bg-gray-100 text-gray-400'
-              )}>
-                {mediaPosts.length}
-              </span>
+              About & Info
             </button>
           </div>
+        </div>
 
-          {/* ── Feed Stream View ── */}
-          {streamTab === 'feed' && (
-            <div className="flex-1 min-h-0 bg-white flex flex-col">
-              {/* Post Composer Trigger (own profile only) */}
-              {isOwnProfile && (
-                <div
-                  onClick={() => setComposerOpen(true)}
-                  className="px-6 sm:px-8 py-4 border-b border-gray-100 bg-white flex items-center gap-3 cursor-pointer hover:bg-gray-50/50 transition-colors flex-shrink-0"
-                >
-                  <AvatarDisplay
-                    src={profile.avatar}
-                    name={profile.name || profile.username}
-                    className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
-                    textClassName="text-lg"
-                  />
-                  <div className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 font-jakarta text-sm text-gray-400">
-                    What's on your mind?
-                  </div>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#1A6B3C]/8 text-[#1A6B3C] font-jakarta text-xs font-semibold hover:bg-[#1A6B3C]/15 transition-colors"
+        {/* ══════════════════════════════════════════════════════════
+            BALANCED 2-COLUMN GRID (STABLE ALIGNMENT ON DESKTOP & MOBILE)
+        ══════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 sm:gap-6 items-start">
+
+          {/* ── LEFT / MAIN STREAM COLUMN: Posts & Media ── */}
+          <div className={cn(
+            'lg:col-span-7 xl:col-span-8 space-y-0 sm:space-y-4 min-w-0',
+            mobileTab !== 'posts' && 'hidden lg:block'
+          )}>
+            {/* Feed & Media Sub-Tabs */}
+            <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-4 sm:px-6 flex items-center gap-8 shadow-none sm:shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setStreamTab('feed')}
+                className={cn(
+                  'py-3.5 font-jakarta text-sm font-semibold flex items-center gap-2 border-b-2 transition-all -mb-px cursor-pointer',
+                  streamTab === 'feed'
+                    ? 'border-[#1A6B3C] dark:border-emerald-500 text-[#1A6B3C] dark:text-emerald-400'
+                    : 'border-transparent text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                )}
+              >
+                <Newspaper size={16} />
+                <span>Feed</span>
+                <span className={cn(
+                  'px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
+                  streamTab === 'feed' ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-400'
+                )}>
+                  {posts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStreamTab('media')}
+                className={cn(
+                  'py-3.5 font-jakarta text-sm font-semibold flex items-center gap-2 border-b-2 transition-all -mb-px cursor-pointer',
+                  streamTab === 'media'
+                    ? 'border-[#1A6B3C] dark:border-emerald-500 text-[#1A6B3C] dark:text-emerald-400'
+                    : 'border-transparent text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                )}
+              >
+                <ImageIcon size={16} />
+                <span>Media</span>
+                <span className={cn(
+                  'px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
+                  streamTab === 'media' ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-400'
+                )}>
+                  {mediaPosts.length}
+                </span>
+              </button>
+            </div>
+
+            {/* ── Feed Stream View ── */}
+            {streamTab === 'feed' && (
+              <div className="divide-y divide-gray-200/80 dark:divide-white/10 sm:divide-y-0 sm:space-y-3">
+                {/* Post Composer Trigger (own profile only) */}
+                {isOwnProfile && (
+                  <div
+                    onClick={() => setComposerOpen(true)}
+                    className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 flex items-center gap-3 cursor-pointer hover:border-[#1A6B3C]/40 transition-colors shadow-none sm:shadow-2xs"
                   >
-                    <ImageIcon size={14} /> <span className="hidden sm:inline">Photo</span>
-                  </button>
-                </div>
-              )}
+                    <AvatarDisplay
+                      src={profile.avatar}
+                      name={profile.name || profile.username}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      textClassName="text-lg"
+                    />
+                    <div className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-sm text-gray-400 dark:text-gray-400">
+                      What's on your mind?
+                    </div>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#1A6B3C] dark:text-emerald-400 font-jakarta text-xs font-semibold hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <ImageIcon size={14} className="text-[#1A6B3C] dark:text-emerald-400" /> <span className="hidden sm:inline">Photo</span>
+                    </button>
+                  </div>
+                )}
 
-              {/* Feed Posts */}
-              <div className="flex-1 min-h-0">
+                {/* Feed Posts */}
                 {postsLoading ? (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200/80 dark:divide-white/10 sm:divide-y-0 sm:space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="p-6 space-y-3 animate-pulse">
+                      <div key={i} className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 space-y-3 shadow-none sm:shadow-2xs animate-pulse">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-200 rounded-xl" />
+                          <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-xl" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-3.5 bg-gray-200 rounded-md w-1/3" />
-                            <div className="h-2.5 bg-gray-100 rounded-md w-1/4" />
+                            <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-md w-1/3" />
+                            <div className="h-2.5 bg-gray-100 dark:bg-white/5 rounded-md w-1/4" />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="h-3 bg-gray-100 rounded-md w-full" />
-                          <div className="h-3 bg-gray-100 rounded-md w-3/4" />
+                          <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-full" />
+                          <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-md w-3/4" />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : posts.length === 0 ? (
-                  <div className="px-6 py-16 text-center">
-                    <div className="w-12 h-12 bg-[#1A6B3C]/8 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                      <RefreshCw size={22} className="text-[#1A6B3C]/40" />
+                  <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-6 py-16 text-center shadow-none sm:shadow-2xs">
+                    <div className="w-12 h-12 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 border border-[#1A6B3C]/20 dark:border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <RefreshCw size={22} className="text-[#1A6B3C] dark:text-emerald-400" />
                     </div>
-                    <p className="font-fraunces text-base font-semibold text-gray-800 mb-1">No posts yet</p>
-                    <p className="font-jakarta text-sm text-gray-400">
+                    <p className="font-fraunces text-base font-semibold text-gray-800 dark:text-white mb-1">No posts yet</p>
+                    <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 max-w-sm mx-auto">
                       {isOwnProfile ? 'Share your thoughts, questions, or updates with classmates.' : 'This student has not shared any posts yet.'}
                     </p>
                   </div>
                 ) : (
-                  <div>
+                  <div className="divide-y divide-gray-200/80 dark:divide-white/10 sm:divide-y-0 sm:space-y-3">
                     {posts.map((post) => (
                       <FeedPostCard
                         key={post.id}
@@ -789,7 +791,7 @@ export default function ProfilePage() {
                         onCommentClick={setActivePost}
                         onDelete={handleDelete}
                         showBorder={false}
-                        className="border-b border-gray-100 last:border-b-0 rounded-none bg-white p-6 hover:bg-gray-50/40 transition-colors"
+                        className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 transition-colors shadow-none sm:shadow-2xs"
                       />
                     ))}
 
@@ -797,97 +799,89 @@ export default function ProfilePage() {
 
                     {isLoadingMore && (
                       <div className="flex justify-center py-5">
-                        <div className="w-6 h-6 border-2 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
+                        <div className="w-6 h-6 border-2 border-[#1A6B3C]/20 border-t-[#1A6B3C] dark:border-emerald-500/20 dark:border-t-emerald-400 rounded-full animate-spin" />
                       </div>
                     )}
 
                     {!hasMore && posts.length > 0 && (
-                      <p className="font-jakarta text-xs text-gray-400 text-center py-6">
+                      <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 text-center py-6">
                         You've reached the end of this stream
                       </p>
                     )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ── Media Grid View ── */}
-          {streamTab === 'media' && (
-            <div className="flex-1 min-h-0 bg-white">
-              {postsLoading ? (
-                <div className="grid grid-cols-3 gap-1 sm:gap-2 p-3 sm:p-4 animate-pulse">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="aspect-square rounded-lg bg-gray-100" />
-                  ))}
-                </div>
-              ) : mediaPosts.length === 0 ? (
-                <div className="px-6 py-16 text-center">
-                  <div className="w-12 h-12 bg-[#1A6B3C]/8 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                    <ImageIcon size={22} className="text-[#1A6B3C]/40" />
+            {/* ── Media Grid View ── */}
+            {streamTab === 'media' && (
+              <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-5 shadow-none sm:shadow-2xs">
+                {postsLoading ? (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 animate-pulse">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="aspect-square rounded-xl bg-gray-100 dark:bg-white/10 border border-gray-200/60 dark:border-white/5" />
+                    ))}
                   </div>
-                  <p className="font-fraunces text-base font-semibold text-gray-800 mb-1">No media yet</p>
-                  <p className="font-jakarta text-sm text-gray-400">
-                    {isOwnProfile
-                      ? 'Photos and images attached to your posts will be collected here.'
-                      : 'This student has not shared any media photos yet.'}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-1 sm:gap-2 p-3 sm:p-4 bg-white">
-                  {mediaPosts.map((post) => {
-                    const cover = post.media[0];
-                    const hasMultiple = post.media.length > 1;
-                    return (
-                      <div
-                        key={post.id}
-                        onClick={() => setActivePost(post)}
-                        className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden cursor-pointer group border border-gray-100/60"
-                      >
-                        <img
-                          src={cover.url}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          loading="lazy"
-                        />
-                        {hasMultiple && (
-                          <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-md backdrop-blur-xs">
-                            <Layers size={12} />
+                ) : mediaPosts.length === 0 ? (
+                  <div className="px-6 py-16 text-center">
+                    <div className="w-12 h-12 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 border border-[#1A6B3C]/20 dark:border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <ImageIcon size={22} className="text-[#1A6B3C] dark:text-emerald-400" />
+                    </div>
+                    <p className="font-fraunces text-base font-semibold text-gray-800 dark:text-white mb-1">No media yet</p>
+                    <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 max-w-sm mx-auto">
+                      {isOwnProfile
+                        ? 'Photos and images attached to your posts will be collected here.'
+                        : 'This student has not shared any media photos yet.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {mediaPosts.map((post) => {
+                      const cover = post.media[0];
+                      const hasMultiple = post.media.length > 1;
+                      return (
+                        <div
+                          key={post.id}
+                          onClick={() => setActivePost(post)}
+                          className="aspect-square relative bg-gray-100 dark:bg-white/5 rounded-xl overflow-hidden cursor-pointer group border border-gray-200/60 dark:border-white/10"
+                        >
+                          <img
+                            src={cover.url}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            loading="lazy"
+                          />
+                          {hasMultiple && (
+                            <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-md backdrop-blur-xs">
+                              <Layers size={12} />
+                            </div>
+                          )}
+                          {/* Hover overlay with likes and comment counts */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-jakarta text-xs font-semibold">
+                            <span className="flex items-center gap-1">
+                              <Heart size={14} className="fill-white" /> {post.likes_count}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle size={14} className="fill-white" /> {post.comments_count}
+                            </span>
                           </div>
-                        )}
-                        {/* Hover overlay with likes and comment counts */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-jakarta text-xs font-semibold">
-                          <span className="flex items-center gap-1">
-                            <Heart size={14} className="fill-white" /> {post.likes_count}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageCircle size={14} className="fill-white" /> {post.comments_count}
-                          </span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════
-            RIGHT COLUMN: Fully Blended Information Sidebar
-        ══════════════════════════════════════════════════════════ */}
-        <div className={cn(
-          'w-full lg:w-[480px] xl:w-[540px] 2xl:w-[600px] bg-white border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col min-h-0 flex-shrink-0 overflow-y-auto custom-scrollbar',
-          mobileTab !== 'about' && 'hidden lg:flex'
-        )}>
-          {/* Top Panel Bar */}
-          <div className="p-4 sm:px-6 border-b border-gray-100 flex items-center justify-between bg-white/95 backdrop-blur-sm sticky top-0 z-10 flex-shrink-0">
-            <h2 className="font-fraunces text-lg font-bold text-gray-900">Student Profile</h2>
-            <span className="font-jakarta text-xs text-gray-400 font-medium">CHMSU Campus</span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {rightSideInfoContent}
+          {/* ── RIGHT COLUMN: Information Sidebar ── */}
+          <div className={cn(
+            'lg:col-span-5 xl:col-span-4 min-w-0',
+            mobileTab !== 'about' && 'hidden lg:block'
+          )}>
+            {rightSideInfoContent}
+          </div>
+
         </div>
 
       </div>

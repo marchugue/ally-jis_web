@@ -141,6 +141,7 @@ export interface ListReportsQuery {
   status?: ReportStatus | 'all';
   categoryId?: string;
   cursor?: string | null;
+  targetType?: 'all' | 'post' | 'user';
 }
 
 export function listReports(params: ListReportsQuery) {
@@ -173,6 +174,10 @@ export function banReportedUser(reportId: string) {
 
 export function suspendReportedUser(reportId: string, until?: string | null) {
   return request<void>(`/admin/reports/${reportId}/suspend`, { method: 'POST', body: { until } });
+}
+
+export function deleteReportedPost(reportId: string, postId?: string) {
+  return request<{ success: boolean }>(`/admin/reports/${reportId}/post`, { method: 'DELETE', body: { postId } });
 }
 
 // ─── Global Search ───────────────────────────────────────────────────────

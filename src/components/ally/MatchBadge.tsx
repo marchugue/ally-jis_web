@@ -30,10 +30,10 @@ export default function MatchBadge({ percentage, sharedCount, animate = false, s
   }, [percentage, animate]);
 
   const colorClasses = {
-    green: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    orange: 'bg-orange-100 text-orange-800 border-orange-300',
-    yellow: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    gray: 'bg-gray-100 text-gray-600 border-gray-300',
+    green: 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800/80',
+    orange: 'bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800/80',
+    yellow: 'bg-yellow-100 dark:bg-yellow-950/80 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-800/80',
+    gray: 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-white/10',
   };
 
   const dotColors = {

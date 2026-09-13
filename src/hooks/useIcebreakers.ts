@@ -160,8 +160,9 @@ export function useIcebreakers({
   }, []);
 
   const select = useCallback((question: string) => {
-    onSendIcebreaker(question);
     setSuggestions([]);
+    setIsDismissed(true);
+    onSendIcebreaker(question);
   }, [onSendIcebreaker]);
 
   return { suggestions, dismiss, select };

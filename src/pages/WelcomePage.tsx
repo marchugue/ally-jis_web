@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,6 +24,22 @@ export default function WelcomePage() {
   const { user } = useAuth();
   const [activeView, setActiveView] = useState<ViewMode>('match');
   const [hasConnected, setHasConnected] = useState(false);
+
+  // Welcome page is strictly light-mode only — ensure dark class is removed on mount and restored on unmount
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+    if (wasDark) {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+    return () => {
+      if (wasDark) {
+        root.classList.add('dark');
+        root.style.colorScheme = 'dark';
+      }
+    };
+  }, []);
 
   // Interactive "How it works" demo states
   const [activeStepIndex, setActiveStepIndex] = useState(0);
@@ -90,7 +106,7 @@ export default function WelcomePage() {
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 shadow-[0_4px_24px_-4px_rgba(26,107,60,0.06)] transition-all"
+        className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#121212]/90 border-b border-[#1A6B3C]/10 dark:border-white/10 shadow-[0_4px_24px_-4px_rgba(26,107,60,0.06)] transition-all"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
           {/* Logo */}
@@ -99,33 +115,33 @@ export default function WelcomePage() {
               whileHover={{ scale: 1.08, rotate: -4 }}
               whileTap={{ scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 350, damping: 20 }}
-              className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-md transition-transform"
+              className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-md transition-transform"
             >
               A
             </motion.div>
             <div className="flex flex-col">
-              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                 Ally<span className="text-[#E8A838]">-jis</span>
               </span>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                 CHMSU Alijis
               </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-mono uppercase tracking-wider text-[#1A6B3C]/75">
+          <nav className="hidden md:flex items-center gap-6 text-xs font-mono uppercase tracking-wider text-[#1A6B3C]/75 dark:text-gray-300">
             <motion.a 
-              whileHover={{ y: -1, color: '#1A6B3C' }}
+              whileHover={{ y: -1 }}
               href="#how-it-works" 
-              className="hover:text-[#1A6B3C] transition-colors"
+              className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors"
             >
               Methodology
             </motion.a>
             <motion.a 
-              whileHover={{ y: -1, color: '#1A6B3C' }}
+              whileHover={{ y: -1 }}
               href="#mobile-app" 
-              className="hover:text-[#1A6B3C] transition-colors flex items-center gap-1.5"
+              className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors flex items-center gap-1.5"
             >
               <Smartphone size={14} className="text-[#E8A838]" /> 
               <span>Android Edition</span>
@@ -133,7 +149,7 @@ export default function WelcomePage() {
             <motion.div whileHover={{ y: -1 }}>
               <Link 
                 to="/about" 
-                className="hover:text-[#1A6B3C] transition-colors"
+                className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors"
               >
                 Manifesto
               </Link>
@@ -145,7 +161,7 @@ export default function WelcomePage() {
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
               <Link
                 to="/download"
-                className="text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white hover:bg-[#EDE7DB] px-4 py-2.5 rounded-full transition-all hidden sm:inline-flex items-center gap-2 font-semibold shadow-xs"
+                className="text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all hidden sm:inline-flex items-center gap-2 font-semibold shadow-xs border border-transparent dark:border-white/10"
               >
                 <Download size={14} className="text-[#E8A838]" /> 
                 <span>APK v1.0</span>
@@ -156,7 +172,7 @@ export default function WelcomePage() {
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link
                   to="/dashboard"
-                  className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] text-white px-6 py-2.5 rounded-full transition-all shadow-md inline-block"
+                  className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full transition-all shadow-md inline-block"
                 >
                   Dashboard
                 </Link>
@@ -167,7 +183,7 @@ export default function WelcomePage() {
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="sm:hidden">
                   <Link
                     to="/login"
-                    className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] text-white px-5 py-2 rounded-full transition-all shadow-md inline-block"
+                    className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-5 py-2 rounded-full transition-all shadow-md inline-block"
                   >
                     Log In
                   </Link>
@@ -176,14 +192,14 @@ export default function WelcomePage() {
                 {/* Desktop view: Sign In text link + Join Circle button */}
                 <Link
                   to="/login"
-                  className="font-mono text-xs uppercase tracking-wider text-[#1A6B3C] hover:text-[#13502D] px-4 py-2.5 rounded-full transition-colors hidden sm:inline"
+                  className="font-mono text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-gray-200 hover:text-[#13502D] dark:hover:text-white px-4 py-2.5 rounded-full transition-colors hidden sm:inline"
                 >
                   Log In
                 </Link>
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="hidden sm:block">
                   <Link
-                    to="/onboarding"
-                    className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] text-white px-6 py-2.5 rounded-full transition-all shadow-md inline-block"
+                    to="/register"
+                    className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full transition-all shadow-md inline-block"
                   >
                     Join Circle
                   </Link>
@@ -278,7 +294,7 @@ export default function WelcomePage() {
                   ) : (
                     <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}>
                       <Link
-                        to="/onboarding"
+                        to="/register"
                         className="w-full inline-flex items-center justify-center gap-3 bg-[#1A6B3C] hover:bg-[#13502D] text-white px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md text-center"
                       >
                         <span>Join on Web</span>
@@ -290,7 +306,7 @@ export default function WelcomePage() {
                   <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}>
                     <Link
                       to="/download"
-                      className="w-full inline-flex items-center justify-center gap-3 bg-[#EDE7DB] hover:bg-[#e4ddcf] text-[#1A6B3C] px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-semibold transition-all text-center"
+                      className="w-full inline-flex items-center justify-center gap-3 bg-[#EDE7DB] dark:bg-[#111827] dark:border dark:border-white/10 hover:bg-[#e4ddcf] dark:hover:bg-[#1E293B] text-[#1A6B3C] dark:text-emerald-400 px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-semibold transition-all text-center"
                     >
                       <Smartphone size={16} className="text-[#E8A838]" />
                       <span>Download Android APK</span>
@@ -298,9 +314,9 @@ export default function WelcomePage() {
                   </motion.div>
                 </div>
 
-                <div className="pt-4 border-t border-[#1A6B3C]/10 flex items-center justify-between text-xs font-mono text-[#1A6B3C]/70">
+                <div className="pt-4 border-t border-[#1A6B3C]/10 dark:border-white/10 flex items-center justify-between text-xs font-mono text-[#1A6B3C]/70 dark:text-gray-400">
                   <span>CIT • BSED • BSIT</span>
-                  <span className="flex items-center gap-1.5 font-semibold text-[#1A6B3C]">
+                  <span className="flex items-center gap-1.5 font-semibold text-[#1A6B3C] dark:text-emerald-400">
                     <Shield size={12} className="text-[#E8A838]" /> Mutual Consent
                   </span>
                 </div>
@@ -312,7 +328,7 @@ export default function WelcomePage() {
         </section>
 
         {/* ── BORDERLESS TONAL BLOCK: MOBILE COMPANION & LIVE UI ── */}
-        <section id="mobile-app" className="bg-[#EDE7DB] text-[#1A6B3C] py-24 sm:py-36 px-4 sm:px-8">
+        <section id="mobile-app" className="bg-[#EDE7DB] dark:bg-[#0D131F] text-[#1A6B3C] dark:text-emerald-400 py-24 sm:py-36 px-4 sm:px-8 transition-colors duration-200">
           <div className="max-w-7xl mx-auto">
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
@@ -326,15 +342,15 @@ export default function WelcomePage() {
                 className="lg:col-span-6 space-y-8"
               >
                 <div className="space-y-3">
-                  <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 block">
+                  <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 dark:text-emerald-400/70 block">
                     Chapter 01 // Pocket Companion
                   </span>
-                  <h2 className="font-fraunces text-4xl sm:text-6xl font-bold leading-tight">
+                  <h2 className="font-fraunces text-4xl sm:text-6xl font-bold leading-tight text-gray-900 dark:text-white">
                     Prefer using your phone between lectures?
                   </h2>
                 </div>
 
-                <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed max-w-xl">
+                <p className="font-jakarta text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed max-w-xl">
                   Ally-jis is completely accessible in your browser, but we also package an official Android release for students on campus data promos who want push notifications.
                 </p>
 
@@ -352,10 +368,10 @@ export default function WelcomePage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: 0.1 * i, duration: 0.5 }}
-                      className="flex items-baseline justify-between py-3 border-b border-[#1A6B3C]/15 font-mono text-xs"
+                      className="flex items-baseline justify-between py-3 border-b border-[#1A6B3C]/15 dark:border-white/10 font-mono text-xs"
                     >
-                      <span className="text-[#1A6B3C]/70 uppercase tracking-wider">{row.label}</span>
-                      <span className="font-semibold text-gray-900">{row.val}</span>
+                      <span className="text-[#1A6B3C]/70 dark:text-gray-400 uppercase tracking-wider">{row.label}</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{row.val}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -364,7 +380,7 @@ export default function WelcomePage() {
                   <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.96 }}>
                     <Link
                       to="/download"
-                      className="inline-flex items-center gap-3 bg-[#1A6B3C] hover:bg-[#13502D] text-white px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md"
+                      className="inline-flex items-center gap-3 bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md"
                     >
                       <Download size={16} />
                       <span>Download APK & Read Guide</span>
@@ -383,7 +399,7 @@ export default function WelcomePage() {
               >
                 
                 {/* Mode Selector (Pill Custom Geometry with Layout Animation) */}
-                <div className="mb-6 inline-flex p-1.5 bg-white rounded-full text-xs font-mono uppercase tracking-wider shadow-sm">
+                <div className="mb-6 inline-flex p-1.5 bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-full text-xs font-mono uppercase tracking-wider shadow-sm">
                   {(['match', 'chat', 'feed'] as ViewMode[]).map((tab) => {
                     const labels = {
                       match: 'Affinity Card',
@@ -396,14 +412,14 @@ export default function WelcomePage() {
                         key={tab}
                         onClick={() => setActiveView(tab)}
                         className={`relative px-4 py-2 rounded-full transition-colors z-10 ${
-                          isActive ? 'text-white' : 'text-[#1A6B3C]/70 hover:text-[#1A6B3C]'
+                          isActive ? 'text-white' : 'text-[#1A6B3C]/70 hover:text-[#1A6B3C] dark:text-gray-400 dark:hover:text-white'
                         }`}
                       >
                         {isActive && (
                           <motion.div
                             layoutId="activeTabIndicator"
                             transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-                            className="absolute inset-0 bg-[#1A6B3C] rounded-full -z-10 shadow-sm"
+                            className="absolute inset-0 bg-[#1A6B3C] dark:bg-emerald-600 rounded-full -z-10 shadow-sm"
                           />
                         )}
                         {labels[tab]}
@@ -419,12 +435,12 @@ export default function WelcomePage() {
                   whileHover={{ scale: 1.02 }}
                   className="w-[300px] sm:w-[330px] h-[520px] bg-[#1c2e22] rounded-[40px] p-3 shadow-2xl border-4 border-[#1c2e22]"
                 >
-                  <div className="w-full h-full bg-[#F7F4EF] rounded-[32px] overflow-hidden flex flex-col justify-between">
+                  <div className="w-full h-full bg-[#F7F4EF] dark:bg-[#111827] rounded-[32px] overflow-hidden flex flex-col justify-between">
                     
                     {/* Top Status */}
-                    <div className="pt-2 px-6 pb-2 flex items-center justify-between text-[#1A6B3C] text-[10px] font-mono font-semibold">
+                    <div className="pt-2 px-6 pb-2 flex items-center justify-between text-[#1A6B3C] dark:text-emerald-400 text-[10px] font-mono font-semibold">
                       <span>9:41</span>
-                      <div className="w-16 h-3.5 bg-black/80 rounded-full" />
+                      <div className="w-16 h-3.5 bg-black/80 dark:bg-black/90 rounded-full" />
                       <span>CHMSU</span>
                     </div>
 
@@ -438,41 +454,41 @@ export default function WelcomePage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: -10 }}
                             transition={{ duration: 0.22, ease: "easeOut" }}
-                            className="bg-white rounded-2xl p-4 space-y-3.5 shadow-sm"
+                            className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 rounded-2xl p-4 space-y-3.5 shadow-sm"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2.5">
                                 <motion.div 
                                   whileHover={{ rotate: 10 }}
-                                  className="w-11 h-11 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-fraunces text-base font-bold shadow-xs"
+                                  className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces text-base font-bold shadow-xs"
                                 >
                                   BM
                                 </motion.div>
                                 <div>
-                                  <h3 className="font-jakarta font-bold text-xs text-gray-900">Bea M.</h3>
-                                  <p className="text-[10px] font-mono text-gray-500">BSIT • 3rd Year</p>
+                                  <h3 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">Bea M.</h3>
+                                  <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400">BSIT • 3rd Year</p>
                                 </div>
                               </div>
                               <motion.span 
                                 animate={{ scale: [1, 1.06, 1] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                                className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#E8A838]/20 text-[#B45309]"
+                                className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#E8A838]/20 text-[#B45309] dark:text-[#E8A838]"
                               >
                                 96% Match
                               </motion.span>
                             </div>
 
-                            <p className="text-xs font-jakarta text-gray-600 bg-[#F7F4EF] p-3 rounded-xl leading-relaxed">
+                            <p className="text-xs font-jakarta text-gray-600 dark:text-gray-300 bg-[#F7F4EF] dark:bg-[#0D131F] p-3 rounded-xl leading-relaxed">
                               "Looking for hackathon project teammates or someone to study with at the student center."
                             </p>
 
                             <div className="space-y-1">
-                              <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
+                              <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 dark:text-gray-500 block">
                                 Shared Affinity
                               </span>
                               <div className="flex flex-wrap gap-1">
                                 {['Web Development', 'UI Design', 'Specialty Coffee'].map((tag) => (
-                                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-jakarta">
+                                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-jakarta">
                                     {tag}
                                   </span>
                                 ))}
@@ -485,13 +501,13 @@ export default function WelcomePage() {
                               whileTap={{ scale: 0.94 }}
                               className={`w-full mt-2 text-xs font-mono uppercase tracking-wider py-2.5 rounded-full flex items-center justify-center gap-1.5 transition-all shadow-xs ${
                                 hasConnected 
-                                  ? 'bg-emerald-100 text-emerald-800 font-bold' 
-                                  : 'bg-[#1A6B3C] hover:bg-[#13502D] text-white font-semibold'
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 font-bold' 
+                                  : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold'
                               }`}
                             >
                               {hasConnected ? (
                                 <>
-                                  <CheckCircle2 size={13} className="text-emerald-700" />
+                                  <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400" />
                                   <span>Request Sent to Bea</span>
                                 </>
                               ) : (
@@ -513,7 +529,7 @@ export default function WelcomePage() {
                             transition={{ duration: 0.22, ease: "easeOut" }}
                             className="space-y-2.5 text-xs font-jakarta"
                           >
-                            <div className="text-center text-[10px] font-mono text-gray-400 py-1">
+                            <div className="text-center text-[10px] font-mono text-gray-400 dark:text-gray-500 py-1">
                               MUTUAL CONSENT UNLOCKED
                             </div>
 
@@ -521,7 +537,7 @@ export default function WelcomePage() {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.05 }}
-                              className="bg-white p-2.5 rounded-2xl rounded-tl-none text-gray-700 max-w-[85%] shadow-sm"
+                              className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2.5 rounded-2xl rounded-tl-none text-gray-700 dark:text-gray-200 max-w-[85%] shadow-sm"
                             >
                               Hey Bea! Saw you are taking Systems Arch this term.
                             </motion.div>
@@ -530,7 +546,7 @@ export default function WelcomePage() {
                               initial={{ opacity: 0, x: 10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.15 }}
-                              className="bg-[#1A6B3C] text-white p-2.5 rounded-2xl rounded-br-none ml-auto max-w-[85%] shadow-sm"
+                              className="bg-[#1A6B3C] dark:bg-emerald-600 text-white p-2.5 rounded-2xl rounded-br-none ml-auto max-w-[85%] shadow-sm"
                             >
                               Yes! Section 3-A. Let's compare notes after afternoon lectures!
                             </motion.div>
@@ -539,14 +555,14 @@ export default function WelcomePage() {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.25 }}
-                              className="bg-white p-2.5 rounded-2xl rounded-tl-none text-gray-700 max-w-[85%] shadow-sm"
+                              className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2.5 rounded-2xl rounded-tl-none text-gray-700 dark:text-gray-200 max-w-[85%] shadow-sm"
                             >
                               Sounds great! Let's meet near the library lobby.
                             </motion.div>
 
-                            <div className="pt-3 flex items-center gap-2 bg-white p-2 rounded-full shadow-xs">
+                            <div className="pt-3 flex items-center gap-2 bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2 rounded-full shadow-xs">
                               <span className="flex-1 text-[11px] text-gray-400 pl-2">Reply to Bea...</span>
-                              <div className="w-6 h-6 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center shadow-xs">
+                              <div className="w-6 h-6 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                                 <Send size={10} />
                               </div>
                             </div>
@@ -565,16 +581,16 @@ export default function WelcomePage() {
                             <motion.div 
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="bg-white p-3.5 rounded-2xl space-y-1.5 shadow-sm"
+                              className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-3.5 rounded-2xl space-y-1.5 shadow-sm"
                             >
-                              <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
-                                <span className="font-bold text-gray-800">Marco • CCS</span>
+                              <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 dark:text-gray-400">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">Marco • CCS</span>
                                 <span>15m ago</span>
                               </div>
-                              <p className="text-gray-700">
+                              <p className="text-gray-700 dark:text-gray-300">
                                 Anyone free for badminton at the gym court after 4:30 PM today? 🏸
                               </p>
-                              <div className="text-[10px] font-mono text-[#1A6B3C] font-semibold pt-1">
+                              <div className="text-[10px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-semibold pt-1">
                                 4 students confirmed
                               </div>
                             </motion.div>
@@ -583,13 +599,13 @@ export default function WelcomePage() {
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: 0.1 }}
-                              className="bg-white p-3.5 rounded-2xl space-y-1.5 shadow-sm"
+                              className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-3.5 rounded-2xl space-y-1.5 shadow-sm"
                             >
-                              <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
-                                <span className="font-bold text-gray-800">GDSC Alijis</span>
+                              <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 dark:text-gray-400">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">GDSC Alijis</span>
                                 <span>2h ago</span>
                               </div>
-                              <p className="text-gray-700">
+                              <p className="text-gray-700 dark:text-gray-300">
                                 Open workshop on UI prototyping this Thursday in IT Lab 2. All courses welcome!
                               </p>
                             </motion.div>
@@ -599,8 +615,8 @@ export default function WelcomePage() {
                     </div>
 
                     {/* Bottom Indicator */}
-                    <div className="px-6 py-3 bg-white flex items-center justify-around text-[10px] font-mono uppercase text-gray-400">
-                      <span className="text-[#1A6B3C] font-bold flex items-center gap-1"><Users size={12} /> Matches</span>
+                    <div className="px-6 py-3 bg-white dark:bg-[#1E293B] border-t border-transparent dark:border-white/10 flex items-center justify-around text-[10px] font-mono uppercase text-gray-400 dark:text-gray-400">
+                      <span className="text-[#1A6B3C] dark:text-emerald-400 font-bold flex items-center gap-1"><Users size={12} /> Matches</span>
                       <span className="flex items-center gap-1"><MessageSquare size={12} /> Chat</span>
                     </div>
                   </div>
@@ -622,18 +638,18 @@ export default function WelcomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.7 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end pb-8 border-b border-[#1A6B3C]/15"
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end pb-8 border-b border-[#1A6B3C]/15 dark:border-white/10"
             >
               <div className="lg:col-span-8 space-y-2">
-                <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 block">
+                <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 dark:text-emerald-400/70 block">
                   Chapter 02 // Methodology
                 </span>
-                <h2 className="font-fraunces text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight">
+                <h2 className="font-fraunces text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight text-gray-900 dark:text-white">
                   How Ally-jis works.
                 </h2>
               </div>
               <div className="lg:col-span-4">
-                <p className="font-jakarta text-sm sm:text-base text-gray-600 leading-relaxed">
+                <p className="font-jakarta text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
                   Three deliberate steps designed to foster organic friendships while completely respecting student privacy and mutual consent.
                 </p>
               </div>
@@ -651,8 +667,8 @@ export default function WelcomePage() {
                     whileTap={{ scale: 0.96 }}
                     className={`px-6 py-3 rounded-full font-mono text-xs uppercase tracking-wider transition-all flex items-center gap-2.5 ${
                       isActive
-                        ? 'bg-[#1A6B3C] text-white shadow-md'
-                        : 'bg-[#EDE7DB] text-[#1A6B3C] hover:bg-[#e4ddcf]'
+                        ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
+                        : 'bg-[#EDE7DB] dark:bg-[#111827] text-[#1A6B3C] dark:text-gray-300 hover:bg-[#e4ddcf] dark:hover:bg-[#1f293d] border border-transparent dark:border-white/10'
                     }`}
                   >
                     <span className="font-bold">{step.number}.</span>
@@ -673,20 +689,20 @@ export default function WelcomePage() {
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="lg:col-span-5 space-y-6"
               >
-                <div className="font-fraunces text-7xl sm:text-8xl font-bold text-[#E8A838]/80 leading-none">
+                <div className="font-fraunces text-7xl sm:text-8xl font-bold text-[#E8A838]/80 dark:text-[#E8A838] leading-none">
                   {steps[activeStepIndex].number}
                 </div>
-                <h3 className="font-fraunces text-3xl sm:text-4xl font-bold leading-tight">
+                <h3 className="font-fraunces text-3xl sm:text-4xl font-bold leading-tight text-gray-900 dark:text-white">
                   {steps[activeStepIndex].title}
                 </h3>
-                <p className="font-jakarta text-base text-gray-700 leading-relaxed">
+                <p className="font-jakarta text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                   {steps[activeStepIndex].summary}
                 </p>
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.15 }}
-                  className="inline-flex items-center gap-2 font-mono text-xs text-[#1A6B3C] bg-[#EDE7DB] px-4 py-2 rounded-full shadow-xs"
+                  className="inline-flex items-center gap-2 font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 bg-[#EDE7DB] dark:bg-[#111827] border border-transparent dark:border-white/10 px-4 py-2 rounded-full shadow-xs"
                 >
                   <Sparkles size={13} className="text-[#E8A838]" />
                   <span>{steps[activeStepIndex].hint}</span>
@@ -694,7 +710,7 @@ export default function WelcomePage() {
               </motion.div>
 
               {/* Right Side: Interactive Dynamic Playground */}
-              <div className="lg:col-span-7 bg-[#EDE7DB] p-8 sm:p-12 rounded-[32px] flex flex-col justify-between shadow-xs">
+              <div className="lg:col-span-7 bg-[#EDE7DB] dark:bg-[#0D131F] border border-transparent dark:border-white/10 p-8 sm:p-12 rounded-[32px] flex flex-col justify-between shadow-xs">
                 <AnimatePresence mode="wait">
                   
                   {/* STEP 01 SIMULATION */}
@@ -708,10 +724,10 @@ export default function WelcomePage() {
                       className="space-y-6"
                     >
                       <div className="space-y-1">
-                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70">
+                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/80">
                           Live Profile Calibration
                         </span>
-                        <h4 className="font-fraunces text-2xl font-bold">Pick your campus passions:</h4>
+                        <h4 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Pick your campus passions:</h4>
                       </div>
 
                       <div className="flex flex-wrap gap-2.5">
@@ -735,8 +751,8 @@ export default function WelcomePage() {
                               transition={{ type: 'spring', stiffness: 350, damping: 20 }}
                               className={`px-5 py-2.5 rounded-full font-jakarta text-xs sm:text-sm font-medium transition-all ${
                                 isSelected
-                                  ? 'bg-[#1A6B3C] text-white shadow-md'
-                                  : 'bg-white text-gray-800 hover:bg-white/80'
+                                  ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
+                                  : 'bg-white dark:bg-[#111827] text-gray-800 dark:text-gray-200 border border-transparent dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10'
                               }`}
                             >
                               {isSelected && <span className="mr-1.5 font-bold">✓</span>}
@@ -746,19 +762,19 @@ export default function WelcomePage() {
                         })}
                       </div>
 
-                      <div className="pt-4 flex items-center justify-between border-t border-[#1A6B3C]/15 font-mono text-xs">
+                      <div className="pt-4 flex items-center justify-between border-t border-[#1A6B3C]/15 dark:border-white/10 font-mono text-xs">
                         <motion.span 
                           key={demoTags.length}
                           initial={{ scale: 1.2, color: '#E8A838' }}
                           animate={{ scale: 1, color: '#1A6B3C' }}
-                          className="font-semibold"
+                          className="font-semibold text-[#1A6B3C] dark:text-emerald-400"
                         >
                           {demoTags.length} passions anchored
                         </motion.span>
                         <motion.button
                           whileHover={{ x: 3 }}
                           onClick={() => setActiveStepIndex(1)}
-                          className="font-bold text-[#1A6B3C] hover:underline flex items-center gap-1"
+                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1"
                         >
                           <span>Proceed to affinity calculation</span>
                           <ArrowRight size={13} />
@@ -778,47 +794,47 @@ export default function WelcomePage() {
                       className="space-y-6"
                     >
                       <div className="space-y-1">
-                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70">
+                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/80">
                           Transparent Algorithmic Matching
                         </span>
-                        <h4 className="font-fraunces text-2xl font-bold">Peer Affinity Breakdown:</h4>
+                        <h4 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Peer Affinity Breakdown:</h4>
                       </div>
 
                       <motion.div 
                         initial={{ scale: 0.97, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.3 }}
-                        className="bg-white p-6 rounded-2xl space-y-4 shadow-sm"
+                        className="bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 p-6 rounded-2xl space-y-4 shadow-sm"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <motion.div 
                               whileHover={{ rotate: 10 }}
-                              className="w-12 h-12 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-fraunces font-bold text-lg"
+                              className="w-12 h-12 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces font-bold text-lg"
                             >
                               BM
                             </motion.div>
                             <div>
-                              <div className="font-jakarta font-bold text-base text-gray-900">Bea M.</div>
-                              <div className="font-mono text-xs text-gray-500">BS Information Tech • 3rd Year</div>
+                              <div className="font-jakarta font-bold text-base text-gray-900 dark:text-white">Bea M.</div>
+                              <div className="font-mono text-xs text-gray-500 dark:text-gray-400">BS Information Tech • 3rd Year</div>
                             </div>
                           </div>
                           <motion.span 
                             animate={{ scale: [1, 1.08, 1] }}
                             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                            className="font-mono text-sm font-bold px-3.5 py-1.5 rounded-full bg-[#E8A838]/20 text-[#B45309]"
+                            className="font-mono text-sm font-bold px-3.5 py-1.5 rounded-full bg-[#E8A838]/20 text-[#B45309] dark:text-[#E8A838]"
                           >
                             96% Match
                           </motion.span>
                         </div>
 
                         <div className="space-y-2 pt-1">
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-gray-400 block">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 block">
                             Shared Passions with you:
                           </span>
                           <div className="flex flex-wrap gap-2">
                             {['Web Development', 'UI Design', 'Specialty Coffee'].map((item) => (
-                              <span key={item} className="px-3 py-1 rounded-full bg-[#F7F4EF] text-[#1A6B3C] font-mono text-xs font-semibold">
+                              <span key={item} className="px-3 py-1 rounded-full bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-emerald-400 font-mono text-xs font-semibold">
                                 {item}
                               </span>
                             ))}
@@ -829,14 +845,14 @@ export default function WelcomePage() {
                       <div className="pt-2 flex items-center justify-between font-mono text-xs">
                         <button
                           onClick={() => setActiveStepIndex(0)}
-                          className="text-gray-500 hover:text-[#1A6B3C]"
+                          className="text-gray-500 dark:text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
                         >
                           ← Re-pick tags
                         </button>
                         <motion.button
                           whileHover={{ x: 3 }}
                           onClick={() => setActiveStepIndex(2)}
-                          className="font-bold text-[#1A6B3C] hover:underline flex items-center gap-1"
+                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1"
                         >
                           <span>Test mutual consent flow</span>
                           <ArrowRight size={13} />
@@ -856,17 +872,17 @@ export default function WelcomePage() {
                       className="space-y-6"
                     >
                       <div className="space-y-1">
-                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70">
+                        <span className="font-mono text-xs uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/80">
                           Two-Way Mutual Consent
                         </span>
-                        <h4 className="font-fraunces text-2xl font-bold">Zero Unsolicited Messages:</h4>
+                        <h4 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Zero Unsolicited Messages:</h4>
                       </div>
 
                       <motion.div 
                         initial={{ scale: 0.97, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.3 }}
-                        className="bg-white p-6 rounded-2xl space-y-4 shadow-sm"
+                        className="bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 p-6 rounded-2xl space-y-4 shadow-sm"
                       >
                         <div className="flex items-center gap-3">
                           <motion.div 
@@ -876,10 +892,10 @@ export default function WelcomePage() {
                             BM
                           </motion.div>
                           <div>
-                            <div className="font-jakarta font-bold text-sm text-gray-900">
+                            <div className="font-jakarta font-bold text-sm text-gray-900 dark:text-white">
                               Bea M. requested to connect
                             </div>
-                            <div className="font-jakarta text-xs text-gray-500">
+                            <div className="font-jakarta text-xs text-gray-500 dark:text-gray-400">
                               "Saw we both love UI Design. Let's collaborate this semester!"
                             </div>
                           </div>
@@ -891,8 +907,8 @@ export default function WelcomePage() {
                           whileTap={{ scale: 0.95 }}
                           className={`w-full py-3.5 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${
                             demoRequestAccepted
-                              ? 'bg-emerald-700 text-white shadow-md'
-                              : 'bg-[#1A6B3C] hover:bg-[#13502D] text-white shadow-md'
+                              ? 'bg-emerald-700 dark:bg-emerald-600 text-white shadow-md'
+                              : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white shadow-md'
                           }`}
                         >
                           {demoRequestAccepted ? (
@@ -912,7 +928,7 @@ export default function WelcomePage() {
                       <div className="pt-2 flex items-center justify-between font-mono text-xs">
                         <button
                           onClick={() => setActiveStepIndex(1)}
-                          className="text-gray-500 hover:text-[#1A6B3C]"
+                          className="text-gray-500 dark:text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
                         >
                           ← Back to matches
                         </button>
@@ -921,7 +937,7 @@ export default function WelcomePage() {
                             setActiveStepIndex(0);
                             setDemoRequestAccepted(false);
                           }}
-                          className="font-bold text-[#1A6B3C] hover:underline"
+                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline"
                         >
                           Reset walkthrough ↻
                         </button>
@@ -1033,7 +1049,7 @@ export default function WelcomePage() {
                 
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Link
-                    to="/onboarding"
+                    to="/register"
                     className="inline-flex items-center gap-2 bg-transparent hover:bg-white/10 text-white border border-white/40 px-6 py-3 rounded-full font-mono text-xs uppercase tracking-wider font-semibold transition-all"
                   >
                     <span>Open Web Portal</span>

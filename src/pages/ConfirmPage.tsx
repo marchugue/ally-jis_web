@@ -62,7 +62,7 @@ export default function ConfirmPage() {
   }, [searchParams, navigate, completeLogin]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#F7F4EF] flex flex-col items-center justify-center px-4">
+    <div className="min-h-[100dvh] bg-[#F7F4EF] dark:bg-[#090D16] flex flex-col items-center justify-center px-4">
       {/* Background blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#1A6B3C]/5 blur-3xl" />
@@ -76,24 +76,24 @@ export default function ConfirmPage() {
             <div className="w-10 h-10 rounded-xl bg-[#1A6B3C] flex items-center justify-center shadow-lg">
               <span className="text-white font-fraunces font-bold text-xl">A</span>
             </div>
-            <span className="font-fraunces font-semibold text-2xl text-[#1A6B3C]">
+            <span className="font-fraunces font-semibold text-2xl text-[#1A6B3C] dark:text-emerald-400">
               lly<span className="text-[#E8A838]">-jis</span>
             </span>
           </Link>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-[#1A6B3C]/8 p-8 text-center">
+        <div className="bg-white dark:bg-[#111827] rounded-3xl shadow-xl border border-[#1A6B3C]/8 dark:border-white/10 p-8 text-center">
 
           {/* ── Loading ─────────────────────────────────────────────── */}
           {state === 'loading' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto mb-5">
-                <Loader2 size={32} className="text-[#1A6B3C] animate-spin" />
+              <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-950/50 flex items-center justify-center mx-auto mb-5">
+                <Loader2 size={32} className="text-[#1A6B3C] dark:text-emerald-400 animate-spin" />
               </div>
-              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] mb-1.5">
+              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400 mb-1.5">
                 Verifying your email…
               </h1>
-              <p className="font-jakarta text-[#1A6B3C]/60 text-sm">
+              <p className="font-jakarta text-[#1A6B3C]/60 dark:text-gray-400 text-sm">
                 Please wait while we confirm your account.
               </p>
             </>
@@ -102,18 +102,18 @@ export default function ConfirmPage() {
           {/* ── Success ─────────────────────────────────────────────── */}
           {state === 'success' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto mb-5">
-                <CheckCircle2 size={32} className="text-[#1A6B3C]" />
+              <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-950/50 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 size={32} className="text-[#1A6B3C] dark:text-emerald-400" />
               </div>
-              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] mb-1.5">
+              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400 mb-1.5">
                 Email verified!
               </h1>
-              <p className="font-jakarta text-[#1A6B3C]/60 text-sm mb-7">
+              <p className="font-jakarta text-[#1A6B3C]/60 dark:text-gray-400 text-sm mb-7">
                 Your account is confirmed. Taking you to your dashboard…
               </p>
               <Link
                 to="/dashboard"
-                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] dark:hover:bg-emerald-500 active:scale-[0.98]"
               >
                 Go to Dashboard <ArrowRight size={18} />
               </Link>
@@ -123,13 +123,13 @@ export default function ConfirmPage() {
           {/* ── Error ───────────────────────────────────────────────── */}
           {state === 'error' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
-                <XCircle size={32} className="text-red-500" />
+              <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center mx-auto mb-5">
+                <XCircle size={32} className="text-red-500 dark:text-red-400" />
               </div>
-              <h1 className="font-fraunces text-2xl font-bold text-gray-800 mb-1.5">
+              <h1 className="font-fraunces text-2xl font-bold text-gray-800 dark:text-white mb-1.5">
                 Verification failed
               </h1>
-              <p className="font-jakarta text-gray-500 text-sm mb-2">
+              <p className="font-jakarta text-gray-500 dark:text-gray-400 text-sm mb-2">
                 {errorMessage}
               </p>
               <p className="font-jakarta text-gray-400 text-xs mb-7">
@@ -137,7 +137,7 @@ export default function ConfirmPage() {
               </p>
               <Link
                 to="/login"
-                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] dark:hover:bg-emerald-500 active:scale-[0.98]"
               >
                 Go to Login <ArrowRight size={18} />
               </Link>
@@ -150,15 +150,15 @@ export default function ConfirmPage() {
               <div className="w-16 h-16 rounded-full bg-[#E8A838]/10 flex items-center justify-center mx-auto mb-5">
                 <CheckCircle2 size={32} className="text-[#E8A838]" />
               </div>
-              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] mb-1.5">
+              <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400 mb-1.5">
                 Check your email!
               </h1>
-              <p className="font-jakarta text-[#1A6B3C]/60 text-sm mb-7">
+              <p className="font-jakarta text-[#1A6B3C]/60 dark:text-gray-400 text-sm mb-7">
                 We've sent a confirmation link to your inbox. Click it to verify your account and then sign in.
               </p>
               <Link
                 to="/login"
-                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] dark:hover:bg-emerald-500 active:scale-[0.98]"
               >
                 Go to Login <ArrowRight size={18} />
               </Link>
@@ -168,18 +168,18 @@ export default function ConfirmPage() {
           {/* ── Missing token ────────────────────────────────────────── */}
           {state === 'missing_token' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
-                <XCircle size={32} className="text-amber-500" />
+              <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center mx-auto mb-5">
+                <XCircle size={32} className="text-amber-500 dark:text-amber-400" />
               </div>
-              <h1 className="font-fraunces text-2xl font-bold text-gray-800 mb-1.5">
+              <h1 className="font-fraunces text-2xl font-bold text-gray-800 dark:text-white mb-1.5">
                 No confirmation token
               </h1>
-              <p className="font-jakarta text-gray-500 text-sm mb-7">
+              <p className="font-jakarta text-gray-500 dark:text-gray-400 text-sm mb-7">
                 This page should be opened from the confirmation link in your email. Please check your inbox and click the link there.
               </p>
               <Link
                 to="/login"
-                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-bold py-3.5 rounded-xl transition-all shadow-lg hover:bg-[#155a33] dark:hover:bg-emerald-500 active:scale-[0.98]"
               >
                 Go to Login <ArrowRight size={18} />
               </Link>
@@ -187,7 +187,7 @@ export default function ConfirmPage() {
           )}
         </div>
 
-        <p className="text-center font-jakarta text-xs text-[#1A6B3C]/40 mt-6">
+        <p className="text-center font-jakarta text-xs text-[#1A6B3C]/40 dark:text-emerald-400/40 mt-6">
           For CHMSU Alijis Campus students only
         </p>
       </div>

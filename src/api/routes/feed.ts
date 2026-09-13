@@ -14,8 +14,27 @@ export function listFeed(params: ListFeedParams = {}) {
   const query = new URLSearchParams();
   if (params.limit !== undefined) query.set('limit', String(params.limit));
   if (params.before !== undefined) query.set('before', params.before);
+  if (params.filter !== undefined) query.set('filter', params.filter);
+  if (params.department !== undefined) query.set('department', params.department);
+  if (params.course !== undefined) query.set('course', params.course);
+  if (params.interest !== undefined) query.set('interest', params.interest);
+  if (params.search !== undefined) query.set('search', params.search);
+  if (params.mediaOnly !== undefined) query.set('mediaOnly', String(params.mediaOnly));
   const qs = query.toString();
   return request<PostRow[]>(`/feed${qs ? `?${qs}` : ''}`);
+}
+
+export function listDiscoverFeed(params: Omit<ListFeedParams, 'filter'> = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set('limit', String(params.limit));
+  if (params.before !== undefined) query.set('before', params.before);
+  if (params.department !== undefined) query.set('department', params.department);
+  if (params.course !== undefined) query.set('course', params.course);
+  if (params.interest !== undefined) query.set('interest', params.interest);
+  if (params.search !== undefined) query.set('search', params.search);
+  if (params.mediaOnly !== undefined) query.set('mediaOnly', String(params.mediaOnly));
+  const qs = query.toString();
+  return request<PostRow[]>(`/feed/discover${qs ? `?${qs}` : ''}`);
 }
 
 export function listPostsByAuthor(authorId: string, params: ListFeedParams = {}) {

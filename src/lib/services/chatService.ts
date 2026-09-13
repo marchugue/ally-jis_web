@@ -88,6 +88,8 @@ export const mapConversationRow = (
       ? row.matchInfo?.partnerAlias ?? 'Anonymous'
       : otherProfile?.username ?? otherProfile?.full_name ?? 'Student',
     participantAvatar: isAnonymous ? '' : otherProfile?.avatar_url ?? CURRENT_USER.avatar,
+    participantCourse: isAnonymous ? null : otherProfile?.course ?? null,
+    participantDepartment: isAnonymous ? null : otherProfile?.department ?? null,
     lastMessage: lastMsg?.content ?? (lastMsg?.image_url ? 'Photo' : 'New match!'),
     lastMessageTime: lastMsg?.created_at ?? row.updated_at,
     lastMessageSenderId: lastMsg?.sender_id ?? '',
@@ -110,6 +112,9 @@ export const mapConversationRow = (
           partnerAlias: row.matchInfo.partnerAlias,
           partnerAvatar: row.matchInfo.partnerAvatar,
           ended: row.matchInfo.ended,
+          status: row.matchInfo.status,
+          chatExpiresAt: row.matchInfo.chatExpiresAt,
+          confirmedAt: row.matchInfo.confirmedAt,
         }
       : null,
   };
@@ -129,6 +134,11 @@ export const chatService = {
   async getOrCreateConversation(targetUserId: string) {
     const result = await apiClient.getOrCreateConversation(targetUserId);
     return result.conversationId;
+  },
+
+  async getOrCreateDirectConversation(targetUserId: string) {
+    const result = await apiClient.getOrCreateConversation(targetUserId);
+    return { id: result.conversationId };
   },
 
   async sendMessage(

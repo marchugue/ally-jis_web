@@ -5,6 +5,7 @@ import WelcomePage from "@/pages/WelcomePage";
 import LoginPage from "@/pages/LoginPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import OnboardingPage from "@/pages/OnboardingPage";
+import RegisterPage from "@/pages/RegisterPage";
 import NewsfeedPage from "@/pages/NewsfeedPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import MessagesPage from "@/pages/MessagesPage";
@@ -32,6 +33,7 @@ import AboutPage from "@/pages/AboutPage";
 import DownloadPage from "@/pages/DownloadPage";
 import { PageTransition } from "@/components/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
+import { CookieConsentCard } from "@/components/CookieConsentCard";
 import { MainLayout } from "@/components/MainLayout";
 import { DashboardRoleGate } from "@/components/DashboardRoleGate";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
@@ -52,11 +54,12 @@ function App() {
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center transition-colors">
+        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 dark:border-emerald-500/20 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin" />
       </div>
     }>
       <Toaster />
+      <CookieConsentCard />
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location}>
           <Route path="/" element={
@@ -76,47 +79,52 @@ function App() {
             </PageTransition>
           } />
 
+          <Route path="/register" element={
+            <PageTransition>
+              <RegisterPage />
+            </PageTransition>
+          } />
           <Route path="/onboarding" element={
             <PageTransition>
               <OnboardingPage />
             </PageTransition>
           } />
           <Route path="/confirmation-page" element={
-              <PageTransition>
-                {/* Legacy redirect: old magic-link URLs → new OTP page */}
-                <ConfirmPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              {/* Legacy redirect: old magic-link URLs → new OTP page */}
+              <ConfirmPage />
+            </PageTransition>
+          } />
           <Route path="/verify-email" element={
-              <PageTransition>
-                <OtpVerifyPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <OtpVerifyPage />
+            </PageTransition>
+          } />
           <Route path="/privacy" element={
-              <PageTransition>
-                <PrivacyPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <PrivacyPage />
+            </PageTransition>
+          } />
           <Route path="/terms" element={
-              <PageTransition>
-                <TermsPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <TermsPage />
+            </PageTransition>
+          } />
           <Route path="/support" element={
-              <PageTransition>
-                <SupportPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <SupportPage />
+            </PageTransition>
+          } />
           <Route path="/about" element={
-              <PageTransition>
-                <AboutPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <AboutPage />
+            </PageTransition>
+          } />
           <Route path="/download" element={
-              <PageTransition>
-                <DownloadPage />
-              </PageTransition>
-            } />
+            <PageTransition>
+              <DownloadPage />
+            </PageTransition>
+          } />
 
           <Route element={
             <ProtectedRoute>
@@ -175,8 +183,8 @@ function App() {
                 <PendingApprovalPage />
               </PageTransition>
             } />
-            
-            
+
+
           </Route>
 
           <Route element={

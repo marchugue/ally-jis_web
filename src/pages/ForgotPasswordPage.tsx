@@ -96,31 +96,31 @@ export default function ForgotPasswordPage() {
 
   if (checkingHash) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#1A6B3C]/20 border-t-[#1A6B3C] dark:border-emerald-500/20 dark:border-t-emerald-400 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-emerald-400 selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
       
       {/* ── TOP NAVIGATION ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <motion.div 
               whileHover={{ scale: 1.08, rotate: -4 }}
               whileTap={{ scale: 0.94 }}
-              className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
+              className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
             >
               A
             </motion.div>
             <div className="flex flex-col">
-              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+              <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                 Ally<span className="text-[#E8A838]">-jis</span>
               </span>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                 CHMSU Alijis
               </span>
             </div>
@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
             <Link 
               to="/login" 
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
             >
               <ArrowLeft size={14} /> Back to Sign In
             </Link>
@@ -149,12 +149,12 @@ export default function ForgotPasswordPage() {
             className="lg:col-span-6 space-y-8"
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/70">
                 <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
                 <span>Account Recovery</span>
               </div>
               
-              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] leading-[0.95]">
+              <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] dark:text-white leading-[0.95]">
                 {mode === 'reset' ? (
                   <>
                     Set a new <br />
@@ -171,13 +171,13 @@ export default function ForgotPasswordPage() {
               </h1>
             </div>
 
-            <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed max-w-lg">
+            <p className="font-jakarta text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed max-w-lg">
               {mode === 'reset'
                 ? 'Create a strong, new password with at least 8 characters to secure your Ally-jis profile.'
                 : 'Enter your registered university email to receive a secure password reset link.'}
             </p>
 
-            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80">
+            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80 dark:text-emerald-400/80">
               <div className="flex items-center gap-2.5">
                 <Shield size={15} className="text-[#E8A838]" />
                 <span>Encrypted single-use recovery token protocol</span>
@@ -196,19 +196,19 @@ export default function ForgotPasswordPage() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="lg:col-span-6"
           >
-            <div className="bg-[#EDE7DB] p-8 sm:p-12 rounded-[36px] shadow-sm space-y-8 border-none">
+            <div className="bg-[#EDE7DB] dark:bg-[#111827] dark:border dark:border-white/10 p-8 sm:p-12 rounded-[36px] shadow-sm space-y-8 border-none">
               
-              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 pb-6">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70">
+              <div className="space-y-1.5 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-6">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/70">
                   Credentials Assistance
                 </span>
-                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C]">
+                <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C] dark:text-white">
                   {mode === 'reset' ? 'Create New Password' : 'Send Recovery Email'}
                 </h2>
               </div>
 
               {!isApiConfigured && (
-                <div className="bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-jakarta p-4 rounded-2xl">
+                <div className="bg-amber-100/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs font-jakarta p-4 rounded-2xl">
                   API is currently in local development mode. Add VITE_API_BASE_URL in your .env file.
                 </div>
               )}
@@ -217,7 +217,7 @@ export default function ForgotPasswordPage() {
               {mode === 'request' && !requestSent && (
                 <form onSubmit={handleRequestReset} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 block">
                       Registered Student Email
                     </label>
                     <input
@@ -225,7 +225,7 @@ export default function ForgotPasswordPage() {
                       placeholder="yourname@chmsu.edu.ph"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-400 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 font-jakarta text-sm outline-none transition-all shadow-xs"
                       autoComplete="email"
                     />
                   </div>
@@ -236,8 +236,8 @@ export default function ForgotPasswordPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     className={cn(
-                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
-                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D] dark:hover:bg-emerald-500'
                     )}
                   >
                     {formLoading ? (
@@ -255,17 +255,17 @@ export default function ForgotPasswordPage() {
               {/* MODE: Request Sent Confirmation */}
               {mode === 'request' && requestSent && (
                 <div className="text-center py-4 space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto text-[#1A6B3C]">
+                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/20 flex items-center justify-center mx-auto text-[#1A6B3C] dark:text-emerald-400">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C]">Recovery Email Dispatched</h3>
-                  <p className="font-jakarta text-sm text-gray-700 leading-relaxed max-w-sm mx-auto">
-                    If an account is associated with <span className="font-bold text-[#1A6B3C]">{email}</span>, a secure recovery link has been delivered to your inbox.
+                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C] dark:text-white">Recovery Email Dispatched</h3>
+                  <p className="font-jakarta text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-sm mx-auto">
+                    If an account is associated with <span className="font-bold text-[#1A6B3C] dark:text-emerald-400">{email}</span>, a secure recovery link has been delivered to your inbox.
                   </p>
                   <div className="pt-2">
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] bg-white px-6 py-3 rounded-full hover:bg-[#F7F4EF] transition-all shadow-xs"
+                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 bg-white dark:bg-white/10 px-6 py-3 rounded-full hover:bg-[#F7F4EF] dark:hover:bg-white/20 transition-all shadow-xs"
                     >
                       Return to Sign In →
                     </Link>
@@ -277,7 +277,7 @@ export default function ForgotPasswordPage() {
               {mode === 'reset' && !resetSuccess && (
                 <form onSubmit={handleSetNewPassword} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 block">
                       New Password
                     </label>
                     <div className="relative">
@@ -286,12 +286,12 @@ export default function ForgotPasswordPage() {
                         placeholder="At least 8 characters"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                        className="w-full px-5 py-4 pr-12 rounded-full border-2 border-[#1A6B3C]/15 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-400 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 font-jakarta text-sm outline-none transition-all shadow-xs"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C]"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
@@ -299,7 +299,7 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] block">
+                    <label className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 block">
                       Confirm New Password
                     </label>
                     <input
@@ -307,7 +307,7 @@ export default function ForgotPasswordPage() {
                       placeholder="Re-enter your new password"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 focus:border-[#1A6B3C] bg-white text-gray-900 placeholder:text-gray-400 font-jakarta text-sm outline-none transition-all shadow-xs"
+                      className="w-full px-5 py-4 rounded-full border-2 border-[#1A6B3C]/15 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-400 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 font-jakarta text-sm outline-none transition-all shadow-xs"
                     />
                   </div>
 
@@ -317,8 +317,8 @@ export default function ForgotPasswordPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     className={cn(
-                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
-                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D]'
+                      'w-full flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full transition-all shadow-md',
+                      formLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#13502D] dark:hover:bg-emerald-500'
                     )}
                   >
                     {formLoading ? (
@@ -336,17 +336,17 @@ export default function ForgotPasswordPage() {
               {/* MODE: Reset Success */}
               {mode === 'reset' && resetSuccess && (
                 <div className="text-center py-4 space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 flex items-center justify-center mx-auto text-[#1A6B3C]">
+                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/20 flex items-center justify-center mx-auto text-[#1A6B3C] dark:text-emerald-400">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C]">Password Successfully Updated</h3>
-                  <p className="font-jakarta text-sm text-gray-700 leading-relaxed max-w-sm mx-auto">
+                  <h3 className="font-fraunces font-bold text-2xl text-[#1A6B3C] dark:text-white">Password Successfully Updated</h3>
+                  <p className="font-jakarta text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-sm mx-auto">
                     Your password has been changed. You can now sign in with your new credentials.
                   </p>
                   <div className="pt-2">
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-white bg-[#1A6B3C] px-8 py-4 rounded-full hover:bg-[#13502D] transition-all shadow-md"
+                      className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold text-white bg-[#1A6B3C] dark:bg-emerald-600 px-8 py-4 rounded-full hover:bg-[#13502D] dark:hover:bg-emerald-500 transition-all shadow-md"
                     >
                       Sign In Now →
                     </Link>
@@ -354,9 +354,9 @@ export default function ForgotPasswordPage() {
                 </div>
               )}
 
-              <div className="pt-6 border-t border-[#1A6B3C]/15 flex items-center justify-between text-xs font-jakarta">
-                <span className="text-gray-700">Remembered credentials?</span>
-                <Link to="/login" className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] hover:underline">
+              <div className="pt-6 border-t border-[#1A6B3C]/15 dark:border-white/10 flex items-center justify-between text-xs font-jakarta">
+                <span className="text-gray-700 dark:text-gray-400">Remembered credentials?</span>
+                <Link to="/login" className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline">
                   Return to Sign In
                 </Link>
               </div>
@@ -368,7 +368,7 @@ export default function ForgotPasswordPage() {
       </main>
 
       {/* ── FOOTER SIMPLE STRIP ── */}
-      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 border-t border-[#1A6B3C]/10">
+      <footer className="py-6 px-4 text-center font-mono text-[11px] text-[#1A6B3C]/60 dark:text-gray-400 border-t border-[#1A6B3C]/10 dark:border-white/10">
         Carlos Hilado Memorial State University – Alijis Campus • Ally-jis v1.0
       </footer>
 

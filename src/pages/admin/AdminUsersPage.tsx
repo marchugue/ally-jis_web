@@ -6,7 +6,7 @@ import {
   Search, MoreHorizontal, ShieldCheck, ShieldOff, Ban, Clock,
   KeyRound, LogOut as LogOutIcon, Trash2, BadgeCheck, X, Loader2,
   CheckCircle2, XCircle, CreditCard, ExternalLink, Calendar,
-  Building2, GraduationCap, Mail, UserCheck, ImageOff
+  Building2, GraduationCap, Mail, UserCheck, ImageOff, RotateCw
 } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import type { AdminUserDetail, AdminUserListItem, ListUsersQuery, PendingVerificationItem } from '@/api/client';
@@ -260,7 +260,11 @@ export default function AdminUsersPage() {
       </div>
 
       {activeTab === 'pending' && (
-        <PendingVerificationsPanel items={pendingItems} onAction={loadPending} />
+        <PendingVerificationsPanel
+          items={pendingItems}
+          onAction={loadPending}
+          onSelectUser={setSelectedUserId}
+        />
       )}
 
       {activeTab === 'users' && (
@@ -520,11 +524,214 @@ function UserActionDropdown({
   );
 }
 
+function FlippableIdPreview({
+  frontUrl,
+  backUrl,
+  onEnlarge,
+  height = 'h-56',
+}: {
+  frontUrl?: string | null;
+  backUrl?: string | null;
+  onEnlarge?: (side: 'front' | 'back') => void;
+  height?: string;
+}) {
+  const [side, setSide] = useState<'front' | 'back'>('front');
+  const [frontErr, setFrontErr] = useState(false);
+  const [backErr, setBackErr] = useState(false);
+
+  const hasFront = Boolean(frontUrl);
+  const hasBack = Boolean(backUrl);
+  const currentUrl = side === 'front' ? frontUrl : (backUrl || frontUrl);
+
+  const toggleFlip = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setSide((s) => (s === 'front' ? 'back' : 'front'));
+  };
+
+  if (!hasFront && !hasBack) {
+    return (
+      <div className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.02] text-center space-y-1">
+        <ImageOff size={24} className="mx-auto text-gray-400 dark:text-white/30" />
+        <p className="text-xs font-medium text-gray-600 dark:text-white/60">No Student ID Image Uploaded</p>
+        <p className="text-[11px] text-gray-400 dark:text-white/40">
+          External email accounts require an uploaded ID photo.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {/* Header Controls */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-white/60 uppercase tracking-wide flex items-center gap-1.5">
+            <CreditCard size={14} className="text-[#1A6B3C] dark:text-emerald-400" /> Uploaded Student ID
+          </p>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+              side === 'front'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+            }`}
+          >
+            {side === 'front' ? 'Front Side' : 'Back Side'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Flip Card Button */}
+          <button
+            type="button"
+            onClick={toggleFlip}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[#1A6B3C] dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer shadow-2xs"
+            title="Click to flip between front and back ID"
+          >
+            <RotateCw size={12} className="transition-transform duration-300" />
+            <span>Flip ID</span>
+          </button>
+
+          {/* View Original Link for current active side */}
+          {currentUrl && (
+            <a
+              href={currentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold flex items-center gap-1 hover:underline"
+            >
+              Original <ExternalLink size={12} />
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* 3D Flippable Card Stage */}
+      <div
+        className={`w-full ${height} rounded-xl relative select-none`}
+        style={{ perspective: '1200px' }}
+      >
+        <div
+          className="w-full h-full relative transition-transform duration-500 ease-out"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          }}
+        >
+          {/* ── Front Face ── */}
+          <div
+            onClick={() => onEnlarge ? onEnlarge('front') : toggleFlip()}
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg-black/20 group cursor-pointer"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
+          >
+            {frontUrl && !frontErr ? (
+              <>
+                <img
+                  src={frontUrl}
+                  alt="Student ID Front"
+                  onError={() => setFrontErr(true)}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                />
+                <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-xs text-white text-[10px] font-bold tracking-wider">
+                  FRONT
+                </div>
+                <div
+                  onClick={toggleFlip}
+                  className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-white/90 dark:bg-black/75 backdrop-blur-xs text-gray-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 shadow-xs hover:bg-white transition-colors"
+                >
+                  <RotateCw size={10} /> Flip to Back
+                </div>
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 pointer-events-none">
+                  <ExternalLink size={14} /> Click to Enlarge
+                </div>
+              </>
+            ) : frontUrl && frontErr ? (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-red-50/50 dark:bg-red-950/10">
+                <ImageOff size={22} className="text-red-500 mb-1" />
+                <p className="text-xs font-semibold text-red-700 dark:text-red-300">Front Preview Unavailable</p>
+                <a href={frontUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-red-600 underline mt-1">
+                  Open Direct Link
+                </a>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-gray-400">
+                <CreditCard size={32} className="mb-1 opacity-50" />
+                <span className="text-xs font-medium">No Front ID photo</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Back Face ── */}
+          <div
+            onClick={() => onEnlarge ? onEnlarge('back') : toggleFlip()}
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg-black/20 group cursor-pointer"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+          >
+            {backUrl && !backErr ? (
+              <>
+                <img
+                  src={backUrl}
+                  alt="Student ID Back"
+                  onError={() => setBackErr(true)}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                />
+                <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-xs text-white text-[10px] font-bold tracking-wider">
+                  BACK
+                </div>
+                <div
+                  onClick={toggleFlip}
+                  className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-white/90 dark:bg-black/75 backdrop-blur-xs text-gray-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 shadow-xs hover:bg-white transition-colors"
+                >
+                  <RotateCw size={10} /> Flip to Front
+                </div>
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 pointer-events-none">
+                  <ExternalLink size={14} /> Click to Enlarge
+                </div>
+              </>
+            ) : backUrl && backErr ? (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-red-50/50 dark:bg-red-950/10">
+                <ImageOff size={22} className="text-red-500 mb-1" />
+                <p className="text-xs font-semibold text-red-700 dark:text-red-300">Back Preview Unavailable</p>
+                <a href={backUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-red-600 underline mt-1">
+                  Open Direct Link
+                </a>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-5 text-center bg-gray-50/80 dark:bg-white/[0.03]">
+                <CreditCard size={32} className="text-gray-400 mb-1.5 opacity-60" />
+                <p className="text-xs font-semibold text-gray-700 dark:text-white/80">No Back Side Uploaded</p>
+                <p className="text-[11px] text-gray-400 dark:text-white/40 max-w-[210px] mt-0.5">
+                  The student only submitted the front side of their ID or COR.
+                </p>
+                <button
+                  type="button"
+                  onClick={toggleFlip}
+                  className="mt-2.5 px-3 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <RotateCw size={11} /> Flip to Front
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null; onClose: () => void; onUpdate: () => void }) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [processing, setProcessing] = useState<'approve' | 'reject' | null>(null);
   const [imgError, setImgError] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSide, setLightboxSide] = useState<'front' | 'back'>('front');
 
   const reload = (id: string) => {
     setDetail(null);
@@ -635,64 +842,16 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
                 )}
               </div>
 
-              {/* Uploaded Student ID Card Preview Section */}
+              {/* Uploaded Student ID Card Flippable Preview Section */}
               <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-white/60 uppercase tracking-wide flex items-center gap-1.5">
-                    <CreditCard size={14} className="text-[#1A6B3C] dark:text-emerald-400" /> Uploaded Student ID
-                  </p>
-                  {detail.student_id_url && (
-                    <a
-                      href={detail.student_id_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold flex items-center gap-1 hover:underline"
-                    >
-                      View Original <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-
-                {detail.student_id_url && !imgError ? (
-                  <div
-                    onClick={() => setLightboxOpen(true)}
-                    className="rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 h-52 bg-black/5 relative group cursor-pointer"
-                  >
-                    <img
-                      src={detail.student_id_url}
-                      alt="Uploaded Student ID"
-                      onError={() => setImgError(true)}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                    />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
-                      <ExternalLink size={14} /> Click to Enlarge
-                    </div>
-                  </div>
-                ) : detail.student_id_url && imgError ? (
-                  <div className="p-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/10 text-center space-y-1.5">
-                    <ImageOff size={24} className="mx-auto text-red-500" />
-                    <p className="text-xs font-semibold text-red-700 dark:text-red-300">Could Not Render ID Image Preview</p>
-                    <p className="text-[11px] text-gray-500 dark:text-white/50">The uploaded image file link may be protected or unavailable.</p>
-                    <a
-                      href={detail.student_id_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-red-600 underline font-medium pt-1"
-                    >
-                      Open Image Link Directly <ExternalLink size={12} />
-                    </a>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.02] text-center space-y-1">
-                    <ImageOff size={24} className="mx-auto text-gray-400 dark:text-white/30" />
-                    <p className="text-xs font-medium text-gray-600 dark:text-white/60">No Student ID Image Uploaded</p>
-                    <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      {detail.email_type === 'chmsu'
-                        ? 'CHMSU domain email accounts are automatically verified.'
-                        : 'External email accounts require an uploaded ID photo.'}
-                    </p>
-                  </div>
-                )}
+                <FlippableIdPreview
+                  frontUrl={detail.student_id_url}
+                  backUrl={detail.student_id_back_url}
+                  onEnlarge={(side) => {
+                    setLightboxSide(side);
+                    setLightboxOpen(true);
+                  }}
+                />
               </div>
 
             {/* Approve / Reject Controls */}
@@ -782,7 +941,7 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
     </Sheet>
 
       {/* Student ID Lightbox Modal — Rendered outside Sheet via Portal */}
-      {lightboxOpen && detail?.student_id_url && createPortal(
+      {lightboxOpen && (detail?.student_id_url || detail?.student_id_back_url) && createPortal(
         <div
           onClick={(e) => {
             e.preventDefault();
@@ -799,29 +958,80 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
             onPointerDown={(e) => e.stopPropagation()}
             className="relative max-w-4xl w-full max-h-[90vh] overflow-hidden rounded-2xl bg-[#161D19] p-3.5 border border-white/10 shadow-2xl space-y-2.5 cursor-default"
           >
-            <div className="flex items-center justify-between px-2 text-white">
-              <span className="text-sm font-semibold flex items-center gap-2">
+            <div className="flex items-center justify-between px-2 text-white flex-wrap gap-2">
+              <div className="flex items-center gap-2">
                 <CreditCard size={16} className="text-emerald-400" />
-                {detail.full_name ?? detail.username} — Uploaded Student ID
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setLightboxOpen(false);
-                }}
-                className="px-3 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <X size={14} /> Close
-              </button>
+                <span className="text-sm font-semibold">
+                  {detail.full_name ?? detail.username} — Uploaded Student ID
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-900/60 border border-emerald-700 text-emerald-300 uppercase">
+                  {lightboxSide === 'front' ? 'Front Side' : 'Back Side'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Flip Button in Lightbox */}
+                <button
+                  type="button"
+                  onClick={() => setLightboxSide((s) => (s === 'front' ? 'back' : 'front'))}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCw size={12} /> Flip to {lightboxSide === 'front' ? 'Back' : 'Front'}
+                </button>
+
+                {/* View Original in Lightbox */}
+                {(lightboxSide === 'front' ? detail.student_id_url : detail.student_id_back_url) && (
+                  <a
+                    href={(lightboxSide === 'front' ? detail.student_id_url : detail.student_id_back_url) || ''}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-emerald-300 transition-colors flex items-center gap-1"
+                  >
+                    Original <ExternalLink size={12} />
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLightboxOpen(false);
+                  }}
+                  className="px-3 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <X size={14} /> Close
+                </button>
+              </div>
             </div>
-            <div className="rounded-xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center min-h-[300px]">
-              <img
-                src={detail.student_id_url}
-                alt="Uploaded Student ID Full"
-                className="w-full h-full max-h-[80vh] object-contain rounded-lg"
-              />
+
+            <div className="rounded-xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center min-h-[300px] max-h-[78vh]">
+              {lightboxSide === 'front' && detail.student_id_url ? (
+                <img
+                  src={detail.student_id_url}
+                  alt="Uploaded Student ID Front"
+                  className="w-full h-full max-h-[78vh] object-contain rounded-lg"
+                />
+              ) : lightboxSide === 'back' && detail.student_id_back_url ? (
+                <img
+                  src={detail.student_id_back_url}
+                  alt="Uploaded Student ID Back"
+                  className="w-full h-full max-h-[78vh] object-contain rounded-lg"
+                />
+              ) : (
+                <div className="p-8 text-center text-white/60 space-y-2">
+                  <CreditCard size={40} className="mx-auto opacity-40 text-emerald-400" />
+                  <p className="text-sm font-semibold text-white">No Back Side Uploaded</p>
+                  <p className="text-xs text-white/40">The student only submitted the front side of their ID / COR.</p>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxSide('front')}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors inline-flex items-center gap-1.5 mt-2 cursor-pointer"
+                  >
+                    <RotateCw size={12} /> Flip to Front
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>,
@@ -831,7 +1041,149 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
   );
 }
 
-function PendingVerificationsPanel({ items, onAction }: { items: PendingVerificationItem[] | null; onAction: () => void }) {
+function PendingVerificationCard({
+  item,
+  processing,
+  onApprove,
+  onReject,
+  onOpenDetail,
+}: {
+  item: PendingVerificationItem;
+  processing: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  onOpenDetail?: () => void;
+}) {
+  const [side, setSide] = useState<'front' | 'back'>('front');
+
+  const toggleSide = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSide((s) => (s === 'front' ? 'back' : 'front'));
+  };
+
+  return (
+    <div className="bg-white dark:bg-[#161D19] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
+      {/* Flippable image container */}
+      <div className="relative w-full h-44 select-none" style={{ perspective: '1000px' }}>
+        <div
+          className="w-full h-full relative transition-transform duration-500 ease-out"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          }}
+        >
+          {/* Front Face */}
+          <div
+            className="absolute inset-0 w-full h-full overflow-hidden bg-black/5 dark:bg-black/20"
+            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+          >
+            {item.student_id_url ? (
+              <a href={item.student_id_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative group">
+                <img src={item.student_id_url} alt="Student ID Front" className="w-full h-44 object-cover group-hover:opacity-90 transition-opacity" />
+                <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold">
+                  FRONT
+                </div>
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                  Open Full Size <ExternalLink size={12} />
+                </div>
+              </a>
+            ) : (
+              <div className="w-full h-44 bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center text-gray-400">
+                <CreditCard size={38} className="mb-2 opacity-50" />
+                <span className="text-xs font-medium">No ID photo uploaded</span>
+              </div>
+            )}
+          </div>
+
+          {/* Back Face */}
+          <div
+            className="absolute inset-0 w-full h-full overflow-hidden bg-black/5 dark:bg-black/20"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+          >
+            {item.student_id_back_url ? (
+              <a href={item.student_id_back_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative group">
+                <img src={item.student_id_back_url} alt="Student ID Back" className="w-full h-44 object-cover group-hover:opacity-90 transition-opacity" />
+                <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold">
+                  BACK
+                </div>
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                  Open Full Size <ExternalLink size={12} />
+                </div>
+              </a>
+            ) : (
+              <div className="w-full h-44 bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center text-gray-400 p-3 text-center">
+                <CreditCard size={32} className="mb-1 opacity-50" />
+                <span className="text-xs font-medium text-gray-500 dark:text-white/60">No Back Side Uploaded</span>
+                <span className="text-[10px] text-gray-400 dark:text-white/40 mt-0.5">Front scan only provided</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Flip toggle badge button */}
+        <button
+          type="button"
+          onClick={toggleSide}
+          className="absolute bottom-2 right-2 px-2 py-1 rounded-md bg-black/70 backdrop-blur-xs text-white hover:bg-black/90 text-[10px] font-semibold flex items-center gap-1 z-10 transition-colors cursor-pointer shadow-sm"
+          title="Flip ID"
+        >
+          <RotateCw size={10} /> Flip ({side === 'front' ? 'Front' : 'Back'})
+        </button>
+      </div>
+
+      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+        <div className="space-y-2 cursor-pointer" onClick={onOpenDetail}>
+          <div className="flex items-center gap-3">
+            <StudentAvatar src={item.avatar_url} name={item.full_name ?? item.username} size="md" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline">
+                {item.full_name ?? item.username ?? 'Unnamed Student'}
+              </p>
+              <p className="text-xs text-gray-400 truncate">{item.email}</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-white/40">
+            {item.course ?? item.department ?? 'General Student'} · {new Date(item.created_at).toLocaleDateString()}
+          </p>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onApprove}
+            disabled={processing}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm cursor-pointer"
+          >
+            {processing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+            Approve ID
+          </button>
+          <button
+            onClick={onReject}
+            disabled={processing}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm cursor-pointer"
+          >
+            <XCircle size={14} /> Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PendingVerificationsPanel({
+  items,
+  onAction,
+  onSelectUser,
+}: {
+  items: PendingVerificationItem[] | null;
+  onAction: () => void;
+  onSelectUser?: (id: string) => void;
+}) {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handle = async (id: string, type: 'approve' | 'reject') => {
@@ -873,55 +1225,14 @@ function PendingVerificationsPanel({ items, onAction }: { items: PendingVerifica
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => (
-        <div key={item.id} className="bg-white dark:bg-[#161D19] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-          {item.student_id_url ? (
-            <a href={item.student_id_url} target="_blank" rel="noopener noreferrer" className="block relative group">
-              <img src={item.student_id_url} alt="Student ID" className="w-full h-44 object-cover group-hover:opacity-90 transition-opacity" />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                Open Full Size <ExternalLink size={12} />
-              </div>
-            </a>
-          ) : (
-            <div className="w-full h-44 bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center text-gray-400">
-              <CreditCard size={38} className="mb-2 opacity-50" />
-              <span className="text-xs font-medium">No ID photo uploaded</span>
-            </div>
-          )}
-
-          <div className="p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <StudentAvatar src={item.avatar_url} name={item.full_name ?? item.username} size="md" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {item.full_name ?? item.username ?? 'Unnamed Student'}
-                </p>
-                <p className="text-xs text-gray-400 truncate">{item.email}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-white/40">
-              {item.course ?? item.department ?? 'General Student'} · {new Date(item.created_at).toLocaleDateString()}
-            </p>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => handle(item.id, 'approve')}
-                disabled={processingId === item.id}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {processingId === item.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                Approve ID
-              </button>
-              <button
-                onClick={() => handle(item.id, 'reject')}
-                disabled={processingId === item.id}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
-              >
-                <XCircle size={14} /> Reject
-              </button>
-            </div>
-          </div>
-        </div>
+        <PendingVerificationCard
+          key={item.id}
+          item={item}
+          processing={processingId === item.id}
+          onApprove={() => handle(item.id, 'approve')}
+          onReject={() => handle(item.id, 'reject')}
+          onOpenDetail={() => onSelectUser?.(item.id)}
+        />
       ))}
     </div>
   );

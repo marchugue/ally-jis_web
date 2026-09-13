@@ -24,14 +24,14 @@ export default function SupportPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] dark:selection:bg-emerald-500 selection:text-white flex flex-col justify-between overflow-x-hidden">
       <div>
         {/* ── TOP NAVIGATION ── */}
         <motion.header 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 border-b border-[#1A6B3C]/10 transition-all"
+          className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
             {/* Logo */}
@@ -44,10 +44,10 @@ export default function SupportPage() {
                 A
               </motion.div>
               <div className="flex flex-col">
-                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] leading-none">
+                <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 pt-0.5">
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
                   CHMSU Alijis
                 </span>
               </div>
@@ -55,16 +55,16 @@ export default function SupportPage() {
 
             {/* Nav & Back */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 mr-4">
-                <Link to="/about" className="hover:text-[#1A6B3C] transition-colors">About</Link>
-                <Link to="/terms" className="hover:text-[#1A6B3C] transition-colors">Terms</Link>
-                <Link to="/privacy" className="hover:text-[#1A6B3C] transition-colors">Privacy</Link>
-                <Link to="/download" className="hover:text-[#1A6B3C] transition-colors">App</Link>
+              <div className="hidden sm:flex items-center gap-4 font-mono text-xs uppercase tracking-wider text-[#1A6B3C]/75 dark:text-gray-300 mr-4">
+                <Link to="/about" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">About</Link>
+                <Link to="/terms" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">Terms</Link>
+                <Link to="/privacy" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">Privacy</Link>
+                <Link to="/download" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">App</Link>
               </div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link 
                   to="/" 
-                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] bg-white px-4 py-2.5 rounded-full hover:bg-[#1A6B3C] hover:text-white transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
                 >
                   <ArrowLeft size={14} /> Back
                 </Link>
@@ -80,9 +80,9 @@ export default function SupportPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 pb-4"
+              className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 dark:border-white/10 pb-4"
             >
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70">
+              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/80">
                 Help Desk & Support Guide • 2026 Edition
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
@@ -94,7 +94,7 @@ export default function SupportPage() {
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] tracking-tight leading-[0.92]"
+              className="font-fraunces text-5xl sm:text-7xl lg:text-9xl font-bold text-[#1A6B3C] dark:text-white tracking-tight leading-[0.92]"
             >
               Support & <br />
               <span className="italic font-normal text-[#E8A838]">Assistance.</span>
@@ -104,7 +104,7 @@ export default function SupportPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="font-fraunces text-2xl sm:text-3xl text-gray-800 leading-snug italic font-normal max-w-3xl pt-4"
+              className="font-fraunces text-2xl sm:text-3xl text-gray-800 dark:text-gray-200 leading-snug italic font-normal max-w-3xl pt-4"
             >
               “Find answers to direct APK installation, profile verification, security, and student support.”
             </motion.p>
@@ -112,16 +112,16 @@ export default function SupportPage() {
         </section>
 
         {/* ── BORDERLESS TONAL BLOCK: FAST APK HELP CTA ── */}
-        <section className="bg-[#EDE7DB] py-16 sm:py-24 px-4 sm:px-8">
+        <section className="bg-[#EDE7DB] dark:bg-[#0D131F] py-16 sm:py-24 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-8 space-y-4">
               <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#E8A838] font-bold block">
                 Direct Android Distribution
               </span>
-              <h2 className="font-fraunces text-3xl sm:text-5xl font-bold leading-tight">
+              <h2 className="font-fraunces text-3xl sm:text-5xl font-bold leading-tight text-[#1A6B3C] dark:text-white">
                 Looking for the Android APK & setup instructions?
               </h2>
-              <p className="font-jakarta text-gray-700 text-base sm:text-lg max-w-xl leading-relaxed">
+              <p className="font-jakarta text-gray-700 dark:text-gray-300 text-base sm:text-lg max-w-xl leading-relaxed">
                 Download the lightweight client directly with step-by-step walkthroughs on browser permissions and verified safety notes.
               </p>
             </div>
@@ -130,7 +130,7 @@ export default function SupportPage() {
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link
                   to="/download"
-                  className="inline-flex items-center gap-3 bg-[#1A6B3C] hover:bg-[#13502D] text-white px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md"
+                  className="inline-flex items-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md"
                 >
                   <Download size={16} />
                   <span>Visit Download Page</span>
@@ -147,13 +147,13 @@ export default function SupportPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#1A6B3C]/15 pb-8"
+            className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-8"
           >
             <div>
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 block mb-2">
+              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/60 dark:text-gray-400 block mb-2">
                 Knowledge Base
               </span>
-              <h2 className="font-fraunces text-4xl sm:text-6xl font-bold text-[#1A6B3C]">
+              <h2 className="font-fraunces text-4xl sm:text-6xl font-bold text-[#1A6B3C] dark:text-white">
                 Frequently Asked Questions.
               </h2>
             </div>
@@ -168,18 +168,18 @@ export default function SupportPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 * i }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pb-10 border-b border-[#1A6B3C]/15 items-start"
+                className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pb-10 border-b border-[#1A6B3C]/15 dark:border-white/10 items-start"
               >
-                <div className="lg:col-span-1 font-fraunces text-4xl sm:text-5xl font-bold text-[#1A6B3C]/25 leading-none">
+                <div className="lg:col-span-1 font-fraunces text-4xl sm:text-5xl font-bold text-[#1A6B3C]/25 dark:text-white/25 leading-none">
                   0{i + 1}
                 </div>
                 <div className="lg:col-span-5">
-                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] leading-snug">
+                  <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white leading-snug">
                     {faq.q}
                   </h3>
                 </div>
                 <div className="lg:col-span-6">
-                  <p className="font-jakarta text-gray-700 text-base leading-relaxed">
+                  <p className="font-jakarta text-gray-700 dark:text-gray-300 text-base leading-relaxed">
                     {faq.a}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function SupportPage() {
         </section>
 
         {/* ── BORDERLESS HIGH CONTRAST BLOCK: CONTACT ── */}
-        <section className="bg-[#1A6B3C] text-[#F7F4EF] py-20 sm:py-28 px-4 sm:px-8">
+        <section className="bg-[#1A6B3C] dark:bg-[#111827] text-[#F7F4EF] dark:text-white py-20 sm:py-28 px-4 sm:px-8 border-y border-[#1A6B3C] dark:border-white/10">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <motion.div 
               initial={{ opacity: 0, y: 25 }}

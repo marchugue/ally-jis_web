@@ -44,6 +44,7 @@ export interface RegisterPayload {
   // New email type system
   email_type?: 'chmsu' | 'external';
   student_id_url?: string | null;
+  student_id_back_url?: string | null;
 }
 
 /** Returned by POST /auth/register — no accessToken until OTP verified */
@@ -183,6 +184,9 @@ export interface ConversationMatchInfo {
   partnerAlias: string | null;
   partnerAvatar: string | null;
   ended: boolean;
+  status?: MatchStatus;
+  chatExpiresAt?: string | null;
+  confirmedAt?: string | null;
 }
 
 export interface ConversationRow {
@@ -200,6 +204,14 @@ export interface ConversationRow {
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
+export interface NotificationRedirection {
+  entityType: 'post' | 'comment' | 'conversation' | 'profile' | 'requests' | 'discover';
+  targetId: string;
+  route: string;
+  params?: Record<string, string>;
+  webUrl?: string;
+}
+
 export interface NotificationRow {
   id: string;
   user_id: string;
@@ -208,7 +220,22 @@ export interface NotificationRow {
   description?: string | null;
   is_read: boolean;
   from_user_id?: string | null;
+  target_id?: string | null;
+  post_id?: string | null;
+  comment_id?: string | null;
   created_at: string;
+  redirection?: NotificationRedirection | null;
+  from_user?: {
+    id?: string;
+    username?: string | null;
+    full_name?: string | null;
+    avatar_url?: string | null;
+  } | {
+    id?: string;
+    username?: string | null;
+    full_name?: string | null;
+    avatar_url?: string | null;
+  }[] | null;
 }
 
 // ─── Media ──────────────────────────────────────────────────────────────────
@@ -246,6 +273,7 @@ export interface FeedAuthorRow {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  is_following?: boolean;
 }
 
 export interface PostMediaRow {
@@ -307,6 +335,12 @@ export interface CreateCommentPayload {
 export interface ListFeedParams {
   limit?: number;
   before?: string;
+  filter?: 'all' | 'allies' | 'following' | 'discover' | 'popular';
+  department?: string;
+  course?: string;
+  interest?: string;
+  search?: string;
+  mediaOnly?: boolean;
 }
 
 export interface PostMediaUploadResponse {
@@ -323,6 +357,8 @@ export interface ReportUserPayload {
   reportedUserId: string;
   violationId: string;
   conversationId?: string;
+  postId?: string;
+  notes?: string;
 }
 
 export interface BlockUserResponse {
@@ -392,6 +428,18 @@ export interface PaginatedFollowList {
   nextCursor: string | null;
 }
 
+export type FollowSortBy = 'recent' | 'name';
+
+export interface FollowFilterOptions {
+  search?: string;
+  department?: string;
+  course?: string;
+  year_level?: string;
+  sortBy?: FollowSortBy;
+  limit?: number;
+  cursor?: string | null;
+}
+
 // ─── Ally (extends the existing connection/interaction system) ────────────
 
 export type RelationshipStatus = 'none' | 'pending_outgoing' | 'pending_incoming' | 'allies';
@@ -412,6 +460,18 @@ export interface AllyListItem {
 export interface PaginatedAllyList {
   items: AllyListItem[];
   nextCursor: string | null;
+}
+
+export type AllySortBy = 'recent' | 'name';
+
+export interface AllyFilterOptions {
+  search?: string;
+  department?: string;
+  course?: string;
+  year_level?: string;
+  sortBy?: AllySortBy;
+  limit?: number;
+  cursor?: string | null;
 }
 
 export interface ProfileRelationshipSummary {
@@ -523,6 +583,7 @@ export interface AdminUserListItem {
   pending_student_verification?: boolean;
   student_verification_status?: 'pending' | 'approved' | 'rejected' | null;
   student_id_url?: string | null;
+  student_id_back_url?: string | null;
 }
 
 export interface AdminUserDetail extends AdminUserListItem {
@@ -538,6 +599,7 @@ export interface AdminUserDetail extends AdminUserListItem {
   pending_student_verification: boolean;
   student_verification_status: 'pending' | 'approved' | 'rejected' | null;
   student_id_url: string | null;
+  student_id_back_url?: string | null;
 }
 
 export interface PaginatedUserList {
@@ -555,6 +617,7 @@ export interface PendingVerificationItem {
   department: string | null;
   course: string | null;
   student_id_url: string | null;
+  student_id_back_url?: string | null;
   student_verification_status: string;
   created_at: string;
 }
@@ -562,6 +625,27 @@ export interface PendingVerificationItem {
 // ─── Admin: Reports Management ─────────────────────────────────────────────
 
 export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'rejected';
+
+export interface AdminReportPostMedia {
+  id: string;
+  url: string;
+  position: number;
+}
+
+export interface AdminReportPost {
+  id: string;
+  author_id: string;
+  author_username?: string | null;
+  author_name?: string | null;
+  author_avatar?: string | null;
+  content: string;
+  audience?: string;
+  likes_count?: number;
+  comments_count?: number;
+  created_at: string;
+  media?: AdminReportPostMedia[];
+  is_deleted?: boolean;
+}
 
 export interface AdminReportListItem {
   id: string;
@@ -574,10 +658,20 @@ export interface AdminReportListItem {
   category_id: string;
   category_label: string;
   conversation_id: string | null;
+  post_id?: string | null;
+  post?: AdminReportPost | null;
   status: ReportStatus;
   internal_notes: string | null;
   created_at: string;
   reviewed_at: string | null;
+}
+
+export interface ListReportsParams {
+  status?: ReportStatus | 'all';
+  categoryId?: string;
+  cursor?: string | null;
+  limit?: number;
+  targetType?: 'all' | 'post' | 'user';
 }
 
 export interface PaginatedReportList {
@@ -612,6 +706,15 @@ export interface SystemSettings {
 
 // ─── Matchmaking ──────────────────────────────────────────────────────────
 
+// TODO: Backend Integration - Matchmaking filter preferences payload for /match/queue
+export interface MatchmakingPreferences {
+  department?: string;         // e.g. "College of Computer Studies"
+  course?: string;             // e.g. "Information Technology" or "BSIT"
+  strictCourse?: boolean;      // e.g. true for "BSIT only"
+  specialization?: string;     // e.g. "more on design"
+  matchType?: 'anonymous' | 'direct';
+}
+
 export type QueueStatus = 'searching' | 'reserved';
 
 export interface QueueRow {
@@ -620,6 +723,7 @@ export interface QueueRow {
   status: QueueStatus;
   joined_at: string;
   updated_at: string;
+  preferences?: MatchmakingPreferences;
 }
 
 export type MatchStatus =

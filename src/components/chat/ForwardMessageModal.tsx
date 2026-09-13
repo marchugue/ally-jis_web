@@ -34,20 +34,20 @@ export function ForwardMessageModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-black/30 p-0 md:p-4">
-      <div className="w-full md:max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-jakarta font-bold text-gray-900">Forward to</h3>
+      <div className="w-full md:max-w-md bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-t-3xl md:rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
+          <h3 className="font-jakarta font-bold text-gray-900 dark:text-white">Forward to</h3>
           <button
             onClick={onClose}
             disabled={forwarding}
-            className="p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            className="p-2 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
             aria-label="Close forward modal"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -55,14 +55,14 @@ export function ForwardMessageModal({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations"
-              className="w-full bg-gray-100 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20"
+              className="w-full bg-gray-100 dark:bg-white/5 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 border border-transparent dark:border-white/10"
             />
           </div>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto">
           {filtered.length === 0 ? (
-            <p className="p-6 text-center font-jakarta text-sm text-gray-400">
+            <p className="p-6 text-center font-jakarta text-sm text-gray-400 dark:text-gray-500">
               No conversations available to forward to.
             </p>
           ) : (
@@ -72,20 +72,20 @@ export function ForwardMessageModal({
                 onClick={() => onSelect(conv)}
                 disabled={forwarding}
                 className={cn(
-                  'w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors',
+                  'w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors',
                   forwarding && 'opacity-60 cursor-not-allowed'
                 )}
               >
                 <AvatarDisplay
                   src={conv.participantAvatar}
                   name={conv.participantName}
-                  className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
+                  className="w-11 h-11 rounded-full object-cover flex-shrink-0"
                 />
                 <div className="min-w-0">
-                  <p className="font-jakarta font-semibold text-sm text-gray-900 truncate">
+                  <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">
                     {conv.participantName}
                   </p>
-                  <p className="font-jakarta text-xs text-gray-400 truncate">
+                  <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 truncate">
                     {conv.lastMessage || 'Start the conversation'}
                   </p>
                 </div>

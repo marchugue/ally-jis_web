@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/api/client';
-import type { MatchIdentityView, MatchRow, QueueRow } from '@/api/client';
+import type { MatchIdentityView, MatchmakingPreferences, MatchRow, QueueRow } from '@/api/client';
 import { getSocket } from '@/lib/socket';
 
 export type MatchPhase =
@@ -49,12 +49,16 @@ export interface UseMatchmakingResult {
   acceptDeadline: number | null;
   ended: EndedInfo | null;
   justUnlockedStage: number | null;
+  /** Populated immediately when both parties accept and room is ready */
+  roomReady: { matchId: string; conversationId: string; identity?: MatchIdentityView } | null;
+  clearRoomReady: () => void;
   /** True whenever the user has an active queue entry — use this instead of
    * phase === 'searching' to drive search UI, because phase priority can hide
    * 'searching' when older chatting/confirmed matches already exist. */
   isInQueue: boolean;
+  activePreferences: MatchmakingPreferences | null;
   dismissStageUnlock: () => void;
-  joinQueue: () => Promise<void>;
+  joinQueue: (preferences?: MatchmakingPreferences) => Promise<void>;
   leaveQueue: () => Promise<void>;
   accept: () => Promise<void>;
   decline: () => Promise<void>;
@@ -70,6 +74,8 @@ export function useMatchmaking(): UseMatchmakingResult {
   const [ended, setEnded] = useState<EndedInfo | null>(null);
   const [justUnlockedStage, setJustUnlockedStage] = useState<number | null>(null);
   const [dailyMatchCount, setDailyMatchCount] = useState(0);
+  const [activePreferences, setActivePreferences] = useState<MatchmakingPreferences | null>(null);
+  const [roomReady, setRoomReady] = useState<{ matchId: string; conversationId: string; identity?: MatchIdentityView } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,6 +115,14 @@ export function useMatchmaking(): UseMatchmakingResult {
     if (!socket) return;
 
     const onLifecycleEvent = () => void refreshStatus();
+    const onRoomReady = (payload: { matchId: string; conversationId: string; identity?: MatchIdentityView }) => {
+      setRoomReady(payload);
+      void refreshStatus();
+    };
+    const onMatchFound = (payload?: { matchId?: string; compatibilityScore?: number; identity?: MatchIdentityView }) => {
+      if (payload?.identity) setIdentity(payload.identity);
+      void refreshStatus();
+    };
     const onStreakUpdate = (payload: { streak: number }) => setStreak(payload.streak);
     const onStageUpdated = (payload: { stage: number; dayStreak: number; matchId?: string }) => {
       setActiveMatches((prev) =>
@@ -137,8 +151,8 @@ export function useMatchmaking(): UseMatchmakingResult {
       void refreshStatus();
     };
 
-    socket.on('matchmaking:match_found', onLifecycleEvent);
-    socket.on('matchmaking:room_ready', onLifecycleEvent);
+    socket.on('matchmaking:match_found', onMatchFound);
+    socket.on('matchmaking:room_ready', onRoomReady);
     socket.on('matchmaking:partner_accepted', onLifecycleEvent);
     socket.on('matchmaking:match_confirmed', onLifecycleEvent);
     socket.on('matchmaking:streak_update', onStreakUpdate);
@@ -149,8 +163,8 @@ export function useMatchmaking(): UseMatchmakingResult {
     socket.on('matchmaking:match_ended', onMatchEnded);
 
     return () => {
-      socket.off('matchmaking:match_found', onLifecycleEvent);
-      socket.off('matchmaking:room_ready', onLifecycleEvent);
+      socket.off('matchmaking:match_found', onMatchFound);
+      socket.off('matchmaking:room_ready', onRoomReady);
       socket.off('matchmaking:partner_accepted', onLifecycleEvent);
       socket.off('matchmaking:match_confirmed', onLifecycleEvent);
       socket.off('matchmaking:streak_update', onStreakUpdate);
@@ -162,10 +176,11 @@ export function useMatchmaking(): UseMatchmakingResult {
     };
   }, [refreshStatus]);
 
-  const joinQueue = useCallback(async () => {
+  const joinQueue = useCallback(async (preferences?: MatchmakingPreferences) => {
     setError(null);
+    setActivePreferences(preferences ?? null);
     try {
-      const entry = await apiClient.joinMatchQueue();
+      const entry = await apiClient.joinMatchQueue(preferences);
       setQueueEntry(entry);
     } catch (err) {
       // Refresh status even on error — a pre-existing pending match should
@@ -177,6 +192,7 @@ export function useMatchmaking(): UseMatchmakingResult {
 
   const leaveQueue = useCallback(async () => {
     setError(null);
+    setActivePreferences(null);
     try {
       await apiClient.leaveMatchQueue();
       setQueueEntry(null);
@@ -197,6 +213,13 @@ export function useMatchmaking(): UseMatchmakingResult {
         prev.map((m) => (m.id === pendingMatch.id ? result : m))
       );
       setIdentity(result.identity);
+      if (result.status === 'chatting' && result.conversation_id) {
+        setRoomReady({
+          matchId: result.id,
+          conversationId: result.conversation_id,
+          identity: result.identity,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not accept the match');
     }
@@ -244,17 +267,17 @@ export function useMatchmaking(): UseMatchmakingResult {
   const dismissStageUnlock = useCallback(() => setJustUnlockedStage(null), []);
 
   // ── Phase derivation ──────────────────────────────────────────────────────
-  // Priority: ended > pending > chatting > confirmed > searching > idle
+  // Priority: ended > pending > searching > chatting > confirmed > idle
   const phase: MatchPhase = ended
     ? 'ended'
     : pendingMatch
       ? 'pending'
-      : activeMatches.some((m) => m.status === 'chatting')
-        ? 'chatting'
-        : activeMatches.some((m) => m.status === 'confirmed')
-          ? 'confirmed'
-          : queueEntry
-            ? 'searching'
+      : queueEntry
+        ? 'searching'
+        : activeMatches.some((m) => m.status === 'chatting')
+          ? 'chatting'
+          : activeMatches.some((m) => m.status === 'confirmed')
+            ? 'confirmed'
             : 'idle';
 
   // Backward-compat: expose the "most relevant" single match
@@ -281,7 +304,10 @@ export function useMatchmaking(): UseMatchmakingResult {
     ended,
     justUnlockedStage,
     dismissStageUnlock,
+    roomReady,
+    clearRoomReady: () => setRoomReady(null),
     isInQueue: !!queueEntry,
+    activePreferences,
     joinQueue,
     leaveQueue,
     accept,

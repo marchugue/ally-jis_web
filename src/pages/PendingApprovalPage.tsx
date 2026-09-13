@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle2, XCircle, LogOut, RefreshCw, Upload } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/api/client';
+import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
 
 type VerificationStatus = 'pending' | 'approved' | 'rejected' | null;
 
@@ -16,6 +17,7 @@ export default function PendingApprovalPage() {
   const { session, signOut, isPendingApproval } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const status: VerificationStatus =
@@ -68,10 +70,10 @@ export default function PendingApprovalPage() {
   const isRejected = status === 'rejected';
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-3xl shadow-xl overflow-hidden">
           {/* Top banner */}
           <div
             className={`px-8 py-10 text-center ${
@@ -101,7 +103,7 @@ export default function PendingApprovalPage() {
           <div className="px-8 py-8 space-y-5">
             {isPending && (
               <>
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800 leading-relaxed">
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
                   <p className="font-semibold mb-1">What's happening?</p>
                   <p>
                     Our team is reviewing your uploaded student ID to verify if you are a bona fide CHMSU student.
@@ -110,11 +112,11 @@ export default function PendingApprovalPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                     <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                     Email verified
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                     <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                     Student ID submitted
                   </div>
@@ -137,7 +139,7 @@ export default function PendingApprovalPage() {
 
             {isRejected && (
               <>
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-800 leading-relaxed">
+                <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 rounded-2xl p-4 text-sm text-red-800 dark:text-red-200 leading-relaxed">
                   <p className="font-semibold mb-1">Why was it rejected?</p>
                   <p>
                     Your student ID could not be verified. This may be due to a blurry image,
@@ -158,8 +160,8 @@ export default function PendingApprovalPage() {
 
             {/* Sign out */}
             <button
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-gray-200 text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium transition-colors cursor-pointer"
             >
               <LogOut size={14} />
               Sign out
@@ -167,7 +169,7 @@ export default function PendingApprovalPage() {
 
             <p className="text-center text-xs text-gray-400">
               Need help?{' '}
-              <a href="/support" className="text-[#1A6B3C] underline underline-offset-2">
+              <a href="/support" className="text-[#1A6B3C] dark:text-emerald-400 underline underline-offset-2">
                 Contact Support
               </a>
             </p>
@@ -177,6 +179,13 @@ export default function PendingApprovalPage() {
         {/* Branding */}
         <p className="text-center text-xs text-gray-400 mt-6 font-fraunces">Ally-jis</p>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleSignOut}
+      />
     </div>
   );
 }

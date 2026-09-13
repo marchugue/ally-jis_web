@@ -45,41 +45,46 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Level 0: Deepest canvas / background (#121212 Material Design Dark Base) */
+    --background: 0 0% 7.1%; /* #121212 */
+    --foreground: 0 0% 93%; /* #EDEDED (off-white, prevents halation) */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    /* Level 1: Cards & major content panels */
+    --card: 0 0% 10%; /* #1A1A1A */
+    --card-foreground: 0 0% 93%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* Level 3: Floating Modals, Popovers & Dialogs */
+    --popover: 0 0% 12%; /* #1F1F1F */
+    --popover-foreground: 0 0% 93%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Desaturated Brand Accents (Eleken: reduce saturation by ~20% to prevent vibration) */
+    --primary: 153 52% 49%; /* #38C185 (refined campus emerald) */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Level 2: Inset wells, inputs, secondary badges */
+    --secondary: 217 34% 15%; /* #182232 */
+    --secondary-foreground: 214 32% 91%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 28% 16%;
+    --muted-foreground: 215 16% 65%; /* #94A3B8 */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 38 86% 60%; /* #F0B247 (warm gold) */
+    --accent-foreground: 150 30% 12%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 56%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 217 26% 18%;
+    --input: 217 26% 18%;
+    --ring: 153 52% 49%;
+    --sidebar-background: 218 33% 11%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 153 52% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 217 34% 15%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 217 26% 18%;
+    --sidebar-ring: 153 52% 49%;
   }
 }
 
@@ -113,6 +118,188 @@
   h3 {
     font-family: 'Fraunces', serif;
   }
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   ELEKEN-INSPIRED DARK MODE SYSTEM (5-STEP SURFACE ELEVATION)
+   • Level 0: Deepest canvas / background (#0B0F17)
+   • Level 1: Cards, Sidebars, Main Panels (#121824)
+   • Level 2: Insets, Inputs, Search Bars, Chat Wells (#182232)
+   • Level 3: Modals, Popovers, Dropdowns, Sheets (#202B3C)
+   • Level 4: Tooltips, Badges, Active Floating Highlights (#28364B)
+   • Text: 88% off-white (#E2E8F0) to eliminate glare & eye strain
+   • Accent: Desaturated Campus Emerald (#38C185) & Warm Gold (#F0B247)
+   ═════════════════════════════════════════════════════════════════ */
+.dark {
+  color-scheme: dark;
+}
+
+/* ── Surface Level 0: Canvas Backgrounds (#121212) ── */
+.dark [class*="bg-[#F7F4EF]"]:not([class*="dark:bg-"]),
+.dark [class*="bg-[#090D16]"],
+.dark [class*="bg-[#0B0F17]"],
+.dark [class*="bg-[#0F1512]"],
+.dark [class*="bg-[#121212]"],
+.dark .dark-surface-0 {
+  background-color: #121212 !important;
+}
+.dark [class*="bg-[#F7F4EF]/"]:not([class*="dark:bg-"]),
+.dark [class*="bg-[#090D16]/"],
+.dark [class*="bg-[#0B0F17]/"],
+.dark [class*="bg-[#121212]/"] {
+  background-color: rgba(18, 18, 18, 0.92) !important;
+}
+
+/* ── Surface Level 1: Cards, Panels, Sidebars (#181818) ── */
+.dark [class*="bg-[#EDE7DB]"]:not([class*="dark:bg-"]),
+.dark [class*="bg-[#FAF9F6]"]:not([class*="dark:bg-"]),
+.dark [class*="bg-[#111827]"],
+.dark [class*="bg-[#0D131F]"],
+.dark [class*="bg-[#161D19]"],
+.dark [class*="bg-[#181818]"],
+.dark .dark-surface-1 {
+  background-color: #181818 !important;
+}
+.dark [class*="bg-[#111827]/"],
+.dark [class*="bg-[#0D131F]/"],
+.dark [class*="bg-[#161D19]/"],
+.dark [class*="bg-[#181818]/"] {
+  background-color: rgba(24, 24, 24, 0.90) !important;
+}
+.dark [class*="bg-white"]:not([class*="dark:bg-"]):not([class*="text-white"]):not(.bg-white.text-\[\#0a331c\]) {
+  background-color: #181818;
+}
+.dark [class*="bg-white/"]:not([class*="dark:bg-"]) {
+  background-color: rgba(24, 24, 24, 0.88);
+}
+
+/* ── Surface Level 2: Insets, Inputs, Badges, Search Wells (#182232) ── */
+.dark [class*="bg-[#1E293B]"],
+.dark [class*="bg-[#1F2937]"],
+.dark .dark-surface-2 {
+  background-color: #182232 !important;
+}
+.dark [class*="bg-gray-50"]:not([class*="dark:bg-"]) {
+  background-color: #182232;
+}
+.dark [class*="bg-gray-100"]:not([class*="dark:bg-"]) {
+  background-color: #202B3C;
+}
+
+/* ── Surface Level 3: Modals, Popovers, Dropdowns (#202B3C) ── */
+.dark [role="dialog"],
+.dark [aria-modal="true"],
+.dark [class*="DialogContent"],
+.dark [class*="SheetContent"],
+.dark [class*="DropdownMenuContent"],
+.dark [class*="modal"],
+.dark [class*="bg-[#1A2234]"],
+.dark .dark-surface-3 {
+  background-color: #202B3C !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.09) !important;
+}
+
+/* ── Surface Level 4: Tooltips, Badges, Active Floating Elements (#28364B) ── */
+.dark .dark-surface-4 {
+  background-color: #28364B !important;
+}
+
+/* ── Typography & Contrast Hierarchy (Eleken: Anti-glare off-white) ── */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark [class*="dark:text-white"]:not(button):not(button *):not(a[class*="bg-"]):not(a[class*="bg-"] *):not([class*="bg-[#1A6B3C]"] *):not([class*="bg-emerald-"] *):not([class*="bg-primary"] *),
+.dark [class*="dark:text-gray-100"],
+.dark [class*="text-gray-900"]:not([class*="dark:text-"]),
+.dark .text-gray-900 {
+  color: #E2E8F0 !important; /* 88% off-white: comfortable, zero halation */
+}
+.dark [class*="text-gray-800"]:not([class*="dark:text-"]),
+.dark [class*="dark:text-gray-200"],
+.dark .text-gray-800 {
+  color: #D6DCE5 !important;
+}
+.dark [class*="text-gray-700"]:not([class*="dark:text-"]),
+.dark [class*="dark:text-gray-300"],
+.dark .text-gray-700 {
+  color: #CBD5E1 !important; /* 75% body text */
+}
+.dark [class*="text-gray-600"]:not([class*="dark:text-"]),
+.dark [class*="dark:text-gray-400"],
+.dark .text-gray-600 {
+  color: #94A3B8 !important; /* 65% secondary text */
+}
+.dark [class*="text-gray-500"]:not([class*="dark:text-"]),
+.dark [class*="dark:text-gray-500"],
+.dark .text-gray-500 {
+  color: #8E9BAE !important; /* 55% muted text */
+}
+.dark [class*="text-gray-400"]:not([class*="dark:text-"]),
+.dark .text-gray-400 {
+  color: #64748B !important; /* 45% subtle meta */
+}
+
+/* ── Desaturated Brand Colors ── */
+.dark [class*="text-[#1A6B3C]"]:not([class*="dark:text-"]):not([class*="bg-[#1A6B3C]"]):not(button[class*="bg-[#1A6B3C]"] *):not(a[class*="bg-[#1A6B3C]"] *):not(.bg-\[\#1A6B3C\] *),
+.dark .text-emerald-400,
+.dark [class*="dark:text-emerald-400"] {
+  color: #38C185 !important; /* Soft, organic campus jade-emerald */
+}
+
+.dark [class*="text-[#E8A838]"],
+.dark [class*="dark:text-amber-400"] {
+  color: #F0B247 !important; /* Warm golden champagne */
+}
+
+.dark [class*="text-[#3B8C7E]"],
+.dark [class*="dark:text-teal-400"] {
+  color: #4EADA0 !important; /* Calming eucalyptus teal */
+}
+
+/* ── Micro-Borders: Build Depth Without Muddy Shadows ── */
+.dark [class*="border-[#1A6B3C]"]:not([class*="dark:border-"]):not(button[class*="border-[#1A6B3C]"]):not(input):not(textarea) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark [class*="border-gray-"]:not([class*="dark:border-"]) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+.dark [class*="dark:border-white/10"] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.dark [class*="divide-gray-"]:not([class*="dark:divide-"]) > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* ── Form Controls (Surface Level 2) ── */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([class*="dark:"]),
+.dark select:not([class*="dark:"]),
+.dark textarea:not([class*="dark:"]) {
+  background-color: #182232 !important;
+  color: #E2E8F0 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: #38C185 !important;
+  box-shadow: 0 0 0 2px rgba(56, 193, 133, 0.15) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B !important;
+}
+
+/* ── Buttons: Desaturated Solid Emerald with Depth ── */
+.dark button[class*="bg-[#1A6B3C]"]:not([class*="dark:bg-"]):not([class*="hover:bg-[#1A6B3C]"]),
+.dark a[class*="bg-[#1A6B3C]"]:not([class*="dark:bg-"]):not([class*="hover:bg-[#1A6B3C]"]) {
+  background-color: #2F9E6C !important;
+}
+.dark button[class*="bg-[#1A6B3C]"]:hover:not([class*="dark:hover:bg-"]),
+.dark a[class*="bg-[#1A6B3C]"]:hover:not([class*="dark:hover:bg-"]) {
+  background-color: #27885D !important;
 }
 
 /* Custom Scrollbar Utility */
@@ -211,6 +398,14 @@
 
   .card-shadow-hover {
     box-shadow: 0 8px 32px rgba(26, 107, 60, 0.14), 0 2px 8px rgba(26, 107, 60, 0.08);
+  }
+
+  .dark .card-shadow {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+
+  .dark .card-shadow-hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(56, 193, 133, 0.25);
   }
 }
 
@@ -327,4 +522,56 @@
 
 .animate-float-badge-delayed {
   animation: float-badge-delayed 5.5s ease-in-out 1.5s infinite;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   THEME TRANSITION: FAST LOWER-RIGHT TO UPPER-RIGHT CURVE-INWARD
+   Zero cross-fade / opacity fade — crisp pixel sweep consuming previous mode
+   ═════════════════════════════════════════════════════════════════ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 999999;
+  animation: theme-curve-sweep 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes theme-curve-sweep {
+  0% {
+    clip-path: inset(100% 0 0 100% round 100% 0 0 0);
+  }
+  35% {
+    clip-path: inset(15% 0 0 25% round 90% 0 0 0);
+  }
+  70% {
+    clip-path: inset(0 0 0 0 round 45% 0 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0 round 0 0 0 0);
+  }
+}
+
+/* Fallback overlay for browsers without native View Transitions */
+.theme-fallback-sweep {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  pointer-events: none;
+  animation: theme-curve-sweep 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.theme-fallback-sweep.dark-sweep {
+  background-color: #121212;
+}
+
+.theme-fallback-sweep.light-sweep {
+  background-color: #F7F4EF;
 }
