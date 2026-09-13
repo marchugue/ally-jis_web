@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
@@ -158,14 +158,18 @@ export default function DownloadPage() {
               {/* Download Trigger / Progress Bar */}
               <div className="space-y-4 max-w-lg">
                 {!downloading && !isCompleted && (
-                  <motion.button
-                    whileHover={{ scale: 1.03, y: -2 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={handleDownload}
-                    className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-9 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
-                  >
-                    <Download size={18} /> Download {apkFileName}
-                  </motion.button>
+                  <div className="space-y-3">
+                    <motion.a
+                      href={apkPath}
+                      download={apkFileName}
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={handleDownload}
+                      className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-9 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
+                    >
+                      <Download size={18} /> Download {apkFileName}
+                    </motion.a>
+                  </div>
                 )}
 
                 {downloading && (
@@ -189,7 +193,7 @@ export default function DownloadPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 font-mono">
-                      <span>Direct streaming ~85 MB APK</span>
+                      <span>Direct streaming ~131 MB APK</span>
                       <span className="text-[#B45309] dark:text-amber-400 font-medium">Handing off to browser...</span>
                     </div>
                   </motion.div>
@@ -209,12 +213,14 @@ export default function DownloadPage() {
                           <p className="text-xs text-emerald-700 dark:text-emerald-400">Check your notification drawer or Downloads folder</p>
                         </div>
                       </div>
-                      <button
+                      <a
+                        href={apkPath}
+                        download={apkFileName}
                         onClick={handleDownload}
                         className="text-xs font-mono uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
                       >
                         <RotateCcw size={13} /> Re-download
-                      </button>
+                      </a>
                     </div>
 
                     <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 font-jakarta flex flex-wrap items-center justify-between gap-2">
@@ -229,6 +235,17 @@ export default function DownloadPage() {
                     </div>
                   </motion.div>
                 )}
+
+                {/* Android 100% Notice / Security Context */}
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="font-semibold block">Android Download Note (100% Status):</strong>
+                    <p className="leading-relaxed text-[11.5px]">
+                      When the download reaches 100%, Android and Chrome run a Google Play Protect scan on the ~131 MB APK before committing the file. If Chrome prompts <em>"File might be harmful"</em>, tap <strong>"Download anyway"</strong>. Then tap the finished notification or open <strong>Files &gt; Downloads</strong> to tap and install.
+                    </p>
+                  </div>
+                </div>
 
                 {/* Pill specifications */}
                 <div className="flex flex-wrap items-center gap-3 pt-2 font-mono text-xs text-[#1A6B3C]/70 dark:text-gray-400">
