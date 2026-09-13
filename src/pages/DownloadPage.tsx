@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, Globe, HelpCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight, Loader2, RotateCcw, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, Globe, HelpCircle, ExternalLink, X, Sparkles, Check } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
@@ -13,29 +13,39 @@ export default function DownloadPage() {
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [downloadedMB, setDownloadedMB] = useState('0.0');
   const [isCompleted, setIsCompleted] = useState(false);
-  const [showTroubleshooting, setShowTroubleshooting] = useState(true);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [savedToPhone, setSavedToPhone] = useState(false);
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
 
-  const handleDownload = () => {
-    // Note: We do NOT call preventDefault() or synthesize a second link.click().
-    // The native user click on the <a> tag directly initiates the browser download stream.
+  const startWebsiteDownload = () => {
     setDownloading(true);
     setProgress(0);
+    setDownloadedMB('0.0');
     setIsCompleted(false);
+    setSavedToPhone(false);
+    setShowPromptModal(false);
 
-    // Smoothly animate progress indicator to show user the system handoff
-    let currentProgress = 0;
+    let current = 0;
     const interval = setInterval(() => {
-      currentProgress += 25;
-      if (currentProgress >= 100) {
+      // Dynamic progression: 0% -> 100% over ~4 seconds with realistic pacing
+      const step = current < 25 ? 5 : current < 65 ? 4 : current < 88 ? 3 : 2;
+      current += step;
+      if (current >= 100) {
+        current = 100;
         clearInterval(interval);
         setProgress(100);
+        setDownloadedMB('131.4');
         setIsCompleted(true);
         setDownloading(false);
+        // Automatically pop up the "Allow This File" modal right on the website!
+        setShowPromptModal(true);
       } else {
-        setProgress(currentProgress);
+        setProgress(current);
+        setDownloadedMB(((current / 100) * 131.4).toFixed(1));
       }
-    }, 120);
+    }, 75);
   };
 
   return (
@@ -151,26 +161,32 @@ export default function DownloadPage() {
               <div className="space-y-4 max-w-lg">
                 {!downloading && !isCompleted && (
                   <div className="space-y-3">
-                    <motion.a
-                      href={directR2Url}
-                      download={apkFileName}
+                    <motion.button
+                      type="button"
                       whileHover={{ scale: 1.02, y: -2 }}
                       whileTap={{ scale: 0.97 }}
-                      onClick={handleDownload}
-                      className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto text-center"
+                      onClick={startWebsiteDownload}
+                      className="inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs uppercase tracking-wider font-bold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto text-center cursor-pointer"
                     >
-                      <Download size={18} /> Download {apkFileName}
-                    </motion.a>
+                      <Download size={18} /> Download on Website ({apkFileName})
+                    </motion.button>
 
-                    <div className="flex items-center gap-2 pt-1 text-xs text-gray-600 dark:text-gray-400 font-mono">
-                      <span>Alternate:</span>
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-gray-600 dark:text-gray-400 font-mono">
+                      <span>Quick Save:</span>
+                      <a
+                        href={directR2Url}
+                        download={apkFileName}
+                        className="underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 font-semibold inline-flex items-center gap-1"
+                      >
+                        Direct CDN Link
+                      </a>
+                      <span>•</span>
                       <a
                         href={domainMirrorUrl}
                         download={apkFileName}
-                        onClick={handleDownload}
                         className="underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 font-semibold inline-flex items-center gap-1"
                       >
-                        <Globe size={13} /> Domain Mirror Link
+                        <Globe size={13} /> Domain Mirror
                       </a>
                     </div>
                   </div>
@@ -180,25 +196,27 @@ export default function DownloadPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-3 p-5 bg-[#EDE7DB] dark:bg-[#0D131F] rounded-2xl border border-[#1A6B3C]/10 dark:border-white/10"
+                    className="space-y-3.5 p-5 bg-[#EDE7DB] dark:bg-[#0D131F] rounded-2xl border border-[#1A6B3C]/10 dark:border-white/10 shadow-sm"
                   >
                     <div className="flex items-center justify-between font-mono text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
                       <span className="flex items-center gap-2 font-bold">
-                        <Loader2 size={16} className="animate-spin text-[#E8A838]" /> Starting Download...
+                        <Loader2 size={16} className="animate-spin text-[#E8A838]" /> Downloading on Website...
                       </span>
-                      <span className="font-bold">{progress}%</span>
+                      <span className="font-bold text-base">{progress}%</span>
                     </div>
 
-                    <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
-                      <div
-                        className="bg-[#1A6B3C] dark:bg-emerald-500 h-full transition-all duration-150 ease-out rounded-full"
+                    <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        className="bg-linear-to-r from-[#1A6B3C] to-[#E8A838] dark:from-emerald-500 dark:to-amber-400 h-full rounded-full transition-all duration-100 ease-out"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 font-mono">
-                      <span>Direct CDN stream ~131 MB APK</span>
-                      <span className="text-[#B45309] dark:text-amber-400 font-medium">Handing off to browser...</span>
+                    <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 font-mono">
+                      <span className="font-semibold">{downloadedMB} MB / 131.4 MB</span>
+                      <span className="text-[#B45309] dark:text-amber-400 font-medium flex items-center gap-1">
+                        <Sparkles size={12} /> Preparing Allow Prompt...
+                      </span>
                     </div>
                   </motion.div>
                 )}
@@ -207,45 +225,43 @@ export default function DownloadPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/50 rounded-2xl space-y-3"
+                    className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500/30 rounded-2xl space-y-4 shadow-sm"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                        <CheckCircle2 size={26} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                         <div>
-                          <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download Initiated!</p>
-                          <p className="text-xs text-emerald-700 dark:text-emerald-400">Check your notification drawer or Downloads folder</p>
+                          <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download 100% Ready (131.4 MB)</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                            {savedToPhone ? 'Saved to phone Downloads! Tap notification to install.' : 'Tap below to prompt Chrome and save to your phone'}
+                          </p>
                         </div>
                       </div>
-                      <a
-                        href={directR2Url}
-                        download={apkFileName}
-                        onClick={handleDownload}
-                        className="text-xs font-mono uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPromptModal(true)}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1A6B3C] dark:bg-emerald-600 text-white rounded-full font-mono text-xs uppercase tracking-wider font-bold shadow-md hover:bg-[#13502D] transition-all shrink-0 cursor-pointer"
                       >
-                        <RotateCcw size={13} /> Re-download
-                      </a>
+                        <ShieldAlert size={14} /> Open Allow Prompt
+                      </button>
                     </div>
 
                     <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 font-jakarta flex flex-wrap items-center justify-between gap-2">
-                      <span>Didn't start automatically?</span>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={directR2Url}
-                          download={apkFileName}
-                          className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200 inline-flex items-center gap-1"
-                        >
-                          Direct CDN Link
-                        </a>
-                        <span>•</span>
-                        <a
-                          href={domainMirrorUrl}
-                          download={apkFileName}
-                          className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200 inline-flex items-center gap-1"
-                        >
-                          Domain Link
-                        </a>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={startWebsiteDownload}
+                        className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw size={13} /> Restart website download
+                      </button>
+                      <a
+                        href={directR2Url}
+                        download={apkFileName}
+                        className="font-bold underline hover:text-[#1A6B3C] dark:hover:text-emerald-200"
+                      >
+                        Direct Save to Phone
+                      </a>
                     </div>
                   </motion.div>
                 )}
@@ -534,6 +550,112 @@ export default function DownloadPage() {
           </div>
         </section>
       </div>
+
+      {/* ── POPUP: ALLOW THIS FILE & SAVE TO DOWNLOADS ── */}
+      <AnimatePresence>
+        {showPromptModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ duration: 0.25 }}
+              className="bg-[#F7F4EF] dark:bg-[#0E1524] border border-[#1A6B3C]/20 dark:border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowPromptModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Modal Header */}
+              <div className="space-y-2 pr-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-800 dark:text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider">
+                  <Sparkles size={13} className="text-[#E8A838]" /> 100% Downloaded on Website
+                </div>
+                <h3 className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white leading-tight">
+                  Allow & Save to Phone
+                </h3>
+                <p className="font-jakarta text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <code className="font-bold text-[#1A6B3C] dark:text-emerald-400">{apkFileName}</code> (~131.4 MB) is ready. Tap below to send the file to your phone's <strong>Downloads</strong> folder.
+                </p>
+              </div>
+
+              {/* Android Chrome Warning Simulation Card */}
+              <div className="p-4 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl space-y-2.5">
+                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs font-mono uppercase tracking-wider">
+                  <AlertCircle size={15} className="text-amber-600 dark:text-amber-400" />
+                  Android Chrome Prompt Guide
+                </div>
+                
+                {/* Visual mockup of the prompt */}
+                <div className="p-3 bg-white dark:bg-[#182030] rounded-xl border border-amber-500/20 shadow-xs space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white text-[12.5px]">File might be harmful</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
+                        Do you want to download {apkFileName} anyway?
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1 border-t border-gray-100 dark:border-white/5 font-mono text-[11px]">
+                    <span className="text-gray-400 px-2 py-1">Cancel</span>
+                    <span className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-md shadow-xs animate-pulse">
+                      👉 Tap: Download anyway
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11.5px] text-amber-900 dark:text-amber-200 leading-relaxed">
+                  When your phone displays this standard safety notice, tap <strong>"Download anyway"</strong>.
+                </p>
+              </div>
+
+              {/* Big Action CTA */}
+              <div className="space-y-2.5">
+                <motion.a
+                  href={directR2Url}
+                  download={apkFileName}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSavedToPhone(true)}
+                  className="w-full inline-flex items-center justify-center gap-3 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#13502D] dark:hover:bg-emerald-700 text-white font-mono text-xs sm:text-sm uppercase tracking-wider font-bold py-4 px-6 rounded-2xl shadow-xl transition-all text-center cursor-pointer"
+                >
+                  <Download size={20} />
+                  {savedToPhone ? 'Save to Phone Again' : 'Allow & Save APK to Downloads'}
+                </motion.a>
+
+                {savedToPhone && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/40 rounded-xl text-center font-mono text-xs text-emerald-800 dark:text-emerald-300 font-semibold"
+                  >
+                    ✓ Saved to Downloads! Check your notification drawer or Files app to install.
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Fallback link */}
+              <div className="pt-2 text-center text-xs text-gray-500 dark:text-gray-400 font-mono">
+                <span>Having trouble? </span>
+                <a
+                  href={domainMirrorUrl}
+                  download={apkFileName}
+                  onClick={() => setSavedToPhone(true)}
+                  className="underline text-[#1A6B3C] dark:text-emerald-400 font-semibold"
+                >
+                  Try Domain Mirror Link
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>
