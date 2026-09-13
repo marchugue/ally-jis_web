@@ -1,4 +1,21 @@
 {
+  "redirects": [
+    {
+      "source": "/download/ally-jis-app-v1.0.apk",
+      "destination": "https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk",
+      "permanent": false
+    },
+    {
+      "source": "/download/apk",
+      "destination": "https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk",
+      "permanent": false
+    },
+    {
+      "source": "/apk",
+      "destination": "https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
