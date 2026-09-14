@@ -10,7 +10,16 @@
  * one object, same shape as before.
  */
 
-export { ApiError, isApiConfigured } from './http';
+export {
+  ApiError,
+  isApiConfigured,
+  getApiBaseUrl,
+  isUsingFallback,
+  switchToProductionFallback,
+  resetToConfiguredBackend,
+  probeLocalBackend,
+  PRODUCTION_API_URL,
+} from './http';
 
 export type {
   AuthUser,

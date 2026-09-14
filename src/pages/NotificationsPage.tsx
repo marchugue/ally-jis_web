@@ -21,30 +21,6 @@ import type { Notification } from '@/types/ally';
 
 type FilterCategory = 'all' | 'unread' | 'requests' | 'matches';
 
-function formatTimestamp(dateStr?: string): string {
-  if (!dateStr) return 'Just now';
-  const then = new Date(dateStr).getTime();
-  if (isNaN(then)) return dateStr;
-  const now = Date.now();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return `${Math.floor(diffDay / 7)}w ago`;
-}
-
-function isTodayDate(dateStr?: string): boolean {
-  if (!dateStr) return true;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return true;
-  const now = new Date();
-  return d.toDateString() === now.toDateString();
-}
-
 function extractSubtext(notif: Notification): string {
   const rawDesc = (notif.description || '').trim();
   if (!rawDesc) return '';
@@ -97,6 +73,74 @@ function getActionText(notif: Notification): string {
     default:
       return notif.title || 'interacted with your post';
   }
+}
+
+function getNotificationContent(notif: Notification) {
+  const isAnon = notif.type === 'anon_match';
+  const anonName = isAnon
+    ? notif.fromUserName ||
+      (notif.title && notif.title.includes('messaged you')
+        ? notif.title.replace(/\s*messaged you.*$/i, '').trim()
+        : null) ||
+      (notif.title && notif.title.includes('sent an anonymous')
+        ? notif.title.replace(/\s*sent an anonymous.*$/i, '').trim()
+        : null) ||
+      'Anonymous Ally'
+    : null;
+
+  const authorName = isAnon
+    ? anonName!
+    : notif.type === 'streak_reminder'
+    ? 'Streak Reminder'
+    : notif.fromUserName || 'Someone';
+
+  const actionText = getActionText(notif);
+
+  if (notif.type === 'streak_reminder') {
+    return {
+      authorName: 'Streak Reminder',
+      actionText: 'is active',
+      description: notif.description || 'Your streak is not yet activated! Send a message to keep it going.',
+    };
+  }
+
+  const subtext = extractSubtext(notif);
+  let description = subtext;
+
+  if (!description) {
+    if (notif.description && notif.description !== notif.title && !notif.description.includes(actionText)) {
+      description = notif.description;
+    } else {
+      switch (notif.type) {
+        case 'friend_request':
+        case 'connection_request':
+          description = 'Tap to review and respond to this request';
+          break;
+        case 'accepted':
+        case 'connection_accepted':
+          description = 'You are now connected allies. Tap to chat';
+          break;
+        case 'match':
+          description = 'You matched! Tap to view profile and start chatting';
+          break;
+        case 'anon_match':
+          description = 'New anonymous match message. Tap to reply';
+          break;
+        case 'post_like':
+        case 'like':
+          description = 'Tap to view your post';
+          break;
+        case 'comment_like':
+          description = 'Tap to view your comment';
+          break;
+        default:
+          description = notif.description || '';
+          break;
+      }
+    }
+  }
+
+  return { authorName, actionText, description };
 }
 
 function NotificationAvatarBadge({ notif }: { notif: Notification }) {
@@ -259,42 +303,9 @@ export default function NotificationsPage() {
     });
   }, [notifications, activeFilter]);
 
-  const { todayList, earlierList } = useMemo(() => {
-    const today: Notification[] = [];
-    const earlier: Notification[] = [];
-    for (const item of filteredNotifications) {
-      if (isTodayDate(item.timestamp)) {
-        today.push(item);
-      } else {
-        earlier.push(item);
-      }
-    }
-    return { todayList: today, earlierList: earlier };
-  }, [filteredNotifications]);
-
   const renderRow = (notif: Notification) => {
     const isUnread = !notif.isRead;
-    const isAnon = notif.type === 'anon_match';
-    const anonName = isAnon
-      ? notif.fromUserName ||
-        (notif.title && notif.title.includes('messaged you')
-          ? notif.title.replace(/\s*messaged you.*$/i, '').trim()
-          : null) ||
-        (notif.title && notif.title.includes('sent an anonymous')
-          ? notif.title.replace(/\s*sent an anonymous.*$/i, '').trim()
-          : null) ||
-        'Anonymous Ally'
-      : null;
-
-    const authorName = isAnon
-      ? anonName!
-      : notif.type === 'streak_reminder'
-      ? 'Streak Reminder'
-      : notif.fromUserName || 'Someone';
-    const actionText = getActionText(notif);
-    const subtext = notif.type === 'streak_reminder'
-      ? (notif.description || 'Your streak is not yet activated! Send a message to activate.')
-      : extractSubtext(notif);
+    const { authorName, actionText, description } = getNotificationContent(notif);
 
     return (
       <button
@@ -302,51 +313,54 @@ export default function NotificationsPage() {
         type="button"
         onClick={() => handleClick(notif)}
         className={cn(
-          'w-full text-left flex items-center gap-3.5 px-4 sm:px-5 py-3.5 hover:bg-gray-50/80 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-white/5 last:border-0',
-          isUnread && 'bg-[#1A6B3C]/[0.03] dark:bg-emerald-950/20'
+          'w-full text-left flex items-center gap-3.5 sm:gap-4 px-4 sm:px-5 py-3.5 transition-all duration-150',
+          'hover:bg-gray-50/90 dark:hover:bg-white/[0.04] active:bg-gray-100/70 dark:active:bg-white/[0.06]',
+          'border-b border-gray-100/80 dark:border-white/5 last:border-0 group cursor-pointer relative',
+          isUnread
+            ? 'bg-[#1A6B3C]/[0.035] dark:bg-emerald-950/20'
+            : 'bg-transparent'
         )}
       >
+        {isUnread && (
+          <div className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#1A6B3C] dark:bg-emerald-400 rounded-r-full" />
+        )}
+
         <NotificationAvatarBadge notif={notif} />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-jakarta text-xs sm:text-[13.5px] leading-snug text-gray-900 dark:text-white truncate">
-              <span className="font-bold text-gray-900 dark:text-white">
-                {authorName}
-              </span>
-              <span
-                className={cn(
-                  'ml-1',
-                  isUnread
-                    ? 'font-semibold text-gray-900 dark:text-gray-100'
-                    : 'font-normal text-gray-600 dark:text-gray-300'
-                )}
-              >
-                {actionText}
-              </span>
-            </p>
-            <span className="font-jakarta text-[11px] font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">
-              {formatTimestamp(notif.timestamp)}
+        <div className="flex-1 min-w-0 pr-1">
+          <p className="font-jakarta text-[13px] sm:text-[13.5px] leading-snug text-gray-900 dark:text-white truncate">
+            <span className="font-bold text-gray-900 dark:text-white">
+              {authorName}
             </span>
-          </div>
+            <span
+              className={cn(
+                'ml-1.5',
+                isUnread
+                  ? 'font-semibold text-gray-800 dark:text-gray-100'
+                  : 'font-normal text-gray-600 dark:text-gray-300'
+              )}
+            >
+              {actionText}
+            </span>
+          </p>
 
-          {Boolean(subtext) && (
-            <p className="font-jakarta text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-              {subtext}
+          {Boolean(description) && (
+            <p className="font-jakarta text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+              {description}
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
           {(notif.type === 'message' || notif.type === 'anon_match') && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/10 dark:text-emerald-400 hover:bg-[#1A6B3C]/20 transition-colors">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 group-hover:bg-[#1A6B3C]/20 transition-colors">
               Reply
             </span>
           )}
           {isUnread && (
-            <div className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 shadow-xs" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 shadow-xs ring-4 ring-[#1A6B3C]/10 dark:ring-emerald-400/20" />
           )}
-          <ChevronRight size={16} className="text-gray-300 dark:text-gray-600" />
+          <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 group-hover:translate-x-0.5 transition-all" />
         </div>
       </button>
     );
@@ -448,14 +462,13 @@ export default function NotificationsPage() {
           {/* ═══ Content List ═══ */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
             {loading ? (
-              <div className="divide-y divide-gray-100 dark:divide-white/5">
+              <div className="divide-y divide-gray-100/80 dark:divide-white/5">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-start gap-4 px-5 py-4 animate-pulse">
+                  <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
                     <div className="w-11 h-11 rounded-2xl bg-gray-200 dark:bg-white/10 flex-shrink-0" />
-                    <div className="flex-1 space-y-2 pt-1">
-                      <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-full w-1/2" />
-                      <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-full w-3/4" />
-                      <div className="h-2.5 bg-gray-100 dark:bg-white/5 rounded-full w-1/4" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-full w-2/5" />
+                      <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-full w-3/5" />
                     </div>
                   </div>
                 ))}
@@ -473,30 +486,8 @@ export default function NotificationsPage() {
                 </p>
               </div>
             ) : (
-              <div>
-                {/* Today Section */}
-                {todayList.length > 0 && (
-                  <div>
-                    <div className="px-5 py-2 bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
-                      <span className="font-jakarta text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                        Today
-                      </span>
-                    </div>
-                    <div>{todayList.map((n) => renderRow(n))}</div>
-                  </div>
-                )}
-
-                {/* Earlier Section */}
-                {earlierList.length > 0 && (
-                  <div>
-                    <div className="px-5 py-2 bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
-                      <span className="font-jakarta text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                        Earlier
-                      </span>
-                    </div>
-                    <div>{earlierList.map((n) => renderRow(n))}</div>
-                  </div>
-                )}
+              <div className="divide-y divide-gray-100/80 dark:divide-white/5">
+                {filteredNotifications.map((n) => renderRow(n))}
               </div>
             )}
           </div>

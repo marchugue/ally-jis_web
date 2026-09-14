@@ -30,7 +30,7 @@ function BrowseRow({
       onClick={() => onSelect(user)}
       disabled={starting}
       className={cn(
-        'w-full p-4 flex items-center gap-3 transition-colors border-b border-gray-50 dark:border-white/5',
+        'w-full p-4 flex items-center gap-4 md:gap-3 transition-colors',
         'hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-60',
       )}
     >
@@ -38,10 +38,11 @@ function BrowseRow({
         <AvatarDisplay
           src={user.avatar ?? undefined}
           name={user.name}
-          className="w-12 h-12 rounded-full object-cover"
+          className="w-14 h-14 md:w-12 md:h-12 rounded-full object-cover"
+          textClassName="text-xl md:text-lg"
         />
         {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#0D131F] rounded-full" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 md:w-3 md:h-3 bg-emerald-500 border-2 border-white dark:border-[#0D131F] rounded-full" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">

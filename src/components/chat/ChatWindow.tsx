@@ -123,6 +123,20 @@ function getBubbleBorderRadii(isMe: boolean, groupPosition: MessageGroupPosition
   }
 }
 
+function getItemMarginClass(groupPosition: MessageGroupPosition = 'single'): string {
+  switch (groupPosition) {
+    case 'first':
+      return 'mt-2 mb-0.5';
+    case 'middle':
+      return 'my-0.5';
+    case 'last':
+      return 'mt-0.5 mb-2';
+    case 'single':
+    default:
+      return 'my-1.5';
+  }
+}
+
 interface MessageBubbleProps {
   msg: Message;
   isMe: boolean;
@@ -363,19 +377,7 @@ const MessageBubble = memo(function MessageBubble({
     />
   );
 
-  const itemMarginClass = useMemo(() => {
-    switch (groupPosition) {
-      case 'first':
-        return 'mt-2 mb-0.5';
-      case 'middle':
-        return 'my-0.5';
-      case 'last':
-        return 'mt-0.5 mb-2';
-      case 'single':
-      default:
-        return 'my-1.5';
-    }
-  }, [groupPosition]);
+  const itemMarginClass = getItemMarginClass(groupPosition);
 
   const showSenderName = (groupPosition === 'first' || groupPosition === 'single') && !msg.isDeleted;
   const senderDisplayName = isMe ? 'Me' : (participantName || 'User');
@@ -488,9 +490,10 @@ export function ChatWindow({
   const prevConvIdRef = useRef<string | null | undefined>(conversationId);
   const prevMsgCountRef = useRef<number>(0);
 
-  // Defensive deduplication to guarantee unique React keys and eliminate duplicate bubbles
+  // Defensive deduplication to guarantee unique React keys, eliminate duplicate bubbles,
+  // and exclude messages hidden for the current user (deleted for me)
   const uniqueMessages = useMemo(() => {
-    return dedupeMessages(messages);
+    return dedupeMessages(messages).filter((m) => !m.deletedForMe);
   }, [messages]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {

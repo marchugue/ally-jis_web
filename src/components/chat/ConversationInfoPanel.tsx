@@ -315,30 +315,29 @@ function ConversationInfoContent({
           </button>
         )}
 
-        {/* End Match (for anonymous conversations) OR Delete Conversation (for regular) */}
-        {isAnonymous ? (
-          conversation.variant !== 'anonymous_ended' && (
-            <button
-              onClick={() => setShowEndMatchDialog(true)}
-              className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
-            >
-              <LogOut size={17} className="text-red-400 flex-shrink-0" />
-              <span className="font-jakarta text-sm text-red-500 font-medium">
-                End match
-              </span>
-            </button>
-          )
-        ) : (
+        {/* End Match (for active anonymous conversations) */}
+        {isAnonymous && conversation.variant !== 'anonymous_ended' && (
           <button
-            onClick={() => setShowDeleteModal(true)}
+            onClick={() => setShowEndMatchDialog(true)}
             className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
           >
-            <Trash2 size={17} className="text-red-400 flex-shrink-0" />
+            <LogOut size={17} className="text-red-400 flex-shrink-0" />
             <span className="font-jakarta text-sm text-red-500 font-medium">
-              Delete conversation
+              End match
             </span>
           </button>
         )}
+
+        {/* Delete Conversation (available for both regular and anonymous conversations) */}
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
+        >
+          <Trash2 size={17} className="text-red-400 flex-shrink-0" />
+          <span className="font-jakarta text-sm text-red-500 font-medium">
+            Delete conversation
+          </span>
+        </button>
 
         {/* Report — always available */}
         <button

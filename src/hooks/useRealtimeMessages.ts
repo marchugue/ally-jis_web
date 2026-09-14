@@ -454,16 +454,15 @@ export function useRealtimeMessages(conversationId: string | null) {
 
   const deleteMessage = useCallback((messageId: string, mode: 'delete_for_me' | 'delete_for_everyone' = 'delete_for_me') => {
     // Optimistic update — apply immediately so the UI feels instant.
-    setMessages((prev) =>
-      prev.map((m) => {
+    setMessages((prev) => {
+      if (mode === 'delete_for_me') {
+        return prev.filter((m) => m.id !== messageId);
+      }
+      return prev.map((m) => {
         if (m.id !== messageId) return m;
-        if (mode === 'delete_for_everyone') {
-          return { ...m, isDeleted: true, content: 'This message was deleted', imageUrl: null, reactions: [] };
-        } else {
-          return { ...m, deletedForMe: true };
-        }
-      })
-    );
+        return { ...m, isDeleted: true, content: 'This message was deleted', imageUrl: null, reactions: [] };
+      });
+    });
 
     // Persist to backend in the background (only for real, non-temp messages).
     if (conversationId && isApiConfigured && !messageId.startsWith(TEMP_ID_PREFIX)) {

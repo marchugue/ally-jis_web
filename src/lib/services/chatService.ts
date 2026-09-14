@@ -103,12 +103,14 @@ export const mapConversationRow = (
     messages: [],
     variant,
     // General PHT streak — backend always returns this now (0 if not started).
-    dayStreak: row.dayStreak ?? 0,
+    dayStreak: row.dayStreak ?? row.matchInfo?.dayStreak ?? 0,
+    streakActiveToday: Boolean(row.streakActiveToday ?? row.matchInfo?.streakActiveToday),
     matchInfo: row.matchInfo
       ? {
           matchId: row.matchInfo.matchId,
           stage: row.matchInfo.stage,
           dayStreak: row.matchInfo.dayStreak,
+          streakActiveToday: Boolean(row.matchInfo.streakActiveToday ?? row.streakActiveToday),
           partnerAlias: row.matchInfo.partnerAlias,
           partnerAvatar: row.matchInfo.partnerAvatar,
           ended: row.matchInfo.ended,

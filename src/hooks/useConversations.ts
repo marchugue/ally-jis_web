@@ -19,7 +19,10 @@ function rowChanged(a: Conversation, b: Conversation): boolean {
     a.participantAvatar !== b.participantAvatar ||
     a.blockStatus !== b.blockStatus ||
     a.icebreakersEnabled !== b.icebreakersEnabled ||
-    a.dayStreak !== b.dayStreak
+    a.dayStreak !== b.dayStreak ||
+    a.streakActiveToday !== b.streakActiveToday ||
+    a.matchInfo?.dayStreak !== b.matchInfo?.dayStreak ||
+    a.matchInfo?.streakActiveToday !== b.matchInfo?.streakActiveToday
   );
 }
 
@@ -148,26 +151,49 @@ export function useConversations(userId: string | null) {
   }, [userId, loadConversations]);
 
   // ── Real-time streak updates ─────────────────────────────────────────────
-  // Listen for 'conversation:streak_updated' so the badge reflects a new
-  // streak day instantly — no need to wait for the next 15-second poll.
+  // Listen for 'conversation:streak_updated' and 'matchmaking:streak_update'
+  // so the badge reflects a new streak day and active status instantly.
   useEffect(() => {
     if (!userId) return;
     const socket = getSocket();
     if (!socket) return;
 
-    const onStreakUpdated = (payload: { conversationId: string; dayStreak: number }) => {
+    const onStreakUpdated = (payload: {
+      conversationId?: string;
+      matchId?: string;
+      dayStreak?: number;
+      streak?: number;
+      streakActiveToday?: boolean;
+    }) => {
       setConversations((prev) =>
-        prev.map((c) =>
-          c.id === payload.conversationId
-            ? { ...c, dayStreak: payload.dayStreak }
-            : c,
-        ),
+        prev.map((c) => {
+          const isMatch =
+            (payload.conversationId && c.id === payload.conversationId) ||
+            (payload.matchId && c.matchInfo?.matchId === payload.matchId);
+          if (!isMatch) return c;
+          const streak = payload.dayStreak ?? payload.streak ?? c.dayStreak;
+          const activeToday = payload.streakActiveToday ?? true;
+          return {
+            ...c,
+            dayStreak: streak,
+            streakActiveToday: activeToday,
+            matchInfo: c.matchInfo
+              ? {
+                  ...c.matchInfo,
+                  dayStreak: streak,
+                  streakActiveToday: activeToday,
+                }
+              : c.matchInfo,
+          };
+        }),
       );
     };
 
     socket.on('conversation:streak_updated', onStreakUpdated);
+    socket.on('matchmaking:streak_update', onStreakUpdated);
     return () => {
       socket.off('conversation:streak_updated', onStreakUpdated);
+      socket.off('matchmaking:streak_update', onStreakUpdated);
     };
   }, [userId]);
 

@@ -1,7 +1,7 @@
 // src/pages/MessagesPage.tsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Search, Info, Clock, MessagesSquare } from 'lucide-react';
+import { ArrowLeft, UserPlus, Search, Info, Clock, MessagesSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations } from '@/hooks/useConversations';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
@@ -24,7 +24,7 @@ import { chatService, formatForwardedMessage } from '@/lib/services/chatService'
 import { ConversationPaneSkeleton } from '@/components/chat/ConversationPaneSkeleton';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { ConversationInfoPanel } from '@/components/chat/ConversationInfoPanel';
-import { DeleteMode } from '@/components/chat/DeleteConversationModal';
+import { DeleteConversationModal, DeleteMode } from '@/components/chat/DeleteConversationModal';
 import { MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { ForwardMessageModal } from '@/components/chat/ForwardMessageModal';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
@@ -128,6 +128,9 @@ export default function MessagesPage() {
 
     try {
       if (mode === 'delete_permanently') {
+        if (conv.variant !== 'regular' && conv.variant !== 'anonymous_ended' && conv.matchInfo?.matchId) {
+          apiClient.endMatch(conv.matchInfo.matchId).catch(() => {});
+        }
         await apiClient.clearConversation(conv.id);
       } else {
         await apiClient.hideConversation(conv.id);
@@ -180,6 +183,7 @@ export default function MessagesPage() {
   const [replyTarget, setReplyTarget] = useState<MessageReplyPreview | null>(null);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [forwarding, setForwarding] = useState(false);
+  const [convToDelete, setConvToDelete] = useState<Conversation | null>(null);
   const lastReadRef = useRef<{ conversationId: string; messageId: string | null } | null>(null);
 
   // ─── FIX: track activeConversation in a ref so the conversation-selection
@@ -234,19 +238,31 @@ export default function MessagesPage() {
       });
     };
 
-    const onStreakUpdated = (payload: { conversationId: string; dayStreak: number }) => {
+    const onStreakUpdated = (payload: {
+      conversationId?: string;
+      matchId?: string;
+      dayStreak?: number;
+      streak?: number;
+      streakActiveToday?: boolean;
+    }) => {
       void refreshConvs(true);
       setActiveConversation((prev) => {
-        if (!prev || prev.id !== payload.conversationId) return prev;
+        if (!prev) return prev;
+        const isMatch =
+          (payload.conversationId && prev.id === payload.conversationId) ||
+          (payload.matchId && prev.matchInfo?.matchId === payload.matchId);
+        if (!isMatch) return prev;
+        const streak = payload.dayStreak ?? payload.streak ?? prev.dayStreak;
+        const activeToday = payload.streakActiveToday ?? true;
         return {
           ...prev,
-          dayStreak: payload.dayStreak ?? prev.dayStreak,
-          streakActiveToday: true,
+          dayStreak: streak,
+          streakActiveToday: activeToday,
           matchInfo: prev.matchInfo
             ? {
                 ...prev.matchInfo,
-                dayStreak: payload.dayStreak ?? prev.matchInfo.dayStreak,
-                streakActiveToday: true,
+                dayStreak: streak,
+                streakActiveToday: activeToday,
               }
             : prev.matchInfo,
         };
@@ -266,6 +282,21 @@ export default function MessagesPage() {
       socket.off('matchmaking:streak_update', onStreakUpdated);
     };
   }, [activeConversation?.id, refreshConvs]);
+
+  // Keep activeConversation.streakActiveToday in sync with computed isStreakActiveToday
+  useEffect(() => {
+    if (isStreakActiveToday && activeConversation && !activeConversation.streakActiveToday) {
+      setActiveConversation((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              streakActiveToday: true,
+              matchInfo: prev.matchInfo ? { ...prev.matchInfo, streakActiveToday: true } : prev.matchInfo,
+            }
+          : prev,
+      );
+    }
+  }, [isStreakActiveToday, activeConversation]);
 
   // ── Profile load ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -583,15 +614,6 @@ export default function MessagesPage() {
     }
   }, [user, startingUserId, refreshConvs]);
 
-  const handleToggleBrowseMode = useCallback(() => {
-    setBrowseMode((prev) => {
-      const next = !prev;
-      if (next) {
-        requestAnimationFrame(() => searchInputRef.current?.focus());
-      }
-      return next;
-    });
-  }, []);
 
   const isParticipantOnline = activeConversation
     ? onlineUserIds.has(activeConversation.participantId)
@@ -613,25 +635,7 @@ export default function MessagesPage() {
           'border-r border-gray-100 dark:border-white/10',
           activeConversation && 'hidden md:flex',
         )}>
-          <div className="p-4 flex items-center justify-between flex-shrink-0">
-            <h1 className="font-fraunces text-2xl font-bold text-[#1A6B3C] dark:text-emerald-400">Chats</h1>
-            <button
-              type="button"
-              onClick={handleToggleBrowseMode}
-              className={cn(
-                'p-2 rounded-full transition-all',
-                browseMode
-                  ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
-                  : 'text-[#1A6B3C] dark:text-emerald-400 hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5',
-              )}
-              aria-label="Find people to message"
-              aria-pressed={browseMode}
-            >
-              <UserPlus size={20} />
-            </button>
-          </div>
-
-          <div className="px-4 pb-3 flex-shrink-0">
+          <div className="px-4 pt-4 pb-3 flex-shrink-0">
             <div className="relative">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -639,7 +643,7 @@ export default function MessagesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={browseMode ? 'Search allies and classmates…' : 'Search chats or people…'}
+                placeholder="Search chats or people…"
                 className="w-full bg-gray-100 dark:bg-white/5 rounded-full pl-9 pr-4 py-2.5 text-sm font-jakarta text-gray-700 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 border border-transparent dark:border-white/10 transition-all"
               />
             </div>
@@ -707,7 +711,9 @@ export default function MessagesPage() {
                     <ConversationList
                       conversations={filteredConversations}
                       activeId={activeConversation?.id}
+                      activeIsStreakActiveToday={isStreakActiveToday}
                       onSelect={setActiveConversation}
+                      onDelete={setConvToDelete}
                       isLoading={false}
                       onlineUserIds={onlineUserIds}
                       currentUserId={user?.id ?? CURRENT_USER.id}
@@ -727,7 +733,9 @@ export default function MessagesPage() {
               <ConversationList
                 conversations={filteredConversations}
                 activeId={activeConversation?.id}
+                activeIsStreakActiveToday={isStreakActiveToday}
                 onSelect={setActiveConversation}
+                onDelete={setConvToDelete}
                 isLoading={loadingConvs}
                 onlineUserIds={onlineUserIds}
                 currentUserId={user?.id ?? CURRENT_USER.id}
@@ -879,11 +887,20 @@ export default function MessagesPage() {
                 />
               )}
 
-              {/* Match ended banner — informs the user that messaging is closed */}
+              {/* Match ended banner — informs the user that messaging is closed and provides quick delete */}
               {isAnonymousConversation && activeConversation.variant === 'anonymous_ended' && (
-                <div className="px-4 py-3 bg-red-500/5 dark:bg-red-500/10 border-t border-b border-red-500/20 text-center font-jakarta text-xs text-red-600 dark:text-red-400 flex items-center justify-center gap-2">
-                  <Clock size={14} className="text-red-500 flex-shrink-0" />
-                  <span>This anonymous match has ended. Messaging is disabled.</span>
+                <div className="px-4 py-2.5 bg-red-500/5 dark:bg-red-500/10 border-t border-b border-red-500/20 font-jakarta text-xs text-red-600 dark:text-red-400 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-red-500 flex-shrink-0" />
+                    <span>This anonymous match has ended. Messaging is disabled.</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteConversation(activeConversation, 'delete_permanently')}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-100/80 hover:bg-red-200 dark:bg-red-950/60 dark:hover:bg-red-900/80 text-red-700 dark:text-red-300 font-semibold text-xs transition-colors ml-auto"
+                  >
+                    <Trash2 size={13} />
+                    Delete Chat
+                  </button>
                 </div>
               )}
 
@@ -998,6 +1015,17 @@ export default function MessagesPage() {
           onClose={() => setForwardMessage(null)}
           onSelect={handleForwardSelect}
           forwarding={forwarding}
+        />
+      )}
+      {convToDelete && (
+        <DeleteConversationModal
+          participantName={convToDelete.participantName}
+          onClose={() => setConvToDelete(null)}
+          onConfirmDelete={(mode) => {
+            const target = convToDelete;
+            setConvToDelete(null);
+            handleDeleteConversation(target, mode);
+          }}
         />
       )}
     </div>

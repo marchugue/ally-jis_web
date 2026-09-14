@@ -179,6 +179,7 @@ export interface ConversationMatchInfo {
   matchId: string;
   stage: number;
   dayStreak: number;
+  streakActiveToday?: boolean;
   myAlias: string | null;
   myAvatar: string | null;
   partnerAlias: string | null;
@@ -200,6 +201,7 @@ export interface ConversationRow {
   matchInfo?: ConversationMatchInfo | null;
   /** PHT-based consecutive-day streak — populated by the backend for all conversation types. */
   dayStreak?: number;
+  streakActiveToday?: boolean;
 }
 
 // ─── Notifications ──────────────────────────────────────────────────────────

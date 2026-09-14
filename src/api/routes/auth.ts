@@ -181,19 +181,11 @@ export async function uploadStudentId(
   formData.append('side', side);
   formData.append('file', file);
 
-  // Use raw fetch since request() adds Content-Type: application/json
-  const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL ?? '';
-  const response = await fetch(`${baseUrl}/auth/student-id/upload`, {
+  return request<{ url: string; side?: string }>('/auth/student-id/upload', {
     method: 'POST',
     body: formData,
+    auth: false,
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new ApiError(err?.message ?? 'Upload failed', response.status);
-  }
-
-  return response.json();
 }
 
 // ─── Registration Rollback ────────────────────────────────────────────────────

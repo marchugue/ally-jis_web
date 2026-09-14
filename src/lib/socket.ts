@@ -6,14 +6,20 @@
 // See backend src/sockets/index.ts for the full event list.
 
 import { io, Socket } from 'socket.io-client';
-import { getStoredToken } from '@/api/http';
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
-// The API is mounted at .../api on the same origin/port socket.io attaches
-// to (see backend src/server.ts) — strip that suffix to get the socket URL.
-const SOCKET_URL = API_BASE_URL.replace(/\/api$/, '');
+import {
+  getStoredToken,
+  getApiBaseUrl,
+  isLocalUrl,
+  switchToProductionFallback,
+  BACKEND_SWITCHED_EVENT,
+} from '@/api/http';
 
 let socket: Socket | null = null;
+
+function getSocketUrl(): string {
+  const apiUrl = getApiBaseUrl();
+  return apiUrl.replace(/\/api$/, '');
+}
 
 /**
  * Returns the shared socket, creating and connecting it on first call.
@@ -23,16 +29,26 @@ let socket: Socket | null = null;
  * login/logout to pick up a new token.
  */
 export function getSocket(): Socket | null {
-  if (!SOCKET_URL) return null;
+  const socketUrl = getSocketUrl();
+  if (!socketUrl) return null;
   if (socket) return socket;
 
   const token = getStoredToken();
   if (!token) return null;
 
-  socket = io(SOCKET_URL, {
+  socket = io(socketUrl, {
     auth: { token },
     autoConnect: true,
     reconnection: true,
+    timeout: 6000,
+  });
+
+  socket.on('connect_error', (err) => {
+    const currentApiUrl = getApiBaseUrl();
+    if (isLocalUrl(currentApiUrl)) {
+      console.warn('[Socket] Local backend socket connection failed, switching to production:', err.message);
+      switchToProductionFallback('Socket.io connection failed to local backend');
+    }
   });
 
   return socket;
@@ -51,4 +67,14 @@ export function initSocket(): Socket | null {
 export function disconnectSocket(): void {
   socket?.disconnect();
   socket = null;
+}
+
+// Automatically reconnect socket if the backend switches (e.g. fallback to production)
+if (typeof window !== 'undefined') {
+  window.addEventListener(BACKEND_SWITCHED_EVENT, () => {
+    if (socket) {
+      disconnectSocket();
+      getSocket();
+    }
+  });
 }

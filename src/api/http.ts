@@ -1,14 +1,134 @@
 // src/api/http.ts
 //
 // Shared HTTP plumbing used by every api/*.ts domain file: the fetch
-// wrapper, the error type, and token storage. Nothing domain-specific
-// lives here — auth.ts, feed.ts, profiles.ts etc. all import `request`
-// from this file instead of duplicating fetch logic.
+// wrapper, the error type, token storage, and automatic fallback from
+// local backend to production backend when local is unreachable.
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+export const DEFAULT_PROD_API_URL = 'https://ally-jisbackend-production.up.railway.app/api';
+
+const CONFIGURED_API_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || DEFAULT_PROD_API_URL;
+
+export const PRODUCTION_API_URL =
+  ((import.meta.env.VITE_PROD_API_BASE_URL as string | undefined) || DEFAULT_PROD_API_URL).replace(/\/$/, '');
+
+export function isLocalUrl(url: string): boolean {
+  if (!url) return false;
+  return /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?(\/.*)?$/i.test(url);
+}
+
 const AUTH_STORAGE_KEY = 'allyjis-auth-token';
+const FALLBACK_STORAGE_KEY = 'ally_backend_fallback_active';
 
-export const isApiConfigured = Boolean(API_BASE_URL);
+let activeApiBaseUrl: string = (() => {
+  if (!isLocalUrl(CONFIGURED_API_URL)) {
+    return CONFIGURED_API_URL;
+  }
+  try {
+    if (sessionStorage.getItem(FALLBACK_STORAGE_KEY) === 'true') {
+      return PRODUCTION_API_URL;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return CONFIGURED_API_URL;
+})();
+
+let isFallingBack = activeApiBaseUrl === PRODUCTION_API_URL && isLocalUrl(CONFIGURED_API_URL);
+
+export const isApiConfigured = Boolean(activeApiBaseUrl || PRODUCTION_API_URL);
+
+export function getApiBaseUrl(): string {
+  return activeApiBaseUrl;
+}
+
+export function isUsingFallback(): boolean {
+  return isFallingBack;
+}
+
+export const BACKEND_SWITCHED_EVENT = 'api:backend-switched';
+
+export function switchToProductionFallback(reason?: string): void {
+  if (activeApiBaseUrl === PRODUCTION_API_URL) return;
+  activeApiBaseUrl = PRODUCTION_API_URL;
+  isFallingBack = true;
+  try {
+    sessionStorage.setItem(FALLBACK_STORAGE_KEY, 'true');
+  } catch {}
+  console.warn(
+    `[API Fallback] Local backend is not reachable. Automatically switched to Production backend: ${PRODUCTION_API_URL}${
+      reason ? ` (${reason})` : ''
+    }`
+  );
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(BACKEND_SWITCHED_EVENT, {
+        detail: { url: PRODUCTION_API_URL, isFallback: true, reason },
+      })
+    );
+  }
+}
+
+export function resetToConfiguredBackend(): void {
+  activeApiBaseUrl = CONFIGURED_API_URL;
+  isFallingBack = false;
+  try {
+    sessionStorage.removeItem(FALLBACK_STORAGE_KEY);
+  } catch {}
+  console.info(`[API] Restored backend to configured URL: ${CONFIGURED_API_URL}`);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(BACKEND_SWITCHED_EVENT, {
+        detail: { url: CONFIGURED_API_URL, isFallback: false },
+      })
+    );
+  }
+}
+
+let probePromise: Promise<boolean> | null = null;
+
+export function probeLocalBackend(): Promise<boolean> {
+  if (!isLocalUrl(CONFIGURED_API_URL)) {
+    return Promise.resolve(true);
+  }
+  if (probePromise) {
+    return probePromise;
+  }
+
+  probePromise = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+
+    try {
+      const res = await fetch(`${CONFIGURED_API_URL}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        if (isFallingBack) {
+          resetToConfiguredBackend();
+        }
+        return true;
+      }
+      switchToProductionFallback('Health check responded with non-200');
+      return false;
+    } catch {
+      clearTimeout(timeoutId);
+      switchToProductionFallback('Local backend is not running or unreachable');
+      return false;
+    } finally {
+      probePromise = null;
+    }
+  })();
+
+  return probePromise;
+}
+
+// Automatically trigger probe on client startup if configured URL is local
+if (typeof window !== 'undefined' && isLocalUrl(CONFIGURED_API_URL)) {
+  probeLocalBackend().catch(() => {});
+}
 
 export class ApiError extends Error {
   status: number;
@@ -53,14 +173,6 @@ export type RequestOptions = Omit<RequestInit, 'body'> & {
  */
 export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized';
 
-/**
- * Core fetch wrapper. Handles auth header injection, JSON vs FormData
- * bodies, 204 responses, and unwrapping a `{ data: T }` envelope if the
- * backend sends one. Every api/*.ts file calls this instead of fetch
- * directly.
- */
-
-// Mutex to prevent multiple parallel refresh calls when several requests 401 at once
 let refreshPromise: Promise<string | null> | null = null;
 
 export async function doSilentRefresh(): Promise<string | null> {
@@ -70,11 +182,27 @@ export async function doSilentRefresh(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      let currentUrl = getApiBaseUrl();
+      let response: Response;
+      try {
+        response = await fetch(`${currentUrl}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch {
+        if (isLocalUrl(currentUrl) && currentUrl !== PRODUCTION_API_URL) {
+          switchToProductionFallback('Local backend unreachable during silent refresh');
+          currentUrl = getApiBaseUrl();
+          response = await fetch(`${currentUrl}/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          });
+        } else {
+          return null;
+        }
+      }
 
       if (!response.ok) {
         return null;
@@ -98,7 +226,8 @@ export async function doSilentRefresh(): Promise<string | null> {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  if (!API_BASE_URL) {
+  let currentBaseUrl = getApiBaseUrl();
+  if (!currentBaseUrl) {
     throw new ApiError('API is not configured. Set VITE_API_BASE_URL in your .env file.', 0);
   }
 
@@ -127,14 +256,31 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${currentBaseUrl}${path}`, {
       ...rest,
-      credentials: 'include', // Automatically sends and receives HttpOnly cookies
+      credentials: 'include',
       headers,
       body: fetchBody,
     });
-  } catch {
-    throw new ApiError('Network error: backend is unreachable.', 0);
+  } catch (err: unknown) {
+    // If request to local backend failed (connection refused, network error, timeout),
+    // immediately fall back to production backend and retry the request!
+    if (isLocalUrl(currentBaseUrl) && currentBaseUrl !== PRODUCTION_API_URL) {
+      switchToProductionFallback('Network connection to local backend failed');
+      currentBaseUrl = getApiBaseUrl();
+      try {
+        response = await fetch(`${currentBaseUrl}${path}`, {
+          ...rest,
+          credentials: 'include',
+          headers,
+          body: fetchBody,
+        });
+      } catch {
+        throw new ApiError('Network error: backend is unreachable.', 0);
+      }
+    } else {
+      throw new ApiError('Network error: backend is unreachable.', 0);
+    }
   }
 
   // If unauthorized on an authenticated request, attempt silent refresh before giving up
@@ -143,7 +289,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     if (newToken) {
       headers.set('Authorization', `Bearer ${newToken}`);
       try {
-        const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
+        currentBaseUrl = getApiBaseUrl();
+        const retryResponse = await fetch(`${currentBaseUrl}${path}`, {
           ...rest,
           credentials: 'include',
           headers,
@@ -196,8 +343,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
     }
 
-    const body = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : undefined;
-    throw new ApiError(message, response.status, body);
+    const resBody = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : undefined;
+    throw new ApiError(message, response.status, resBody);
   }
 
   if (typeof payload === 'object' && payload !== null && 'data' in payload) {

@@ -37,10 +37,28 @@ import { CookieConsentCard } from "@/components/CookieConsentCard";
 import { MainLayout } from "@/components/MainLayout";
 import { DashboardRoleGate } from "@/components/DashboardRoleGate";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
+import { BACKEND_SWITCHED_EVENT } from "@/api/http";
+import { toast } from "sonner";
 
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleBackendSwitched = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string; isFallback: boolean; reason?: string }>;
+      if (customEvent.detail?.isFallback) {
+        toast.info("Local backend not running. Switched to Production backend.", {
+          id: "backend-fallback-notice",
+          duration: 4000,
+          description: "All requests are automatically served by Railway production.",
+        });
+      }
+    };
+
+    window.addEventListener(BACKEND_SWITCHED_EVENT, handleBackendSwitched);
+    return () => window.removeEventListener(BACKEND_SWITCHED_EVENT, handleBackendSwitched);
+  }, []);
 
   // If this app is also reachable at an "admin.*" subdomain (e.g.
   // admin.ally-jis.xyz), landing on its root should go straight to the

@@ -199,9 +199,10 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
           {iconMap[notif.type]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white leading-snug">{notif.title}</p>
-          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{notif.description}</p>
-          <p className="font-jakarta text-[10px] text-[#3B8C7E] dark:text-teal-400 mt-1">{notif.timestamp}</p>
+          <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white leading-snug truncate">{notif.title}</p>
+          {Boolean(notif.description) && (
+            <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug line-clamp-2">{notif.description}</p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {!notif.isRead && (
@@ -338,53 +339,15 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                           <p className="text-xs text-gray-400 dark:text-gray-500 font-jakarta">New likes, comments, and requests will show up here.</p>
                         </div>
                       ) : (
-                        <>
-                          {/* Group: Today */}
-                          {(() => {
-                            const todayNotifs = notifications.filter(n => {
-                              const d = new Date(n.timestamp);
-                              const now = new Date();
-                              return d.toDateString() === now.toDateString();
-                            });
-                            const earlierNotifs = notifications.filter(n => {
-                              const d = new Date(n.timestamp);
-                              const now = new Date();
-                              return d.toDateString() !== now.toDateString();
-                            });
-                            const PREVIEW_LIMIT = 5;
-                            const allGrouped = [
-                              ...(todayNotifs.length > 0 ? [{ label: 'Today', items: todayNotifs }] : []),
-                              ...(earlierNotifs.length > 0 ? [{ label: 'Earlier', items: earlierNotifs }] : []),
-                            ];
-
-                            return allGrouped.map(({ label, items }) => {
-                              const visibleItems = label === 'Today'
-                                ? items
-                                : notifications.slice(0, PREVIEW_LIMIT).filter(n => {
-                                    const d = new Date(n.timestamp);
-                                    const now = new Date();
-                                    return d.toDateString() !== now.toDateString();
-                                  });
-
-                              if (visibleItems.length === 0) return null;
-
-                              return (
-                                <div key={label}>
-                                  <div className="px-4 py-1.5 bg-gray-50 dark:bg-[#0D131F] border-y border-gray-100 dark:border-white/10 sticky top-0">
-                                    <span className="font-jakarta text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{label}</span>
-                                  </div>
-                                  {visibleItems.map((notif) => (
-                                    <NotifItem
-                                      key={notif.id}
-                                      notif={notif}
-                                      onClick={() => handleNotificationClick(notif.id, notif.type, notif.fromUserId)}
-                                    />
-                                  ))}
-                                </div>
-                              );
-                            });
-                          })()}
-                        </>
+                        <div className="divide-y divide-gray-50 dark:divide-white/5">
+                          {notifications.slice(0, 6).map((notif) => (
+                            <NotifItem
+                              key={notif.id}
+                              notif={notif}
+                              onClick={() => handleNotificationClick(notif.id, notif.type, notif.fromUserId)}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
 
