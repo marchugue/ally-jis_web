@@ -64,3 +64,10 @@ export function getIcebreakersEnabled(conversationId: string) {
   // any `{ data: ... }` payload, so the resolved value here is `boolean | null`.
   return request<boolean | null>(`/conversations/${conversationId}/icebreakers`);
 }
+
+export function restoreConversationStreak(conversationId: string) {
+  return request<{ restoresRemaining: number; newStreak: number }>(
+    `/conversations/${conversationId}/streak/restore`,
+    { method: 'POST' }
+  );
+}

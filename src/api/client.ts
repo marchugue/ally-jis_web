@@ -244,6 +244,7 @@ export const apiClient = {
   listMyConversationMemberships: conversations.listMyConversationMemberships,
   updateIcebreakers: conversations.updateIcebreakers,
   getIcebreakersEnabled: conversations.getIcebreakersEnabled,
+  restoreConversationStreak: conversations.restoreConversationStreak,
 
   // ─── Messages ────────────────────────────────────────────────────────────
   listMessages: messages.listMessages,

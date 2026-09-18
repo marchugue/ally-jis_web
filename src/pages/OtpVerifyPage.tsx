@@ -320,7 +320,7 @@ export default function OtpVerifyPage() {
                     {resendCount >= resendLimit ? (
                       <p className="text-sm text-[#9CA3AF] dark:text-gray-400">
                         Maximum resends reached. Please wait or{' '}
-                        <a href="mailto:support@ally-jis.xyz" className="text-[#1A6B3C] dark:text-emerald-400 underline">contact support</a>.
+                        <a href="mailto:support@ally-jis.com" className="text-[#1A6B3C] dark:text-emerald-400 underline">contact support</a>.
                       </p>
                     ) : (
                       <div>

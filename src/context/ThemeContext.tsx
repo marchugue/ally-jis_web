@@ -1,5 +1,6 @@
 // src/context/ThemeContext.tsx
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -12,6 +13,23 @@ interface ThemeContextValue {
 }
 
 const STORAGE_KEY = 'ally-theme';
+
+export const PROTECTED_ROUTES = [
+  '/dashboard',
+  '/discover',
+  '/messages',
+  '/requests',
+  '/profile',
+  '/notifications',
+  '/blocked-users',
+  '/settings',
+  '/pending-approval',
+];
+
+export function isProtectedRoute(pathname: string): boolean {
+  if (!pathname) return false;
+  return PROTECTED_ROUTES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
@@ -33,7 +51,19 @@ function getStoredTheme(): Theme {
   return 'system';
 }
 
+function useSafeLocation() {
+  try {
+    return useLocation();
+  } catch (e) {
+    return { pathname: typeof window !== 'undefined' ? window.location.pathname : '/' };
+  }
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const location = useSafeLocation();
+  const currentPath = location.pathname;
+  const isProtected = isProtectedRoute(currentPath);
+
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(getSystemTheme);
 
@@ -80,7 +110,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Native View Transition with custom CSS clip-path animation
       const transition = (document as any).startViewTransition(() => {
         setThemeState(targetTheme);
-        applyDarkClass(targetResolved);
+        if (isProtected) {
+          applyDarkClass(targetResolved);
+        } else {
+          applyDarkClass('light');
+        }
       });
 
       transition.finished
@@ -99,7 +133,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Apply theme mid-sweep so the underlying page is ready
       setTimeout(() => {
         setThemeState(targetTheme);
-        applyDarkClass(targetResolved);
+        if (isProtected) {
+          applyDarkClass(targetResolved);
+        } else {
+          applyDarkClass('light');
+        }
       }, 160);
 
       // Clean up overlay when animation completes
@@ -110,7 +148,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       // Instant switch for reduced-motion
       setThemeState(targetTheme);
-      applyDarkClass(targetResolved);
+      if (isProtected) {
+        applyDarkClass(targetResolved);
+      } else {
+        applyDarkClass('light');
+      }
     }
 
     try {
@@ -118,7 +160,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // Ignore storage errors
     }
-  }, [applyDarkClass]);
+  }, [applyDarkClass, isProtected]);
 
   const setTheme = useCallback((newTheme: Theme) => {
     const targetResolved: ResolvedTheme = newTheme === 'system' ? getSystemTheme() : newTheme;
@@ -144,10 +186,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     executeThemeTransition(nextResolved, nextResolved);
   }, [resolvedTheme, executeThemeTransition]);
 
-  // Initial synchronization on mount
+  // Route-aware synchronization: only apply dark mode on protected routes
   useEffect(() => {
-    applyDarkClass(resolvedTheme);
-  }, [resolvedTheme, applyDarkClass]);
+    if (isProtected) {
+      applyDarkClass(resolvedTheme);
+    } else {
+      applyDarkClass('light');
+    }
+  }, [isProtected, resolvedTheme, applyDarkClass]);
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>

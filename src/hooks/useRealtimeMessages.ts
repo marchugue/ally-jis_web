@@ -69,6 +69,14 @@ export function dedupeMessages(list: Message[]): Message[] {
 
 function mergeMessages(prev: Message[], next: Message[]): Message[] {
   const prevById = new Map(prev.map((m) => [m.id, m]));
+  const nextIds = new Set(next.map((m) => m.id));
+
+  // Preserve any older messages already loaded into prev that are older than next
+  const firstNextTime = next.length > 0 ? new Date(next[0].createdAt).getTime() : Infinity;
+  const olderInPrev = prev.filter(
+    (m) => !nextIds.has(m.id) && !m.id.startsWith(TEMP_ID_PREFIX) && new Date(m.createdAt).getTime() < firstNextTime
+  );
+
   let anyChanged = next.length !== prev.length;
 
   const merged = next.map((incoming) => {
@@ -86,7 +94,7 @@ function mergeMessages(prev: Message[], next: Message[]): Message[] {
     return existing;
   });
 
-  return dedupeMessages(anyChanged ? merged : prev);
+  return dedupeMessages([...olderInPrev, ...(anyChanged ? merged : next)]);
 }
 
 function applyReactionToggle(
@@ -111,9 +119,64 @@ function applyReactionToggle(
   };
 }
 
+const CACHE_KEY_PREFIX = 'ally_chat_cache_';
+const MAX_CACHED_MESSAGES = 50;
+
+interface CachedChatData {
+  messages: Message[];
+  hasMore: boolean;
+  nextCursor: string | null;
+  cachedAt: number;
+}
+
+function getCachedMessages(conversationId: string): CachedChatData | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PREFIX + conversationId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.messages)) {
+      return {
+        messages: parsed.messages,
+        hasMore: Boolean(parsed.hasMore),
+        nextCursor: parsed.nextCursor ?? null,
+        cachedAt: Number(parsed.cachedAt) || 0,
+      };
+    }
+  } catch {
+    // ignore corrupted cache
+  }
+  return null;
+}
+
+function setCachedMessages(
+  conversationId: string,
+  messages: Message[],
+  hasMore: boolean,
+  nextCursor: string | null
+) {
+  try {
+    // Store only the newest messages up to MAX_CACHED_MESSAGES
+    const toCache = messages.slice(-MAX_CACHED_MESSAGES);
+    localStorage.setItem(
+      CACHE_KEY_PREFIX + conversationId,
+      JSON.stringify({
+        messages: toCache,
+        hasMore,
+        nextCursor,
+        cachedAt: Date.now(),
+      })
+    );
+  } catch {
+    // ignore quota errors
+  }
+}
+
 export function useRealtimeMessages(conversationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const hasLoadedOnceRef = useRef(false);
@@ -133,14 +196,17 @@ export function useRealtimeMessages(conversationId: string | null) {
     }
 
     try {
-      const data = await chatService.getMessages(conversationId);
+      const data = await chatService.getMessages(conversationId, { limit: 30 });
       // Guard against race conditions when switching conversations rapidly
       if (currentConvIdRef.current !== conversationId) return;
+
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
 
       setMessages((prev) => {
         const pending = prev.filter((m) => {
           if (!m.id.startsWith(TEMP_ID_PREFIX)) return false;
-          const alreadyInServerData = data.some(
+          const alreadyInServerData = data.messages.some(
             (d) =>
               d.senderId === m.senderId &&
               (d.content ?? null) === (m.content ?? null) &&
@@ -148,8 +214,10 @@ export function useRealtimeMessages(conversationId: string | null) {
           );
           return !alreadyInServerData;
         });
-        const merged = mergeMessages(prev, data);
-        return dedupeMessages(pending.length === 0 ? merged : [...merged, ...pending]);
+        const merged = mergeMessages(prev, data.messages);
+        const finalMessages = dedupeMessages(pending.length === 0 ? merged : [...merged, ...pending]);
+        setCachedMessages(conversationId, finalMessages, data.hasMore, data.nextCursor);
+        return finalMessages;
       });
       hasLoadedOnceRef.current = true;
     } catch (err: any) {
@@ -164,19 +232,62 @@ export function useRealtimeMessages(conversationId: string | null) {
     }
   }, [conversationId]);
 
+  const loadOlderMessages = useCallback(async () => {
+    if (!conversationId || !nextCursor || !hasMore || isLoadingOlder) return;
+
+    setIsLoadingOlder(true);
+    try {
+      const data = await chatService.getMessages(conversationId, { limit: 30, before: nextCursor });
+      if (currentConvIdRef.current !== conversationId) return;
+
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+
+      setMessages((prev) => {
+        // Prepend older messages
+        const combined = dedupeMessages([...data.messages, ...prev]);
+        return combined;
+      });
+    } catch (err) {
+      console.warn('[loadOlderMessages] failed:', err);
+    } finally {
+      if (currentConvIdRef.current === conversationId) {
+        setIsLoadingOlder(false);
+      }
+    }
+  }, [conversationId, nextCursor, hasMore, isLoadingOlder]);
+
   useEffect(() => {
-    // Immediately clear messages and trigger skeleton loader when switching conversation
-    setMessages([]);
+    currentConvIdRef.current = conversationId;
     hasLoadedOnceRef.current = false;
     setError(null);
 
     if (!conversationId || !isApiConfigured) {
+      setMessages([]);
       setIsLoading(false);
+      setHasMore(false);
+      setNextCursor(null);
       return;
     }
 
-    setIsLoading(true);
-    void loadMessages();
+    // ── Instant Navigation (0ms display) ──────────────────────────────────
+    // If we have cached messages for this conversation, show them immediately!
+    const cached = getCachedMessages(conversationId);
+    if (cached && cached.messages.length > 0) {
+      setMessages(cached.messages);
+      setHasMore(cached.hasMore);
+      setNextCursor(cached.nextCursor);
+      setIsLoading(false);
+      hasLoadedOnceRef.current = true;
+      // Reconcile and refresh in background silently
+      void loadMessages(true);
+    } else {
+      setMessages([]);
+      setHasMore(false);
+      setNextCursor(null);
+      setIsLoading(true);
+      void loadMessages(false);
+    }
   }, [conversationId, loadMessages]);
 
   useEffect(() => {
@@ -246,7 +357,7 @@ export function useRealtimeMessages(conversationId: string | null) {
 
   // Fallback poll while this conversation is open. Socket.io requires a
   // persistent Node process — it does NOT work on Vercel serverless, so
-  // production (api.ally-jis.xyz) relies on this until the backend moves
+  // production (api.ally-jis.com) relies on this until the backend moves
   // to Railway/Render/Fly or similar.
   useEffect(() => {
     if (!conversationId || !isApiConfigured) return;
@@ -474,5 +585,18 @@ export function useRealtimeMessages(conversationId: string | null) {
     }
   }, [conversationId]);
 
-  return { messages, isLoading, error, partnerTyping, notifyTyping, sendMessage, retrySend, reactToMessage, deleteMessage };
+  return {
+    messages,
+    isLoading,
+    error,
+    partnerTyping,
+    notifyTyping,
+    sendMessage,
+    retrySend,
+    reactToMessage,
+    deleteMessage,
+    loadOlderMessages,
+    hasMore,
+    isLoadingOlder,
+  };
 }

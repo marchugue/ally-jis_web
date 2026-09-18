@@ -164,6 +164,7 @@ export function useConversations(userId: string | null) {
       dayStreak?: number;
       streak?: number;
       streakActiveToday?: boolean;
+      status?: string;
     }) => {
       setConversations((prev) =>
         prev.map((c) => {
@@ -171,8 +172,9 @@ export function useConversations(userId: string | null) {
             (payload.conversationId && c.id === payload.conversationId) ||
             (payload.matchId && c.matchInfo?.matchId === payload.matchId);
           if (!isMatch) return c;
-          const streak = payload.dayStreak ?? payload.streak ?? c.dayStreak;
-          const activeToday = payload.streakActiveToday ?? true;
+          const isInactive = payload.status === 'inactive' || payload.dayStreak === 0 || payload.streak === 0;
+          const streak = isInactive ? 0 : (payload.dayStreak ?? payload.streak ?? c.dayStreak);
+          const activeToday = isInactive ? false : (payload.streakActiveToday ?? true);
           return {
             ...c,
             dayStreak: streak,

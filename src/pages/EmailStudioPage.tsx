@@ -273,7 +273,7 @@ const RESET_PASSWORD_TEMPLATE = `<!DOCTYPE html>
                 <tr>
                   <td style="padding-bottom: 24px;">
                     <div class="warning-box" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; text-align: center; font-size: 12px; color: #64748B; line-height: 1.5;">
-                      Security Note: Valid for 1 hour. If you did not request a password reset, you can safely ignore this email or contact support at <a href="mailto:support@ally-jis.xyz" style="color: #64748B; font-weight: bold; text-decoration: underline;">support@ally-jis.xyz</a>.
+                      Security Note: Valid for 1 hour. If you did not request a password reset, you can safely ignore this email or contact support at <a href="mailto:support@ally-jis.com" style="color: #64748B; font-weight: bold; text-decoration: underline;">support@ally-jis.com</a>.
                     </div>
                   </td>
                 </tr>
@@ -397,8 +397,8 @@ export default function EmailStudioPage() {
   // Variable Customizers with live configuration defaults
   const [testEmail, setTestEmail] = useState('student@chmsu.edu.ph');
   const [testToken, setTestToken] = useState('849204');
-  const [testUrl, setTestUrl] = useState('https://www.ally-jis.xyz/auth/confirm?token=849204&type=signup');
-  const [siteUrl, setSiteUrl] = useState(typeof window !== 'undefined' ? window.location.origin : 'https://www.ally-jis.xyz');
+  const [testUrl, setTestUrl] = useState('https://www.ally-jis.com/auth/confirm?token=849204&type=signup');
+  const [siteUrl, setSiteUrl] = useState(typeof window !== 'undefined' ? window.location.origin : 'https://www.ally-jis.com');
   const [brandName, setBrandName] = useState('Ally-jis');
   const [brandColor, setBrandColor] = useState('#1A6B3C');
 

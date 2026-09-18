@@ -51,7 +51,7 @@ export const ChatStreakBadge: React.FC<ChatStreakBadgeProps> = ({
 
   const tooltipText = isStreakActiveToday
     ? `${dayStreak}-day streak • Active today! 🔥`
-    : `${dayStreak}-day streak • Pending today (send a message to maintain)`;
+    : `${dayStreak}-day streak • Not yet activated today (send a message to activate)`;
 
   const Comp = onClick ? 'button' : 'span';
 

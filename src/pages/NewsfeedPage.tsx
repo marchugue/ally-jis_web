@@ -254,7 +254,7 @@ export default function NewsfeedPage() {
                   onDelete={handleDelete}
                   onAuthorClick={(authorId) => navigate(`/profile/${authorId}`)}
                   onToggleFollow={toggleFollow}
-                  className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 shadow-none sm:shadow-2xs transition-colors"
+                  className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 shadow-none sm:shadow-2xs transition-colors"
                 />
               ))}
 

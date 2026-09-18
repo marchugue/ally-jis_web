@@ -3,8 +3,24 @@
 import { request } from '../http';
 import type { MessageReactionRow, MessageRow } from '../types';
 
-export function listMessages(conversationId: string) {
-  return request<MessageRow[]>(`/conversations/${conversationId}/messages`);
+export interface ListMessagesOptions {
+  limit?: number;
+  before?: string;
+}
+
+export interface PaginatedMessagesResponse {
+  messages: MessageRow[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+export function listMessages(conversationId: string, options?: ListMessagesOptions) {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set('limit', String(options.limit));
+  if (options?.before) params.set('before', options.before);
+  const qs = params.toString();
+  const url = `/conversations/${conversationId}/messages${qs ? `?${qs}` : ''}`;
+  return request<PaginatedMessagesResponse | MessageRow[]>(url);
 }
 
 export function sendMessage(

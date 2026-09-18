@@ -173,7 +173,7 @@ export default function FeedPostCard({
     <article
       id={`post-${post.id}`}
       className={cn(
-        'bg-white dark:bg-[#181818] p-5 sm:p-6 transition-colors',
+        'bg-white dark:bg-[#181818] p-4 sm:p-6 transition-colors',
         showBorder
           ? 'border-0 border-b sm:border border-gray-200/80 dark:border-white/10 rounded-none sm:rounded-2xl shadow-none sm:shadow-2xs'
           : 'rounded-none sm:rounded-2xl border-0 shadow-none',
@@ -284,36 +284,61 @@ export default function FeedPostCard({
       {/* Media */}
       <MediaGrid media={post.media} onMediaClick={() => onCommentClick(post)} />
 
-      {/* Divider */}
-      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/10 flex items-center gap-1">
+      {/* Actions (Left-aligned, icon-only with count matching mobile) */}
+      <div className="mt-3 pt-2.5 border-t border-gray-100/80 dark:border-white/10 flex items-center gap-5 sm:gap-6">
         {/* Like (Heart) */}
         <button
+          type="button"
           onClick={() => onToggleLike(post)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold transition-all active:scale-[0.98] flex-1 justify-center ${
+          className={cn(
+            "flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-all active:scale-95 group cursor-pointer",
             post.liked_by_me
-              ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400'
-              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-rose-600 dark:hover:text-rose-400'
-          }`}
+              ? "text-[#1A6B3C] dark:text-emerald-400"
+              : "text-gray-400 dark:text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
+          )}
+          aria-label={post.liked_by_me ? "Unlike post" : "Like post"}
         >
           <Heart
-            size={16}
-            className={`transition-transform duration-150 ${post.liked_by_me ? 'fill-current scale-105' : ''}`}
+            size={18}
+            className={cn(
+              "transition-transform duration-150 group-hover:scale-110",
+              post.liked_by_me
+                ? "fill-[#1A6B3C] text-[#1A6B3C] dark:fill-emerald-400 dark:text-emerald-400"
+                : "text-gray-400 dark:text-gray-500 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400"
+            )}
             strokeWidth={post.liked_by_me ? 2.5 : 2}
           />
-          <span>
-            {post.likes_count > 0 ? post.likes_count : ''} {post.liked_by_me ? 'Liked' : 'Like'}
-          </span>
+          {post.likes_count > 0 && (
+            <span
+              className={cn(
+                "font-medium text-xs sm:text-[13px]",
+                post.liked_by_me
+                  ? "text-[#1A6B3C] dark:text-emerald-400"
+                  : "text-gray-600 dark:text-gray-400"
+              )}
+            >
+              {post.likes_count}
+            </span>
+          )}
         </button>
 
         {/* Comment */}
         <button
+          type="button"
           onClick={() => onCommentClick(post)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-jakarta text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-1 justify-center"
+          className="flex items-center gap-1.5 py-1 px-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors group active:scale-95 cursor-pointer"
+          aria-label="Comment on post"
         >
-          <MessageCircle size={16} />
-          <span>
-            {post.comments_count > 0 ? post.comments_count : ''} Comment{post.comments_count !== 1 ? 's' : ''}
-          </span>
+          <MessageCircle
+            size={18}
+            className="text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-transform group-hover:scale-110"
+            strokeWidth={2}
+          />
+          {post.comments_count > 0 && (
+            <span className="font-medium text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
+              {post.comments_count}
+            </span>
+          )}
         </button>
       </div>
 

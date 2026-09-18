@@ -9,7 +9,7 @@ export default function DownloadPage() {
   // Direct Cloudflare R2 CDN link (bypasses cross-origin redirect lag & suppression in mobile Chrome)
   const directR2Url = 'https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk';
   // Custom Domain fallback / mirror link
-  const domainMirrorUrl = 'https://www.ally-jis.xyz/download/ally-jis-app-v1.0.apk';
+  const domainMirrorUrl = 'https://www.ally-jis.com/download/ally-jis-app-v1.0.apk';
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -110,7 +110,7 @@ export default function DownloadPage() {
                 Official Android Client • Official Release v1.0
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
-                Direct Web Distribution • ally-jis.xyz
+                Direct Web Distribution • ally-jis.com
               </span>
             </motion.div>
 
@@ -313,7 +313,7 @@ export default function DownloadPage() {
                   Why Android shows "File might be harmful"
                 </h4>
                 <p className="font-jakarta text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                  Because Ally-jis is distributed directly through our official campus server (<code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">ally-jis.xyz</code>) and Cloudflare R2 CDN instead of Google Play, Android displays a standard warning notice whenever downloading any <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">.apk</code> file in Chrome or web browsers.
+                  Because Ally-jis is distributed directly through our official campus server (<code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">ally-jis.com</code>) and Cloudflare R2 CDN instead of Google Play, Android displays a standard warning notice whenever downloading any <code className="dark:bg-white/10 dark:text-emerald-300 px-1 py-0.5 rounded">.apk</code> file in Chrome or web browsers.
                 </p>
                 <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 leading-relaxed italic">
                   <strong>Rest assured:</strong> Our application binary is signed, verified, completely safe, and built strictly for the CHMSU Alijis student community.
@@ -324,7 +324,7 @@ export default function DownloadPage() {
               <div className="border-t border-[#1A6B3C]/15 dark:border-white/10 pt-6 space-y-3 font-mono text-xs">
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">Package ID</span>
-                  <span className="font-bold text-[#1A6B3C] dark:text-emerald-400">xyz.allyjis.app</span>
+                  <span className="font-bold text-[#1A6B3C] dark:text-emerald-400">com.allyjis.app</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">Version</span>

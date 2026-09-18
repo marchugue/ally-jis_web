@@ -128,9 +128,22 @@ export const chatService = {
     return (data ?? []).map((row) => mapConversationRow(row, userId, currentUserInterests));
   },
 
-  async getMessages(conversationId: string) {
-    const data = await apiClient.listMessages(conversationId);
-    return (data || []).map((msg) => mapMessageRow(msg));
+  async getMessages(conversationId: string, options?: { limit?: number; before?: string }) {
+    const data = await apiClient.listMessages(conversationId, options);
+    if (data && typeof data === 'object' && 'messages' in data && Array.isArray((data as any).messages)) {
+      const paginated = data as { messages: any[]; hasMore: boolean; nextCursor: string | null };
+      return {
+        messages: paginated.messages.map((msg) => mapMessageRow(msg)),
+        hasMore: paginated.hasMore,
+        nextCursor: paginated.nextCursor,
+      };
+    }
+    const rawList = Array.isArray(data) ? data : [];
+    return {
+      messages: rawList.map((msg) => mapMessageRow(msg)),
+      hasMore: false,
+      nextCursor: null,
+    };
   },
 
   async getOrCreateConversation(targetUserId: string) {

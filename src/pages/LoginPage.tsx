@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
 
+  // Login page is strictly light-mode only — ensure dark class is removed on mount
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
+  }, []);
+
   useEffect(() => {
     if (!loading && user) {
       if (needsOnboarding) {

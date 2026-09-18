@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowRight, 
@@ -17,28 +17,35 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Footer } from '@/components/Footer';
+import { useCookieConsent } from '@/components/CookieConsentCard';
 
 type ViewMode = 'match' | 'chat' | 'feed';
 
 export default function WelcomePage() {
-  const { user } = useAuth();
+  const { user, session, loading, needsOnboarding, isPendingApproval } = useAuth();
+  const { isAllowed: cookiesAllowed } = useCookieConsent();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<ViewMode>('match');
   const [hasConnected, setHasConnected] = useState(false);
 
-  // Welcome page is strictly light-mode only — ensure dark class is removed on mount and restored on unmount
+  // If cookies are already allowed and user has an active session, automatically redirect to dashboard
+  useEffect(() => {
+    if (cookiesAllowed && !loading && (user || session)) {
+      if (needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else if (isPendingApproval) {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [cookiesAllowed, loading, user, session, needsOnboarding, isPendingApproval, navigate]);
+
+  // Welcome page is strictly light-mode only — ensure dark class is removed on mount
   useEffect(() => {
     const root = document.documentElement;
-    const wasDark = root.classList.contains('dark');
-    if (wasDark) {
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
-    return () => {
-      if (wasDark) {
-        root.classList.add('dark');
-        root.style.colorScheme = 'dark';
-      }
-    };
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
   }, []);
 
   // Interactive "How it works" demo states

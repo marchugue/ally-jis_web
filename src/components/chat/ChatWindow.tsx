@@ -1,6 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useState, memo, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { Message } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -34,6 +34,9 @@ interface ChatWindowProps {
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
   onDelete?: (message: Message, mode?: MessageDeleteMode) => void;
+  hasMore?: boolean;
+  isLoadingOlder?: boolean;
+  onLoadOlder?: () => void;
 }
 
 export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
@@ -387,6 +390,7 @@ const MessageBubble = memo(function MessageBubble({
       className={cn(
         'group flex items-end gap-2',
         itemMarginClass,
+        msg.reactions && msg.reactions.length > 0 && 'mb-3',
         isMe ? 'flex-row-reverse' : 'flex-row',
       )}
     >
@@ -482,9 +486,14 @@ export function ChatWindow({
   onReply,
   onForward,
   onDelete,
+  hasMore = false,
+  isLoadingOlder = false,
+  onLoadOlder,
 }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevScrollTopRef = useRef<number>(0);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
 
   const prevConvIdRef = useRef<string | null | undefined>(conversationId);
@@ -504,6 +513,29 @@ export function ChatWindow({
     }
   }, []);
 
+  // When user scrolls near top (scrollTop <= 60), trigger loading older messages
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || !hasMore || isLoadingOlder) return;
+    if (el.scrollTop <= 60) {
+      prevScrollHeightRef.current = el.scrollHeight;
+      prevScrollTopRef.current = el.scrollTop;
+      onLoadOlder?.();
+    }
+  }, [hasMore, isLoadingOlder, onLoadOlder]);
+
+  // Adjust scroll position after older messages are prepended to prevent scroll jumping
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || isLoadingOlder || prevScrollHeightRef.current === 0) return;
+    const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
+    if (heightDiff > 0) {
+      el.scrollTop = prevScrollTopRef.current + heightDiff;
+    }
+    prevScrollHeightRef.current = 0;
+    prevScrollTopRef.current = 0;
+  }, [isLoadingOlder, uniqueMessages.length]);
+
   // When switching conversation or when messages first finish loading, instantly jump to bottom
   useLayoutEffect(() => {
     if (isLoading) return;
@@ -515,13 +547,13 @@ export function ChatWindow({
       // Instant snap to bottom so the user immediately sees the latest messages
       scrollToBottom('auto');
       requestAnimationFrame(() => scrollToBottom('auto'));
-    } else if (uniqueMessages.length > prevMsgCountRef.current) {
+    } else if (uniqueMessages.length > prevMsgCountRef.current && !isLoadingOlder) {
       // New message sent or received -> smooth scroll to bottom
       scrollToBottom('smooth');
     }
 
     prevMsgCountRef.current = uniqueMessages.length;
-  }, [conversationId, isLoading, uniqueMessages.length, scrollToBottom]);
+  }, [conversationId, isLoading, uniqueMessages.length, isLoadingOlder, scrollToBottom]);
 
   const handleConfirmDelete = (msg: Message, mode: MessageDeleteMode) => {
     setMessageToDelete(null);
@@ -535,22 +567,35 @@ export function ChatWindow({
   return (
     <div
       ref={scrollContainerRef}
+      onScroll={handleScroll}
       className={cn(
         'flex-1 overflow-y-auto p-4 h-full min-h-0 custom-scrollbar flex flex-col',
         uniqueMessages.length === 0 && 'justify-center'
       )}
     >
-      {/* Centered conversation welcome header at the top */}
-      <ConversationWelcomeHeader
-        participantName={participantName ?? 'User'}
-        participantAvatar={participantAvatar}
-        participantCourse={participantCourse}
-        participantDepartment={participantDepartment}
-        sharedInterests={sharedInterests}
-        partnerAvatar={partnerAvatar}
-        isAnonymous={isAnonymous}
-        className={uniqueMessages.length === 0 ? 'my-auto' : 'mb-4'}
-      />
+      {/* Top spinner when fetching older messages */}
+      {isLoadingOlder && (
+        <div className="flex items-center justify-center py-3 text-[#1A6B3C] dark:text-emerald-400 gap-2 select-none">
+          <Loader2 size={18} className="animate-spin" />
+          <span className="text-xs font-jakarta text-gray-400 dark:text-gray-500 font-medium">
+            Loading older messages…
+          </span>
+        </div>
+      )}
+
+      {/* Centered conversation welcome header at the top (shown only at the beginning of chat) */}
+      {!hasMore && (
+        <ConversationWelcomeHeader
+          participantName={participantName ?? 'User'}
+          participantAvatar={participantAvatar}
+          participantCourse={participantCourse}
+          participantDepartment={participantDepartment}
+          sharedInterests={sharedInterests}
+          partnerAvatar={partnerAvatar}
+          isAnonymous={isAnonymous}
+          className={uniqueMessages.length === 0 ? 'my-auto' : 'mb-4'}
+        />
+      )}
 
       {uniqueMessages.map((msg, idx) => {
         const isMe = msg.senderId === currentUserId;

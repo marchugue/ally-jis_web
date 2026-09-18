@@ -1,9 +1,24 @@
 /**
- * OnboardingIllustrations.tsx
+ * OnboardingIllustrations.tsx (Web)
  * SVG inline illustrations for registration steps, email selection, ID verification, and OTP.
- * Scalable, lightweight, no-API vector art matching the mobile app.
+ * Supports easy-to-plug-in custom images (via config or props) with automatic fallback
+ * to the crisp, scalable, hardcoded vector SVG if no image is provided or on image load error.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import {
+  ONBOARDING_ILLUSTRATION_ASSETS,
+  setOnboardingIllustrations,
+  setOnboardingIllustration,
+  type OnboardingIllustrationAssets,
+} from '@/config/onboardingIllustrations';
+
+export {
+  ONBOARDING_ILLUSTRATION_ASSETS,
+  setOnboardingIllustrations,
+  setOnboardingIllustration,
+  type OnboardingIllustrationAssets,
+};
 
 // ── Shared blob container ───────────────────────────────────────────
 
@@ -14,14 +29,17 @@ interface BlobProps {
   children: React.ReactNode;
 }
 
-export function IllustrationBlob({ size = 200, color = '#E8F5EE', className = '', children }: BlobProps) {
+export function IllustrationBlob({ size, color = '#E8F5EE', className = '', children }: BlobProps) {
+  const hasExplicitSize = typeof size === 'number';
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden shrink-0 transition-all duration-300 ${className}`}
+      className={cn(
+        'flex items-center justify-center overflow-hidden shrink-0 transition-all duration-300 rounded-full',
+        !hasExplicitSize && 'w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52',
+        className
+      )}
       style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
+        ...(hasExplicitSize ? { width: size, height: size, borderRadius: size / 2 } : {}),
         backgroundColor: color,
       }}
     >
@@ -30,12 +48,83 @@ export function IllustrationBlob({ size = 200, color = '#E8F5EE', className = ''
   );
 }
 
-// ── Email Selection: University & Personal email illustration ────────
-export function EmailSelectIllustration({ size = 180, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+// ── Pluggable Image Wrapper with Automatic Vector Fallback ──────────
+
+interface PluggableIllustrationProps {
+  size?: number;
+  color?: string;
+  className?: string;
+  imageSrc?: string | null;
+  configKey: keyof OnboardingIllustrationAssets;
+  alt: string;
+  children: React.ReactNode;
+}
+
+export function PluggableIllustration({
+  size,
+  color = '#E8F5EE',
+  className = '',
+  imageSrc,
+  configKey,
+  alt,
+  children,
+}: PluggableIllustrationProps) {
+  const [imgError, setImgError] = useState(false);
+  const resolvedSrc = imageSrc !== undefined ? imageSrc : ONBOARDING_ILLUSTRATION_ASSETS[configKey];
+
+  useEffect(() => {
+    setImgError(false);
+  }, [resolvedSrc]);
+
+  // If a custom image is provided and hasn't failed to load, display it
+  if (resolvedSrc && !imgError) {
+    return (
+      <IllustrationBlob size={size} color={color} className={className}>
+        <img
+          src={resolvedSrc}
+          alt={alt}
+          onError={() => setImgError(true)}
+          className="w-[85%] h-[85%] object-contain select-none pointer-events-none transition-transform duration-300 hover:scale-105"
+          draggable={false}
+        />
+      </IllustrationBlob>
+    );
+  }
+
+  // Fallback: render the crisp hardcoded vector SVG
   return (
-    <IllustrationBlob size={size} color="#E8F5EE" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <IllustrationBlob size={size} color={color} className={className}>
+      {children}
+    </IllustrationBlob>
+  );
+}
+
+export interface IllustrationProps {
+  size?: number;
+  className?: string;
+  imageSrc?: string | null;
+}
+
+// ── Email Selection: University & Personal email illustration ────────
+export function EmailSelectIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
+  return (
+    <PluggableIllustration
+      size={size}
+      color="#E8F5EE"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="emailSelect"
+      alt="Email Selection Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Background card */}
         <rect x="20" y="32" width="110" height="86" rx="14" fill="#FFFFFF" fillOpacity="0.95" />
         <rect x="20" y="32" width="110" height="86" rx="14" fill="none" stroke="#BBF7D0" strokeWidth="1.5" />
@@ -58,16 +147,30 @@ export function EmailSelectIllustration({ size = 180, className = '' }: { size?:
         <circle cx="28" cy="44" r="4" fill="#34D399" />
         <circle cx="126" cy="40" r="3" fill="#6EE7B7" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── Step 1: Basic Info — Profile card with user/email/lock ──────────
-export function BasicInfoIllustration({ size = 200, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function BasicInfoIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#E8F5EE" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#E8F5EE"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="basicInfo"
+      alt="Basic Info Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Profile card */}
         <rect x="20" y="30" width="110" height="95" rx="14" fill="#FFFFFF" fillOpacity="0.95" />
         <rect x="20" y="30" width="110" height="95" rx="14" fill="none" stroke="#BBF7D0" strokeWidth="1.5" />
@@ -101,16 +204,30 @@ export function BasicInfoIllustration({ size = 200, className = '' }: { size?: n
         <rect x="118" y="118" width="24" height="16" rx="4" fill="#1A6B3C" fillOpacity="0.9" />
         <path d="M118 122 L130 130 L142 122" stroke="#FFFFFF" strokeWidth="1.5" fill="none" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── Student ID Upload: ID Card scanner with camera viewfinder ────────
-export function IdUploadIllustration({ size = 180, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function IdUploadIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#E8F5EE" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#E8F5EE"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="idUpload"
+      alt="ID Upload Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Scanner Viewfinder corners */}
         <path d="M18 35 L18 22 L31 22" stroke="#1A6B3C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
         <path d="M132 35 L132 22 L119 22" stroke="#1A6B3C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
@@ -146,16 +263,30 @@ export function IdUploadIllustration({ size = 180, className = '' }: { size?: nu
         <circle cx="120" cy="40" r="14" fill="#FBBF24" />
         <path d="M116 38 L120 35 L124 38 L124 43 Q120 47 116 43 Z" fill="#1A6B3C" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── OTP Verification: Phone + Floating digits ────────────────────────
-export function OtpIllustration({ size = 200, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function OtpIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#E8F5EE" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#E8F5EE"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="otp"
+      alt="OTP Verification Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Phone */}
         <rect x="42" y="20" width="66" height="108" rx="14" fill="#FFFFFF" fillOpacity="0.95" />
         <rect x="42" y="20" width="66" height="108" rx="14" fill="none" stroke="#BBF7D0" strokeWidth="2" />
@@ -196,16 +327,30 @@ export function OtpIllustration({ size = 200, className = '' }: { size?: number;
         <circle cx="130" cy="68" r="12" fill="#1A6B3C" />
         <path d="M124 68 L128 72 L136 64" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── Step 2: Academic — Graduation cap + campus building ──────────────
-export function AcademicIllustration({ size = 200, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function AcademicIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#D1FAE5" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#D1FAE5"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="academic"
+      alt="Academic Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Building */}
         <rect x="30" y="65" width="90" height="70" rx="4" fill="#FFFFFF" fillOpacity="0.9" />
         <rect x="30" y="65" width="90" height="70" rx="4" fill="none" stroke="#6EE7B7" strokeWidth="1.5" />
@@ -239,16 +384,30 @@ export function AcademicIllustration({ size = 200, className = '' }: { size?: nu
         <circle cx="20" cy="80" r="5" fill="#6EE7B7" fillOpacity="0.7" />
         <circle cx="25" cy="68" r="3" fill="#A7F3D0" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── Step 3: Interests — Floating colored interest tags ───────────────
-export function InterestsIllustration({ size = 200, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function InterestsIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#FEF3C7" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#FEF3C7"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="interests"
+      alt="Interests Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Center person */}
         <circle cx="75" cy="85" r="18" fill="#FBBF24" fillOpacity="0.3" />
         <circle cx="75" cy="79" r="11" fill="#D97706" />
@@ -286,16 +445,30 @@ export function InterestsIllustration({ size = 200, className = '' }: { size?: n
         <line x1="58" y1="110" x2="68" y2="98" stroke="#CFFAFE" strokeWidth="1.5" strokeDasharray="3,2" />
         <line x1="94" y1="110" x2="82" y2="98" stroke="#FFEDD5" strokeWidth="1.5" strokeDasharray="3,2" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
 }
 
 // ── Step 4: Avatar & Bio — Emoji floating palette ────────────────────
-export function AvatarIllustration({ size = 200, className = '' }: { size?: number; className?: string }) {
-  const svgSize = size * 0.75;
+export function AvatarIllustration({ size, className = '', imageSrc }: IllustrationProps) {
+  const svgSize = size ? size * 0.75 : undefined;
   return (
-    <IllustrationBlob size={size} color="#FCE7F3" className={className}>
-      <svg width={svgSize} height={svgSize} viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <PluggableIllustration
+      size={size}
+      color="#FCE7F3"
+      className={className}
+      imageSrc={imageSrc}
+      configKey="avatar"
+      alt="Avatar and Bio Illustration"
+    >
+      <svg
+        width={svgSize || '75%'}
+        height={svgSize || '75%'}
+        viewBox="0 0 150 150"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[75%] h-[75%] max-w-full max-h-full"
+      >
         {/* Large center phone */}
         <rect x="48" y="25" width="54" height="96" rx="12" fill="#FFFFFF" fillOpacity="0.95" />
         <rect x="48" y="25" width="54" height="96" rx="12" fill="none" stroke="#FBCFE8" strokeWidth="1.5" />
@@ -331,6 +504,62 @@ export function AvatarIllustration({ size = 200, className = '' }: { size?: numb
         {/* Sparkle */}
         <path d="M112 18 L113.5 22 L118 22 L114.5 24.5 L116 28.5 L112 26 L108 28.5 L109.5 24.5 L106 22 L110.5 22 Z" fill="#FBBF24" />
       </svg>
-    </IllustrationBlob>
+    </PluggableIllustration>
   );
+}
+
+// ── Unified Onboarding Step Illustration Component ──────────────────
+
+export type OnboardingIllustrationType =
+  | 'email-select'
+  | 'emailSelect'
+  | 'basic-info'
+  | 'basicInfo'
+  | 'academic'
+  | 'interests'
+  | 'avatar'
+  | 'id-upload'
+  | 'idUpload'
+  | 'otp'
+  | 1
+  | 2
+  | 3
+  | 4;
+
+export function OnboardingStepIllustration({
+  step,
+  size = 200,
+  className = '',
+  imageSrc,
+}: {
+  step: OnboardingIllustrationType;
+  size?: number;
+  className?: string;
+  imageSrc?: string | null;
+}) {
+  switch (step) {
+    case 'email-select':
+    case 'emailSelect':
+      return <EmailSelectIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'basic-info':
+    case 'basicInfo':
+    case 1:
+      return <BasicInfoIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'academic':
+    case 2:
+      return <AcademicIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'interests':
+    case 3:
+      return <InterestsIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'avatar':
+    case 4:
+      return <AvatarIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'id-upload':
+    case 'idUpload':
+      return <IdUploadIllustration size={size} className={className} imageSrc={imageSrc} />;
+    case 'otp':
+      return <OtpIllustration size={size} className={className} imageSrc={imageSrc} />;
+    default:
+      return <BasicInfoIllustration size={size} className={className} imageSrc={imageSrc} />;
+  }
 }

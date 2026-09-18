@@ -58,7 +58,7 @@ const TERMS_TEXT = `Welcome to Ally-jis! By creating an account or using our pla
 4. Privacy & Consent: Direct messaging and matching unlock only upon mutual consent. Respect peer boundaries at all times.
 5. Account Responsibility: You are responsible for keeping your credentials confidential.
 
-Official terms: https://ally-jis.xyz/terms`;
+Official terms: https://ally-jis.com/terms`;
 
 const PRIVACY_TEXT = `Privacy Policy for Ally-jis:
 
@@ -68,7 +68,7 @@ const PRIVACY_TEXT = `Privacy Policy for Ally-jis:
 4. Matching & Chat Privacy: Your profile is visible only to verified CHMSU Alijis students. We never sell your personal data or share it with third-party advertisers.
 5. Your Rights: You can edit your profile details, update interests, or request account deletion at any time.
 
-Official privacy policy: https://ally-jis.xyz/privacy`;
+Official privacy policy: https://ally-jis.com/privacy`;
 
 const STEPS = [
   { num: 1, label: 'Basic Info', icon: GraduationCap, hint: 'Your identity on the platform' },
@@ -217,6 +217,13 @@ export default function RegisterPage() {
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Onboarding & register are strictly light-mode only — ensure dark class is removed on mount
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
+  }, []);
 
   // ── Route & Auth Guards ───────────────────────────────────────────────────
   // If user is already authenticated & onboarding is complete, redirect
@@ -681,17 +688,17 @@ export default function RegisterPage() {
       <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
         {/* Top Header Bar */}
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
-          <div className="max-w-4xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
+          <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 h-14 sm:h-16 md:h-18 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3 group">
               <motion.div
                 whileHover={{ scale: 1.08, rotate: -4 }}
                 whileTap={{ scale: 0.94 }}
-                className="w-10 h-10 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-lg shadow-sm"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-base sm:text-lg shadow-sm"
               >
                 A
               </motion.div>
               <div className="flex flex-col">
-                <span className="font-fraunces font-bold text-xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
+                <span className="font-fraunces font-bold text-lg sm:text-xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-400 pt-0.5">
@@ -702,7 +709,7 @@ export default function RegisterPage() {
 
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-[#1A6B3C]/10 dark:border-white/10"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all shadow-xs border border-[#1A6B3C]/10 dark:border-white/10"
             >
               <ArrowLeft size={14} /> Back to Sign in
             </Link>
@@ -710,151 +717,165 @@ export default function RegisterPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 flex flex-col items-center justify-center text-center">
-          {/* Top Illustration */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6"
-          >
-            <EmailSelectIllustration size={160} />
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-fraunces text-2xl sm:text-3xl font-bold text-[#1A6B3C] dark:text-white"
-          >
-            How would you like to sign up?
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-md"
-          >
-            Choose an email type to verify your CHMSU Alijis student identity and get started.
-          </motion.p>
-
-          {/* Cards Container */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full space-y-4 mt-8 text-left"
-          >
-            {/* Option 1: CHMSU Email */}
-            <button
-              type="button"
-              onClick={() => setEmailType('chmsu')}
-              className={cn(
-                'w-full p-5 sm:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-3 relative cursor-pointer',
-                emailType === 'chmsu'
-                  ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
-                  : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                      emailType === 'chmsu'
-                        ? 'bg-[#1A6B3C] text-white'
-                        : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
-                    )}
-                  >
-                    <GraduationCap size={20} />
-                  </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E8A838]/20 text-[#B45309] dark:text-amber-300">
-                    Instant Access
-                  </span>
+        <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-8 md:py-10 flex items-center justify-center">
+          <div className="w-full max-w-5xl xl:max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 xl:gap-20 items-center">
+            {/* Left Column: Illustration & Title (Centered) */}
+            <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mb-4 sm:mb-6 relative flex justify-center"
+              >
+                <div className="absolute -inset-4 bg-gradient-to-tr from-[#1A6B3C]/15 via-emerald-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+                <div className="relative">
+                  <EmailSelectIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
                 </div>
-                {emailType === 'chmsu' && (
-                  <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
-                )}
+              </motion.div>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 mb-2.5 sm:mb-3 mx-auto">
+                <Shield size={13} />
+                <span>CHMSU Alijis Exclusive</span>
               </div>
 
-              <div>
-                <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                  CHMSU Student Email
-                </h3>
-                <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
-                  @chmsu.edu.ph
-                </p>
-                <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
-                  Instant 6-digit verification code sent directly to your institutional student inbox. No ID upload required.
-                </p>
-              </div>
-            </button>
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-[#1A6B3C] dark:text-white leading-tight text-center"
+              >
+                How would you like to sign up?
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 sm:mt-3 max-w-md leading-relaxed text-center mx-auto"
+              >
+                Choose an email type to verify your CHMSU Alijis student identity and get started with Ally-jis.
+              </motion.p>
+            </div>
 
-            {/* Option 2: Personal Email */}
-            <button
-              type="button"
-              onClick={() => setEmailType('external')}
-              className={cn(
-                'w-full p-5 sm:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-3 relative cursor-pointer',
-                emailType === 'external'
-                  ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
-                  : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                      emailType === 'external'
-                        ? 'bg-[#1A6B3C] text-white'
-                        : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
+            {/* Right Column: Option Cards Container (Centered) */}
+            <div className="md:col-span-7 lg:col-span-1 flex flex-col items-center justify-center w-full max-w-lg md:max-w-none lg:max-w-xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="w-full space-y-3.5 sm:space-y-4 text-left"
+              >
+                {/* Option 1: CHMSU Email */}
+                <button
+                  type="button"
+                  onClick={() => setEmailType('chmsu')}
+                  className={cn(
+                    'w-full p-4 sm:p-5 md:p-5 lg:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2.5 sm:gap-3 relative cursor-pointer',
+                    emailType === 'chmsu'
+                      ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
+                      : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
+                          emailType === 'chmsu'
+                            ? 'bg-[#1A6B3C] text-white'
+                            : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
+                        )}
+                      >
+                        <GraduationCap size={20} />
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E8A838]/20 text-[#B45309] dark:text-amber-300">
+                        Instant Access
+                      </span>
+                    </div>
+                    {emailType === 'chmsu' && (
+                      <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
                     )}
-                  >
-                    <FileCheck size={20} />
                   </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/15 dark:bg-emerald-950 text-[#1A6B3C] dark:text-emerald-300">
-                    Student ID Required
-                  </span>
-                </div>
-                {emailType === 'external' && (
-                  <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
-                )}
-              </div>
 
-              <div>
-                <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                  Personal Email
-                </h3>
-                <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
-                  Gmail, Yahoo, Outlook, etc.
-                </p>
-                <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
-                  For students awaiting institutional account activation. Requires a photo upload of your Student ID or COR.
-                </p>
-              </div>
-            </button>
-          </motion.div>
+                  <div>
+                    <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                      CHMSU Student Email
+                    </h3>
+                    <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
+                      @chmsu.edu.ph
+                    </p>
+                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
+                      Instant 6-digit verification code sent directly to your institutional student inbox. No ID upload required.
+                    </p>
+                  </div>
+                </button>
 
-          {/* Continue Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.25 }}
-            className="w-full mt-8"
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setPhase('form');
-                setStep(1);
-              }}
-              className="w-full bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Continue</span>
-              <ArrowRight size={16} />
-            </button>
-          </motion.div>
+                {/* Option 2: Personal Email */}
+                <button
+                  type="button"
+                  onClick={() => setEmailType('external')}
+                  className={cn(
+                    'w-full p-4 sm:p-5 md:p-5 lg:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2.5 sm:gap-3 relative cursor-pointer',
+                    emailType === 'external'
+                      ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
+                      : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
+                          emailType === 'external'
+                            ? 'bg-[#1A6B3C] text-white'
+                            : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
+                        )}
+                      >
+                        <FileCheck size={20} />
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/15 dark:bg-emerald-950 text-[#1A6B3C] dark:text-emerald-300">
+                        Student ID Required
+                      </span>
+                    </div>
+                    {emailType === 'external' && (
+                      <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                      Personal Email
+                    </h3>
+                    <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
+                      Gmail, Yahoo, Outlook, etc.
+                    </p>
+                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
+                      For students awaiting institutional account activation. Requires a photo upload of your Student ID or COR.
+                    </p>
+                  </div>
+                </button>
+              </motion.div>
+
+              {/* Continue Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+                className="w-full mt-6"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhase('form');
+                    setStep(1);
+                  }}
+                  className="w-full bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Continue</span>
+                  <ArrowRight size={16} />
+                </button>
+              </motion.div>
+            </div>
+          </div>
         </main>
 
         {/* Footer */}
@@ -870,7 +891,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 flex flex-col justify-between overflow-x-hidden">
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#FAF8F5]/90 dark:bg-[#090D16]/90 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
-        <div className="max-w-2xl mx-auto px-4 sm:px-8 h-16 sm:h-20 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 h-14 sm:h-16 md:h-18 flex items-center justify-between">
           <button
             type="button"
             onClick={handleBack}
@@ -901,77 +922,109 @@ export default function RegisterPage() {
       </header>
 
       {/* ── BODY CONTAINER ── */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-10 flex flex-col items-center">
-        {/* ── STEP ILLUSTRATION & TITLE HEADER ── */}
-        <div className="flex flex-col items-center text-center w-full mb-8">
-          <motion.div
-            key={`ill-${step}-${idSubStep}-${showOtpView}`}
-            initial={{ scale: 0.85, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 24 }}
-            className="mb-4"
-          >
-            {showOtpView ? (
-              <OtpIllustration size={165} />
-            ) : idSubStep !== 'none' ? (
-              <IdUploadIllustration size={165} />
-            ) : step === 1 ? (
-              <BasicInfoIllustration size={165} />
-            ) : step === 2 ? (
-              <AcademicIllustration size={165} />
-            ) : step === 3 ? (
-              <InterestsIllustration size={165} />
-            ) : (
-              <AvatarIllustration size={165} />
-            )}
-          </motion.div>
-
-          <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
-            {showOtpView
-              ? 'Verify your email'
-              : idSubStep === 'front'
-              ? 'Upload Front ID or COR'
-              : idSubStep === 'back'
-              ? 'Upload Back of ID'
-              : idSubStep === 'review'
-              ? 'Review Student ID'
-              : STEPS[step - 1]?.label}
-          </h1>
-
-          <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-md">
-            {showOtpView
-              ? `We sent a 6-digit verification code to ${form.email}`
-              : idSubStep === 'front'
-              ? 'Please upload the front side of your CHMSU student ID or official Certificate of Registration.'
-              : idSubStep === 'back'
-              ? 'Now upload the back side of your student ID, or skip if your card has no back.'
-              : idSubStep === 'review'
-              ? 'Ensure all student details and photo are sharp and legible before submitting.'
-              : STEPS[step - 1]?.hint}
-          </p>
-
-          {/* Progress dots (when in 4 main steps and not in ID sub-flow or OTP) */}
-          {idSubStep === 'none' && !showOtpView && (
-            <div className="flex items-center gap-2 mt-4">
-              {STEPS.map(({ num }) => (
-                <div
-                  key={num}
-                  className={cn(
-                    'h-2 rounded-full transition-all duration-300',
-                    num === step
-                      ? 'w-7 bg-[#1A6B3C] dark:bg-emerald-500'
-                      : num < step
-                      ? 'w-2 bg-[#1A6B3C]/60 dark:bg-emerald-500/60'
-                      : 'w-2 bg-gray-200 dark:bg-white/15'
+      <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-7 md:py-8 lg:py-10 flex flex-col justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 xl:gap-16 items-start w-full max-w-5xl xl:max-w-6xl mx-auto">
+          {/* ── LEFT COLUMN: STEP ILLUSTRATION & CONTEXT (Centered) ── */}
+          <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto md:sticky md:top-20 lg:top-24">
+            <motion.div
+              key={`ill-${step}-${idSubStep}-${showOtpView}`}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+              className="relative mb-3 sm:mb-5 flex justify-center"
+            >
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-tr from-[#1A6B3C]/15 via-emerald-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+                <div className="relative">
+                  {showOtpView ? (
+                    <OtpIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
+                  ) : idSubStep !== 'none' ? (
+                    <IdUploadIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
+                  ) : step === 1 ? (
+                    <BasicInfoIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
+                  ) : step === 2 ? (
+                    <AcademicIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
+                  ) : step === 3 ? (
+                    <InterestsIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
+                  ) : (
+                    <AvatarIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
                   )}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+                </div>
+              </div>
+            </motion.div>
 
-        {/* ── CARD FORM CONTAINER ── */}
-        <div className="w-full bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-[#1A6B3C]/10 dark:border-white/10 shadow-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 mb-2 mx-auto">
+              <span>
+                {showOtpView
+                  ? 'Verification'
+                  : idSubStep !== 'none'
+                  ? 'Student ID Verification'
+                  : `Step ${step} of ${STEPS.length}`}
+              </span>
+            </div>
+
+            <h1 className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight text-center">
+              {showOtpView
+                ? 'Verify your email'
+                : idSubStep === 'front'
+                ? 'Upload Front ID or COR'
+                : idSubStep === 'back'
+                ? 'Upload Back of ID'
+                : idSubStep === 'review'
+                ? 'Review Student ID'
+                : STEPS[step - 1]?.label}
+            </h1>
+
+            <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-md leading-relaxed text-center mx-auto">
+              {showOtpView
+                ? `We sent a 6-digit verification code to ${form.email}`
+                : idSubStep === 'front'
+                ? 'Please upload the front side of your CHMSU student ID or official Certificate of Registration.'
+                : idSubStep === 'back'
+                ? 'Now upload the back side of your student ID, or skip if your card has no back.'
+                : idSubStep === 'review'
+                ? 'Ensure all student details and photo are sharp and legible before submitting.'
+                : STEPS[step - 1]?.hint}
+            </p>
+
+            {/* Progress dots */}
+            {idSubStep === 'none' && !showOtpView && (
+              <div className="flex items-center justify-center gap-2 mt-4 sm:mt-5 mx-auto">
+                {STEPS.map(({ num }) => (
+                  <div
+                    key={num}
+                    className={cn(
+                      'h-2 rounded-full transition-all duration-300',
+                      num === step
+                        ? 'w-7 bg-[#1A6B3C] dark:bg-emerald-500'
+                        : num < step
+                        ? 'w-2 bg-[#1A6B3C]/60 dark:bg-emerald-500/60'
+                        : 'w-2 bg-gray-200 dark:bg-white/15'
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Verification Trust Badge (for ID Upload or OTP) — visible on tablets md: and desktops */}
+            {(idSubStep !== 'none' || showOtpView) && (
+              <div className="hidden md:flex flex-col gap-1.5 sm:gap-2 mt-4 lg:mt-6 p-3 sm:p-4 rounded-2xl bg-white/70 dark:bg-[#111827]/70 border border-[#1A6B3C]/15 dark:border-white/10 w-full max-w-xs sm:max-w-sm mx-auto text-center items-center">
+                <div className="flex items-center gap-2 text-xs font-mono text-[#1A6B3C] dark:text-emerald-400 font-semibold">
+                  <Shield size={14} />
+                  <span>Verified CHMSU Identity</span>
+                </div>
+                <p className="text-xs font-jakarta text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {showOtpView
+                    ? 'Enter the 6-digit code sent to your student email to activate your account.'
+                    : 'All uploaded student IDs and COR documents are encrypted and reviewed solely by authorized university campus admins.'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT COLUMN: ONBOARDING STEPS FORM (Centered) ── */}
+          <div className="md:col-span-7 lg:col-span-1 flex flex-col items-center justify-center w-full max-w-lg md:max-w-none lg:max-w-xl mx-auto">
+            <div className="w-full bg-white dark:bg-[#111827] rounded-3xl p-5 sm:p-7 md:p-6 lg:p-8 xl:p-10 border border-[#1A6B3C]/10 dark:border-white/10 shadow-xl">
           {/* =========================================================================
               OTP VIEW (Step 1 or External ID Upload Completion)
              ========================================================================= */}
@@ -1020,7 +1073,7 @@ export default function RegisterPage() {
                       }
                     }}
                     className={cn(
-                      'w-11 h-13 sm:w-13 sm:h-15 text-center font-fraunces text-xl sm:text-2xl font-bold rounded-2xl border-2 transition-all outline-none',
+                      'w-10 h-12 sm:w-12 sm:h-14 md:w-11 md:h-13 lg:w-13 lg:h-15 text-center font-fraunces text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 transition-all outline-none',
                       digit
                         ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-300'
                         : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C] dark:focus:border-emerald-500'
@@ -2193,7 +2246,7 @@ export default function RegisterPage() {
                 </div>
 
                 {avatarTab === 'presets' ? (
-                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 p-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                  <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
                     {AVATAR_OPTIONS.map((emoji) => (
                       <button
                         key={emoji}
@@ -2425,6 +2478,8 @@ export default function RegisterPage() {
               </button>
             </div>
           )}
+            </div>
+          </div>
         </div>
       </main>
 

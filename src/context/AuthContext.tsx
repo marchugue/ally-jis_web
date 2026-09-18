@@ -140,6 +140,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         disconnectSocket();
         clearRolePromptFlag();
 
+        try {
+          localStorage.removeItem('ally-theme');
+        } catch (e) {}
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.colorScheme = 'light';
+
         if (!isApiConfigured) return;
 
         try {
@@ -156,6 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setVerified(false);
         disconnectSocket();
         clearRolePromptFlag();
+
+        try {
+          localStorage.removeItem('ally-theme');
+        } catch (e) {}
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.colorScheme = 'light';
 
         if (!isApiConfigured) return;
 

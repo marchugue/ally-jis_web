@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
   Cookie, 
@@ -14,11 +14,59 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { notify } from '@/components/ui/sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export const COOKIE_CONSENT_KEY = 'allyjis_cookie_consent';
 export const COOKIE_CONSENT_EVENT = 'open-cookie-settings';
+export const COOKIE_CONSENT_CHANGED_EVENT = 'cookie-consent-changed';
 
 export type CookieConsentLevel = 'all' | 'essential' | 'declined';
+
+export function areCookiesAllowed(): boolean {
+  try {
+    const consent = localStorage.getItem(COOKIE_CONSENT_KEY) as CookieConsentLevel | null;
+    return consent === 'all' || consent === 'essential';
+  } catch {
+    return false;
+  }
+}
+
+export function useCookieConsent() {
+  const [consent, setConsent] = useState<CookieConsentLevel | null>(() => {
+    try {
+      return localStorage.getItem(COOKIE_CONSENT_KEY) as CookieConsentLevel | null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<CookieConsentLevel>;
+      if (customEvent.detail) {
+        setConsent(customEvent.detail);
+      } else {
+        try {
+          const stored = localStorage.getItem(COOKIE_CONSENT_KEY) as CookieConsentLevel | null;
+          setConsent(stored);
+        } catch {
+          setConsent(null);
+        }
+      }
+    };
+
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  const isAllowed = consent === 'all' || consent === 'essential';
+
+  return { consent, isAllowed };
+}
 
 export function openCookieSettings() {
   window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_EVENT));
@@ -26,6 +74,8 @@ export function openCookieSettings() {
 
 export function CookieConsentCard() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, session, needsOnboarding, isPendingApproval } = useAuth();
   const isWelcomePage = location.pathname === '/' || location.pathname === '/welcome';
   const [isVisible, setIsVisible] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -61,10 +111,21 @@ export function CookieConsentCard() {
     localStorage.setItem(`${COOKIE_CONSENT_KEY}_timestamp`, new Date().toISOString());
     setCurrentConsent('all');
     setIsVisible(false);
+    window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_CHANGED_EVENT, { detail: 'all' }));
     notify.success(
       'Cookie preferences saved',
       'You will stay securely signed in across sessions.'
     );
+
+    if ((user || session) && isWelcomePage) {
+      if (needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else if (isPendingApproval) {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
   };
 
   const handleAcceptEssential = () => {
@@ -72,10 +133,21 @@ export function CookieConsentCard() {
     localStorage.setItem(`${COOKIE_CONSENT_KEY}_timestamp`, new Date().toISOString());
     setCurrentConsent('essential');
     setIsVisible(false);
+    window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_CHANGED_EVENT, { detail: 'essential' }));
     notify.info(
       'Essential cookies only',
       'Only strictly required session security cookies will be used.'
     );
+
+    if ((user || session) && isWelcomePage) {
+      if (needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else if (isPendingApproval) {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
   };
 
   const handleDismiss = () => {

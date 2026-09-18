@@ -11,15 +11,40 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('ally-theme');
-          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (saved === 'dark' || ((!saved || saved === 'system') && prefersDark)) {
-            document.documentElement.classList.add('dark');
-            document.documentElement.style.colorScheme = 'dark';
-          } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.colorScheme = 'light';
+          var path = window.location.pathname || '';
+          var protectedRoutes = [
+            '/dashboard',
+            '/discover',
+            '/messages',
+            '/requests',
+            '/profile',
+            '/notifications',
+            '/blocked-users',
+            '/settings',
+            '/pending-approval'
+          ];
+          var isProtected = false;
+          for (var i = 0; i < protectedRoutes.length; i++) {
+            var prefix = protectedRoutes[i];
+            if (path === prefix || path.indexOf(prefix + '/') === 0) {
+              isProtected = true;
+              break;
+            }
           }
+
+          if (isProtected) {
+            var saved = localStorage.getItem('ally-theme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || ((!saved || saved === 'system') && prefersDark)) {
+              document.documentElement.classList.add('dark');
+              document.documentElement.style.colorScheme = 'dark';
+              return;
+            }
+          }
+
+          // Welcome page, login, onboarding, and public pages strictly stay in light mode
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
         } catch (e) {}
       })();
     </script>

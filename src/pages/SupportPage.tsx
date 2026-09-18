@@ -7,7 +7,7 @@ export default function SupportPage() {
   const faqs = [
     {
       q: 'Why does Android show "File might be harmful" when downloading the APK?',
-      a: 'Android automatically displays a default warning prompt whenever you download any executable .apk file directly from a web browser instead of Google Play. This is standard Android security behavior. As long as you download directly from our official server (ally-jis.xyz/download), our APK is completely safe, signed, and malware-free.'
+      a: 'Android automatically displays a default warning prompt whenever you download any executable .apk file directly from a web browser instead of Google Play. This is standard Android security behavior. As long as you download directly from our official server (ally-jis.com/download), our APK is completely safe, signed, and malware-free.'
     },
     {
       q: 'How do I allow installation from unknown sources?',
@@ -220,10 +220,10 @@ export default function SupportPage() {
               <motion.a
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                href="mailto:support@ally-jis.xyz"
+                href="mailto:support@ally-jis.com"
                 className="w-full inline-flex items-center justify-center gap-3 bg-[#E8A838] hover:bg-[#d4952e] text-[#13502D] px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-lg text-center"
               >
-                <Mail size={16} /> Email support@ally-jis.xyz
+                <Mail size={16} /> Email support@ally-jis.com
               </motion.a>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link

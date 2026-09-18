@@ -25,21 +25,36 @@ export function MessageReactions({ reactions, currentUserId, isMe, onToggle }: M
   if (grouped.length === 0) return null;
 
   return (
-    <div className={cn('flex flex-wrap gap-1 mt-1', isMe ? 'justify-end' : 'justify-start')}>
+    <div
+      className={cn(
+        'absolute -bottom-2.5 z-10 flex items-center gap-1 select-none pointer-events-auto',
+        isMe ? 'right-3 flex-row-reverse' : 'left-3 flex-row',
+      )}
+    >
       {grouped.map(([emoji, meta]) => (
         <button
           key={emoji}
           type="button"
-          onClick={() => onToggle(emoji)}
-          className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-jakarta border transition-colors',
-            meta.reactedByMe
-              ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 border-[#1A6B3C]/30 dark:border-emerald-500/40 text-[#1A6B3C] dark:text-emerald-300'
-              : 'bg-white dark:bg-[#1E293B] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10',
-          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(emoji);
+          }}
+          title={meta.reactedByMe ? 'Remove reaction' : `React with ${emoji}`}
+          className="inline-flex items-center gap-0.5 p-0 bg-transparent border-0 outline-none cursor-pointer transition-transform duration-150 hover:scale-125 active:scale-95 filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
         >
-          <span className="text-sm leading-none">{emoji}</span>
-          {meta.count > 1 && <span>{meta.count}</span>}
+          <span className="text-base leading-none select-none">{emoji}</span>
+          {meta.count > 1 && (
+            <span
+              className={cn(
+                'text-[10px] font-bold leading-none select-none',
+                isMe
+                  ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]'
+                  : 'text-gray-700 dark:text-gray-200 drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]',
+              )}
+            >
+              {meta.count}
+            </span>
+          )}
         </button>
       ))}
     </div>

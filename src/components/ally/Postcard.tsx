@@ -125,33 +125,59 @@ export default function PostCard({ post, onToggleLike, onOpenComments, onExpand 
       {/* Media grid */}
       <MediaGrid media={post.media} />
 
-      {/* Counts */}
-      {(post.likes_count > 0 || post.comments_count > 0) && (
-        <div className="flex items-center justify-between px-4 pt-3 font-jakarta text-xs text-gray-400">
-          <span>{post.likes_count > 0 ? `${post.likes_count} like${post.likes_count === 1 ? '' : 's'}` : ''}</span>
-          <span>{post.comments_count > 0 ? `${post.comments_count} comment${post.comments_count === 1 ? '' : 's'}` : ''}</span>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center border-t border-gray-100 dark:border-white/10 mt-3">
+      {/* Actions (Left-aligned, icon-only with count matching mobile) */}
+      <div className="flex items-center gap-5 sm:gap-6 border-t border-gray-100 dark:border-white/10 px-4 py-2.5 mt-3">
+        {/* Like (Heart) */}
         <button
+          type="button"
           onClick={handleLikeClick}
           disabled={isLiking}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 font-jakarta text-sm font-semibold transition-colors ${
-            post.liked_by_me ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400'
+          className={`flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-all active:scale-95 group cursor-pointer ${
+            post.liked_by_me
+              ? 'text-[#1A6B3C] dark:text-emerald-400'
+              : 'text-gray-400 dark:text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400'
           }`}
+          aria-label={post.liked_by_me ? 'Unlike post' : 'Like post'}
         >
-          <Heart size={16} className={post.liked_by_me ? 'fill-current' : ''} />
-          {post.liked_by_me ? 'Liked' : 'Like'}
+          <Heart
+            size={18}
+            className={`transition-transform duration-150 group-hover:scale-110 ${
+              post.liked_by_me
+                ? 'fill-[#1A6B3C] text-[#1A6B3C] dark:fill-emerald-400 dark:text-emerald-400'
+                : 'text-gray-400 dark:text-gray-500 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400'
+            }`}
+            strokeWidth={post.liked_by_me ? 2.5 : 2}
+          />
+          {post.likes_count > 0 && (
+            <span
+              className={`font-medium text-xs sm:text-[13px] ${
+                post.liked_by_me
+                  ? 'text-[#1A6B3C] dark:text-emerald-400'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              {post.likes_count}
+            </span>
+          )}
         </button>
-        <div className="w-px h-6 bg-gray-100 dark:bg-white/10" />
+
+        {/* Comment */}
         <button
+          type="button"
           onClick={() => onOpenComments(post)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 font-jakarta text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          className="flex items-center gap-1.5 py-1 px-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors group active:scale-95 cursor-pointer"
+          aria-label="Comment on post"
         >
-          <MessageCircle size={16} />
-          Comment
+          <MessageCircle
+            size={18}
+            className="text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-transform group-hover:scale-110"
+            strokeWidth={2}
+          />
+          {post.comments_count > 0 && (
+            <span className="font-medium text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
+              {post.comments_count}
+            </span>
+          )}
         </button>
       </div>
     </div>

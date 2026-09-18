@@ -334,10 +334,10 @@ export default function PrivacyPage() {
                 <motion.a
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
-                  href="mailto:support@ally-jis.xyz"
+                  href="mailto:support@ally-jis.com"
                   className="w-full inline-flex items-center justify-center gap-3 bg-[#E8A838] hover:bg-[#d4952e] text-[#13502D] px-8 py-4 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-lg text-center"
                 >
-                  <Mail size={16} /> support@ally-jis.xyz
+                  <Mail size={16} /> support@ally-jis.com
                 </motion.a>
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                   <Link

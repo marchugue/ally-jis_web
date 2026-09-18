@@ -791,7 +791,7 @@ export default function ProfilePage() {
                         onCommentClick={setActivePost}
                         onDelete={handleDelete}
                         showBorder={false}
-                        className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-5 sm:p-6 transition-colors shadow-none sm:shadow-2xs"
+                        className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 transition-colors shadow-none sm:shadow-2xs"
                       />
                     ))}
 

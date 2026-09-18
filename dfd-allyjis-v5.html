@@ -357,7 +357,7 @@ flowchart LR
         User <-->|User Inputs, Credentials & Chat| ClientApp
 
         Admin["🛡️ <b>ADMINISTRATOR</b><br/>System Admin / Moderator"]:::adminEntity
-        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.xyz)"]:::client
+        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.com)"]:::client
         Admin <-->|Moderation Actions & Query Filters| AdminPortal
     end
 
@@ -481,7 +481,7 @@ flowchart LR
     %% Column 1: Admin Actor & Portal
     subgraph AdminBoundary ["Admin Interface Layer"]
         Admin["🛡️ <b>ADMINISTRATOR</b><br/>System Admin / Moderator"]:::adminEntity
-        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.xyz)"]:::client
+        AdminPortal["🖥️ <b>Admin Dashboard</b><br/>(admin.ally-jis.com)"]:::client
         Admin <-->|Moderation Queries, Actions & Toggles| AdminPortal
     end
 
@@ -583,7 +583,7 @@ flowchart LR
           <div class="audit-box success">
             <h3>✅ Role-Based Access Control (RBAC)</h3>
             <p>
-              Accurately models dual-entry points: Student Mobile/Web clients communicate with <b>1.0 User Auth</b>, while privileged staff authenticate via <b>Admin RBAC (admin.ally-jis.xyz)</b> with session claims verified against <b>D1</b>.
+              Accurately models dual-entry points: Student Mobile/Web clients communicate with <b>1.0 User Auth</b>, while privileged staff authenticate via <b>Admin RBAC (admin.ally-jis.com)</b> with session claims verified against <b>D1</b>.
             </p>
           </div>
 

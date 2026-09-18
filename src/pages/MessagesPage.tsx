@@ -52,49 +52,31 @@ export default function MessagesPage() {
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student>(CURRENT_USER);
   const { conversations, isLoading: loadingConvs, refresh: refreshConvs, removeConversation } = useConversations(user?.id ?? null);
-  const { messages, sendMessage, retrySend, reactToMessage, deleteMessage: deleteRealtimeMessage, isLoading: loadingMessages, partnerTyping, notifyTyping } = useRealtimeMessages(activeConversation?.id ?? null);
+  const {
+    messages,
+    sendMessage,
+    retrySend,
+    reactToMessage,
+    deleteMessage: deleteRealtimeMessage,
+    isLoading: loadingMessages,
+    partnerTyping,
+    notifyTyping,
+    loadOlderMessages,
+    hasMore,
+    isLoadingOlder,
+  } = useRealtimeMessages(activeConversation?.id ?? null);
   const isAnonymousConversation = activeConversation?.variant && activeConversation.variant !== 'regular';
   const reveal = useMatchReveal(
     isAnonymousConversation ? activeConversation!.matchInfo?.matchId ?? null : null,
     activeConversation?.matchInfo?.stage ?? 0,
   );
 
-  // Check if streak was activated today (both participants sent at least 1 message today), exactly like mobile
-  const isStreakActiveToday = useMemo(() => {
-    if (Boolean(activeConversation?.streakActiveToday || activeConversation?.matchInfo?.streakActiveToday)) {
-      return true;
-    }
-    if (!messages.length || !user?.id) return false;
-
-    // Evaluate in both PHT (UTC+8) and device local date
-    const phtToday = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
-    const localToday = new Date().toISOString().slice(0, 10);
-
-    const hasBothOnDate = (targetDate: string) => {
-      let myMsg = false;
-      let partnerMsg = false;
-      for (const msg of messages) {
-        const timeStr = msg.createdAt || msg.timestamp;
-        if (!timeStr) continue;
-        const msgPht = new Date(new Date(timeStr).getTime() + 8 * 3600_000)
-          .toISOString()
-          .slice(0, 10);
-        const msgLocal = new Date(timeStr).toISOString().slice(0, 10);
-
-        if (msgPht === targetDate || msgLocal === targetDate) {
-          if (msg.senderId === user.id) {
-            myMsg = true;
-          } else if (msg.senderId) {
-            partnerMsg = true;
-          }
-        }
-        if (myMsg && partnerMsg) return true;
-      }
-      return myMsg && partnerMsg;
-    };
-
-    return hasBothOnDate(phtToday) || hasBothOnDate(localToday);
-  }, [messages, user?.id, activeConversation?.streakActiveToday, activeConversation?.matchInfo?.streakActiveToday]);
+  // Streak active today — derived purely from backend state.
+  // The backend is the single source of truth; we do NOT re-derive from messages
+  // to avoid timezone/clock-drift false positives.
+  const isStreakActiveToday = Boolean(
+    activeConversation?.streakActiveToday || activeConversation?.matchInfo?.streakActiveToday
+  );
 
   const handleEndMatch = useCallback(async () => {
     const matchId = activeConversation?.matchInfo?.matchId;
@@ -117,6 +99,30 @@ export default function MessagesPage() {
       notify.error('Could not end match', err?.message);
     }
   }, [activeConversation, refreshConvs]);
+
+  const handleRestoreStreak = useCallback(async () => {
+    if (!activeConversation?.id) return;
+    try {
+      const result = await apiClient.restoreConversationStreak(activeConversation.id);
+      setActiveConversation((prev) =>
+        prev
+          ? {
+              ...prev,
+              dayStreak: result.newStreak,
+              streakActiveToday: true,
+              matchInfo: prev.matchInfo
+                ? { ...prev.matchInfo, dayStreak: result.newStreak, streakActiveToday: true }
+                : prev.matchInfo,
+            }
+          : prev
+      );
+      notify.success(`✅ Streak Restored! ${result.restoresRemaining} restore${result.restoresRemaining !== 1 ? 's' : ''} remaining.`);
+    } catch (err: any) {
+      notify.error("Couldn't restore streak", err?.message ?? 'You may be out of restore tokens.');
+    }
+  }, [activeConversation?.id]);
+
+
 
   const handleDeleteConversation = useCallback(async (conv: Conversation, mode: DeleteMode = 'delete_permanently') => {
     // Optimistic — removed from the list immediately, the request happens
@@ -244,6 +250,7 @@ export default function MessagesPage() {
       dayStreak?: number;
       streak?: number;
       streakActiveToday?: boolean;
+      status?: string;
     }) => {
       void refreshConvs(true);
       setActiveConversation((prev) => {
@@ -252,8 +259,11 @@ export default function MessagesPage() {
           (payload.conversationId && prev.id === payload.conversationId) ||
           (payload.matchId && prev.matchInfo?.matchId === payload.matchId);
         if (!isMatch) return prev;
-        const streak = payload.dayStreak ?? payload.streak ?? prev.dayStreak;
-        const activeToday = payload.streakActiveToday ?? true;
+        // 'inactive' = streak lapsed. 'restored' = streak brought back.
+        // Do NOT treat dayStreak===0 alone as inactive (valid on a day-1 restore).
+        const isInactive = payload.status === 'inactive';
+        const streak = isInactive ? 0 : (payload.dayStreak ?? payload.streak ?? prev.dayStreak);
+        const activeToday = isInactive ? false : (payload.streakActiveToday ?? prev.streakActiveToday ?? false);
         return {
           ...prev,
           dayStreak: streak,
@@ -283,20 +293,11 @@ export default function MessagesPage() {
     };
   }, [activeConversation?.id, refreshConvs]);
 
-  // Keep activeConversation.streakActiveToday in sync with computed isStreakActiveToday
-  useEffect(() => {
-    if (isStreakActiveToday && activeConversation && !activeConversation.streakActiveToday) {
-      setActiveConversation((prev: any) =>
-        prev
-          ? {
-              ...prev,
-              streakActiveToday: true,
-              matchInfo: prev.matchInfo ? { ...prev.matchInfo, streakActiveToday: true } : prev.matchInfo,
-            }
-          : prev,
-      );
-    }
-  }, [isStreakActiveToday, activeConversation]);
+  // Midnight streak expiry is handled server-side (streakReminder.service.ts).
+  // The backend emits 'conversation:streak_updated' with status:'inactive' + dayStreak:0
+  // at 12:00 AM PHT, which onStreakUpdated above picks up automatically.
+  // Client-side midnight polling is removed to prevent stale-closure race conditions.
+
 
   // ── Profile load ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -846,6 +847,19 @@ export default function MessagesPage() {
                 style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
               >
               <div className="flex-1 min-h-0 relative flex flex-col">
+                {/* ── Streak Ended Notice ──────────────────────────────────────────── */}
+                {activeConversation.variant !== 'anonymous_ended' && (activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0) === 0 && (
+                  <div className="py-2.5 px-4 text-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 flex items-center justify-center gap-1.5 flex-wrap font-jakarta z-10">
+                    <span>Your daily streak has ended. Keep the conversation going to start a new one.</span>
+                    <button
+                      type="button"
+                      onClick={handleRestoreStreak}
+                      className="text-[#1A6B3C] dark:text-emerald-400 font-bold underline hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center ml-1"
+                    >
+                      Restore Streak
+                    </button>
+                  </div>
+                )}
                 {isAnonymousConversation && activeConversation.variant !== 'anonymous_ended' && (
                   <FloatingStatusBadge
                     stage={activeConversation.matchInfo?.stage ?? 1}
@@ -873,6 +887,9 @@ export default function MessagesPage() {
                   onReply={handleReply}
                   onForward={handleForward}
                   onDelete={handleDeleteMessage}
+                  hasMore={hasMore}
+                  isLoadingOlder={isLoadingOlder}
+                  onLoadOlder={loadOlderMessages}
                 />
               </div>
 
