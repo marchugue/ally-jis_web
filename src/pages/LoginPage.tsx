@@ -107,12 +107,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-emerald-400 selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
-      
+
       {/* ── TOP NAVIGATION ── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.08, rotate: -4 }}
               whileTap={{ scale: 0.94 }}
               className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
@@ -130,8 +130,8 @@ export default function LoginPage() {
           </Link>
 
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
             >
               <ArrowLeft size={14} /> Back to Home
@@ -143,9 +143,9 @@ export default function LoginPage() {
       {/* ── MAIN CONTENT (EDITORIAL SPLIT / HIGH LEGIBILITY AUTH) ── */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-12 lg:py-20 flex flex-col justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
-          
+
           {/* Left Column: Magazine Narrative & Brand Statement (Hidden on mobile for clean, uncluttered card view) */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
@@ -156,7 +156,7 @@ export default function LoginPage() {
                 <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
                 <span>Student Secure Access</span>
               </div>
-              
+
               <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] dark:text-white leading-[0.95]">
                 Welcome <br />
                 back to <br />
@@ -181,14 +181,14 @@ export default function LoginPage() {
           </motion.div>
 
           {/* Right Column: High-Legibility, High-Contrast Form Workspace */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md mx-auto lg:max-w-none lg:col-span-6"
           >
             <div className="bg-[#EDE7DB] dark:bg-[#111827] dark:border dark:border-white/10 p-6 sm:p-12 rounded-3xl sm:rounded-[36px] shadow-sm space-y-6 sm:space-y-8 border-none">
-              
+
               <div className="space-y-1.5 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-6">
                 <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/70">
                   Authentication
@@ -268,7 +268,7 @@ export default function LoginPage() {
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Sign In to Ally-jis</span>
+                      <span>Login</span>
                       <ArrowRight size={16} />
                     </>
                   )}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useState, memo, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState, memo, useCallback, useMemo, Fragment } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { Message } from '@/types/ally';
@@ -37,6 +37,8 @@ interface ChatWindowProps {
   hasMore?: boolean;
   isLoadingOlder?: boolean;
   onLoadOlder?: () => void;
+  streakNotice?: React.ReactNode;
+  streakEndedAt?: Date | string | null;
 }
 
 export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
@@ -144,15 +146,45 @@ interface MessageBubbleProps {
   msg: Message;
   isMe: boolean;
   currentUserId: string;
-  showAvatar: boolean;
+  showAvatar?: boolean;
   groupPosition?: MessageGroupPosition;
   participantAvatar?: string | null;
   participantName?: string | null;
+  isActiveTime?: boolean;
+  onToggleTime?: () => void;
   onRetry?: (message: Message) => void;
   onReact?: (message: Message, emoji: string) => void;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
   onDelete?: (message: Message) => void;
+}
+
+function formatMessageTime(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+
+  const now = new Date();
+
+  // If year has passed (different year) -> display month and year, e.g. "Sep 2025"
+  if (d.getFullYear() !== now.getFullYear()) {
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  // Check if same calendar day
+  const isSameDay =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+
+  if (isSameDay) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Days have passed (within current year) -> display date and month, e.g. "19 Sep"
+  const day = d.getDate();
+  const month = d.toLocaleDateString('en-US', { month: 'short' });
+  return `${day} ${month}`;
 }
 
 const MessageBubble = memo(function MessageBubble({
@@ -163,6 +195,8 @@ const MessageBubble = memo(function MessageBubble({
   groupPosition = 'single',
   participantAvatar,
   participantName,
+  isActiveTime = false,
+  onToggleTime,
   onRetry,
   onReact,
   onReply,
@@ -173,12 +207,33 @@ const MessageBubble = memo(function MessageBubble({
   const isSending = msg.status === 'sending';
   const isFailed = msg.status === 'failed';
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
-  const [showTime, setShowTime] = useState(false);
   const [viewingImage, setViewingImage] = useState(false);
+  const [viewingImageIndex, setViewingImageIndex] = useState(0);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const isVideoUrl = Boolean(msg.imageUrl && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(msg.imageUrl));
-  const isImageOnly = Boolean(msg.imageUrl && !msg.content?.trim());
+
+  // Parse images (supports single URL, JSON array string, camelCase, snake_case)
+  const images = useMemo<string[]>(() => {
+    const raw = msg.imageUrl || (msg as any).image_url;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return parsed.filter(Boolean);
+        } catch {}
+      }
+      return [trimmed];
+    }
+    return [];
+  }, [msg.imageUrl, (msg as any).image_url]);
+
+  const hasMedia = images.length > 0;
+  const primaryMedia = images[0] || '';
+  const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
+  const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
   const isMobile = useIsMobile();
 
   const openActionMenu = useCallback(() => {
@@ -273,24 +328,29 @@ const MessageBubble = memo(function MessageBubble({
             isMe ? 'right-0 -top-6' : 'left-0 -top-6',
           )}
         >
-          {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {formatMessageTime(msg.createdAt || msg.timestamp)}
         </div>
       )}
 
       <div
         ref={bubbleRef}
         {...mobileLongPressHandlers}
-        onClick={() => setShowTime((prev) => !prev)}
-        style={getBubbleBorderRadii(isMe, groupPosition)}
+        onClick={() => {
+          if (!isImageOnly) {
+            onToggleTime?.();
+          }
+        }}
+        style={isImageOnly ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
         className={cn(
-          'max-w-full text-sm font-jakarta transition-opacity select-none cursor-pointer',
-          isImageOnly ? 'p-1' : 'px-4 py-2',
-          isMe
-            ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
-            : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100',
+          'max-w-full text-sm font-jakarta transition-opacity select-none',
+          isImageOnly
+            ? 'p-0 bg-transparent dark:bg-transparent shadow-none border-none'
+            : cn(
+                'px-4 py-2 cursor-pointer',
+                isMe
+                  ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
+                  : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100',
+              ),
           isSending && 'opacity-60',
           isFailed && 'opacity-80 ring-1 ring-red-400',
         )}
@@ -303,11 +363,12 @@ const MessageBubble = memo(function MessageBubble({
             imageUrl={msg.replyTo.imageUrl}
           />
         )}
-        {msg.imageUrl && (
+        {/* Single Media or Stacked Cards UI */}
+        {hasMedia && images.length === 1 && (
           isVideoUrl ? (
             <div className={cn('rounded-xl overflow-hidden', !isImageOnly && 'mb-2')}>
               <video
-                src={msg.imageUrl}
+                src={primaryMedia}
                 controls
                 playsInline
                 className="max-w-[260px] max-h-[200px] rounded-xl object-cover"
@@ -315,33 +376,113 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           ) : (
             <ChatImageThumbnail
-              src={msg.imageUrl}
+              src={primaryMedia}
               onClick={() => {
                 if (longPress.didLongPress()) return;
+                setViewingImageIndex(0);
                 setViewingImage(true);
               }}
               className={cn(!isImageOnly && 'mb-2')}
             />
           )
         )}
+
+        {hasMedia && images.length > 1 && (
+          <div
+            onClick={() => {
+              if (longPress.didLongPress()) return;
+              setViewingImageIndex(0);
+              setViewingImage(true);
+            }}
+            className="relative w-[216px] h-[170px] my-1 cursor-pointer select-none group flex items-center justify-center"
+          >
+            {/* Card 2 (Bottom card, peeking to the right) */}
+            {images.length >= 3 && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (longPress.didLongPress()) return;
+                  setViewingImageIndex(2);
+                  setViewingImage(true);
+                }}
+                className="absolute w-[196px] h-[150px] rounded-xl overflow-hidden border border-white/30 shadow-md bg-gray-200 dark:bg-gray-800 transition-transform duration-200 group-hover:rotate-[7deg] group-hover:translate-x-3 cursor-pointer"
+                style={{
+                  transform: 'rotate(5deg) translate(8px, -4px) scale(0.94)',
+                  zIndex: 1,
+                }}
+              >
+                <img
+                  src={images[2]}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              </div>
+            )}
+
+            {/* Card 1 (Middle card, peeking to the left) */}
+            {images.length >= 2 && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (longPress.didLongPress()) return;
+                  setViewingImageIndex(1);
+                  setViewingImage(true);
+                }}
+                className="absolute w-[196px] h-[150px] rounded-xl overflow-hidden border border-white/40 shadow-md bg-gray-100 dark:bg-gray-700 transition-transform duration-200 group-hover:-rotate-[6deg] group-hover:-translate-x-3 cursor-pointer"
+                style={{
+                  transform: 'rotate(-4.5deg) translate(-8px, -2px) scale(0.97)',
+                  zIndex: 2,
+                }}
+              >
+                <img
+                  src={images[1]}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              </div>
+            )}
+
+            {/* Card 0 (Top / Upper card) */}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                if (longPress.didLongPress()) return;
+                setViewingImageIndex(0);
+                setViewingImage(true);
+              }}
+              className="relative w-[196px] h-[150px] rounded-xl overflow-hidden border border-white/50 shadow-lg bg-white dark:bg-gray-900 transition-transform duration-200 group-hover:scale-[1.02] cursor-pointer"
+              style={{ zIndex: 10 }}
+            >
+              <img
+                src={images[0]}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+              {/* Badge showing photo count */}
+              <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                <span>{images.length} photos</span>
+              </div>
+            </div>
+          </div>
+        )}
         {msg.content && <p className={cn(isImageOnly ? 'hidden' : undefined)}>{msg.content}</p>}
 
         {/* On phone/click: expands to show the time at the bottom of the message; on sending: shows sending status */}
-        {(showTime || isSending) && (
+        {(isActiveTime || isSending) && (
           <span
             className={cn(
               'text-[10px] flex items-center gap-1 mt-1',
               isMe ? 'text-white/60' : 'text-gray-400',
-              isImageOnly && 'px-2 pb-1',
+              isImageOnly && 'px-2 py-0.5 rounded-md bg-black/60 text-white/90 self-end backdrop-blur-sm shadow',
             )}
           >
             {isSending && <Clock size={10} className="animate-pulse" />}
             {isSending
               ? 'Sending…'
-              : new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+              : formatMessageTime(msg.createdAt || msg.timestamp)}
           </span>
         )}
       </div>
@@ -388,9 +529,9 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        'group flex items-end gap-2',
+        'group flex items-end gap-2 transition-[margin] duration-150 ease-out',
         itemMarginClass,
-        msg.reactions && msg.reactions.length > 0 && 'mb-3',
+        msg.reactions && msg.reactions.length > 0 && 'mb-5',
         isMe ? 'flex-row-reverse' : 'flex-row',
       )}
     >
@@ -456,9 +597,10 @@ const MessageBubble = memo(function MessageBubble({
             }}
           />
         )}
-        {viewingImage && msg.imageUrl && (
+        {viewingImage && hasMedia && (
           <MessageImageViewer
             message={msg}
+            initialIndex={viewingImageIndex}
             onClose={() => setViewingImage(false)}
             onReply={onReply}
             onForward={onForward}
@@ -468,6 +610,12 @@ const MessageBubble = memo(function MessageBubble({
     </div>
   );
 });
+
+interface WebStreakNoticeAnchor {
+  messageId: string;
+  timestamp: number;
+}
+const webStreakNoticeAnchorMap = new Map<string, WebStreakNoticeAnchor>();
 
 export function ChatWindow({
   messages,
@@ -489,12 +637,15 @@ export function ChatWindow({
   hasMore = false,
   isLoadingOlder = false,
   onLoadOlder,
+  streakNotice,
+  streakEndedAt,
 }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
   const prevScrollTopRef = useRef<number>(0);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [activeTimeMessageId, setActiveTimeMessageId] = useState<string | null>(null);
 
   const prevConvIdRef = useRef<string | null | undefined>(conversationId);
   const prevMsgCountRef = useRef<number>(0);
@@ -504,6 +655,79 @@ export function ChatWindow({
   const uniqueMessages = useMemo(() => {
     return dedupeMessages(messages).filter((m) => !m.deletedForMe);
   }, [messages]);
+
+  // Determine chronological insertion point for the streak notice based on when streak ended
+  const streakNoticeIndex = useMemo(() => {
+    if (!streakNotice) {
+      if (conversationId && webStreakNoticeAnchorMap.has(conversationId)) {
+        webStreakNoticeAnchorMap.delete(conversationId);
+        try {
+          sessionStorage.removeItem(`streak_anchor_${conversationId}`);
+        } catch {}
+      }
+      return -1;
+    }
+
+    if (streakEndedAt) {
+      const endedTime = new Date(streakEndedAt).getTime();
+      if (!isNaN(endedTime)) {
+        const idx = uniqueMessages.findIndex((m) => {
+          const msgTime = new Date(m.createdAt || m.timestamp).getTime();
+          return !isNaN(msgTime) && msgTime > endedTime;
+        });
+        return idx !== -1 ? idx : uniqueMessages.length;
+      }
+    }
+
+    // Fallback if streakEndedAt is not available: anchor to specific message
+    let anchor = conversationId ? webStreakNoticeAnchorMap.get(conversationId) : null;
+    if (!anchor && conversationId && typeof sessionStorage !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(`streak_anchor_${conversationId}`);
+        if (raw) {
+          anchor = JSON.parse(raw);
+          if (anchor) webStreakNoticeAnchorMap.set(conversationId, anchor);
+        }
+      } catch {}
+    }
+
+    if (anchor) {
+      if (anchor.messageId === '__START__') {
+        return 0;
+      }
+      const anchorIdx = uniqueMessages.findIndex((m) => m.id === anchor!.messageId);
+      if (anchorIdx !== -1) {
+        return anchorIdx + 1;
+      }
+      // If message ID not found (e.g. deleted), fallback to timestamp
+      if (anchor.timestamp) {
+        const timeIdx = uniqueMessages.findIndex((m) => {
+          const msgTime = new Date(m.createdAt || m.timestamp).getTime();
+          return !isNaN(msgTime) && msgTime > anchor!.timestamp;
+        });
+        if (timeIdx !== -1) return timeIdx;
+      }
+      return 0;
+    }
+
+    // First time seeing notice in this conversation: anchor to current last message
+    if (uniqueMessages.length > 0) {
+      const lastMsg = uniqueMessages[uniqueMessages.length - 1];
+      const newAnchor: WebStreakNoticeAnchor = {
+        messageId: lastMsg.id,
+        timestamp: new Date(lastMsg.createdAt || lastMsg.timestamp).getTime() || Date.now(),
+      };
+      if (conversationId) {
+        webStreakNoticeAnchorMap.set(conversationId, newAnchor);
+        try {
+          sessionStorage.setItem(`streak_anchor_${conversationId}`, JSON.stringify(newAnchor));
+        } catch {}
+      }
+      return uniqueMessages.length;
+    }
+
+    return 0;
+  }, [streakNotice, streakEndedAt, uniqueMessages, conversationId]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (messagesEndRef.current) {
@@ -602,8 +826,8 @@ export function ChatWindow({
         const prev = idx > 0 ? uniqueMessages[idx - 1] : null;
         const next = idx < uniqueMessages.length - 1 ? uniqueMessages[idx + 1] : null;
 
-        const hasPrev = isConsecutiveWith(msg, prev);
-        const hasNext = isConsecutiveWith(msg, next);
+        const hasPrev = idx === streakNoticeIndex ? false : isConsecutiveWith(msg, prev);
+        const hasNext = (idx + 1) === streakNoticeIndex ? false : isConsecutiveWith(msg, next);
 
         let groupPosition: MessageGroupPosition = 'single';
         if (!hasPrev && hasNext) {
@@ -618,23 +842,30 @@ export function ChatWindow({
           !isMe && (idx === 0 || uniqueMessages[idx - 1].senderId !== msg.senderId);
 
         return (
-          <MessageBubble
-            key={msg.id}
-            msg={msg}
-            isMe={isMe}
-            currentUserId={currentUserId}
-            showAvatar={showAvatar}
-            groupPosition={groupPosition}
-            participantAvatar={participantAvatar}
-            participantName={participantName}
-            onRetry={onRetry}
-            onReact={onReact}
-            onReply={onReply}
-            onForward={onForward}
-            onDelete={(targetMsg) => setMessageToDelete(targetMsg)}
-          />
+          <Fragment key={msg.id}>
+            {idx === streakNoticeIndex && streakNotice}
+            <MessageBubble
+              key={msg.id}
+              msg={msg}
+              isMe={isMe}
+              currentUserId={currentUserId}
+              showAvatar={showAvatar}
+              groupPosition={groupPosition}
+              participantAvatar={participantAvatar}
+              participantName={participantName}
+              isActiveTime={activeTimeMessageId === msg.id}
+              onToggleTime={() => setActiveTimeMessageId((prev) => (prev === msg.id ? null : msg.id))}
+              onRetry={onRetry}
+              onReact={onReact}
+              onReply={onReply}
+              onForward={onForward}
+              onDelete={(targetMsg) => setMessageToDelete(targetMsg)}
+            />
+          </Fragment>
         );
       })}
+
+      {streakNoticeIndex === uniqueMessages.length && streakNotice}
 
       {/* Sentinel for auto-scrolling straight to bottom */}
       <div ref={messagesEndRef} className="h-px w-full pointer-events-none flex-shrink-0" />

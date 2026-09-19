@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Picker from "@emoji-mart/react";
-import data from "@emoji-mart/data";
-
-interface EmojiMartSelection {
-  id: string;
-  name: string;
-  native: string;
-  unified: string;
-  shortcodes: string;
-}
+import { FluentEmojiPicker } from "@/components/chat/FluentEmojiPicker";
 
 interface EmojiPickerButtonProps {
   /** Called with the native emoji character, e.g. "😂" */
@@ -23,11 +14,8 @@ interface EmojiPickerButtonProps {
 }
 
 /**
- * Self-contained emoji picker: a trigger button that opens emoji-mart's
- * Picker in a floating panel. Closes on outside click, Escape, or selection.
- *
- * Usage:
- *   <EmojiPickerButton onEmojiSelect={(emoji) => setText((t) => t + emoji)} />
+ * Self-contained Microsoft Fluent 3D emoji picker button: opens FluentEmojiPicker
+ * in a floating panel. Closes on outside click, Escape, or selection.
  */
 export default function EmojiPickerButton({
   onEmojiSelect,
@@ -62,8 +50,8 @@ export default function EmojiPickerButton({
     };
   }, [open]);
 
-  function handleSelect(emoji: EmojiMartSelection) {
-    onEmojiSelect(emoji.native);
+  function handleSelect(emoji: string) {
+    onEmojiSelect(emoji);
     setOpen(false);
   }
 
@@ -92,14 +80,7 @@ export default function EmojiPickerButton({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className={`absolute left-0 z-50 ${panelPositionClass}`}
           >
-            <Picker
-              data={data}
-              onEmojiSelect={handleSelect}
-              theme="dark"
-              previewPosition="none"
-              skinTonePosition="search"
-              maxFrequentRows={2}
-            />
+            <FluentEmojiPicker autoFocus onSelect={handleSelect} />
           </motion.div>
         )}
       </AnimatePresence>

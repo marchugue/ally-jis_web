@@ -50,19 +50,97 @@ function mergeConversations(prev: Conversation[], next: Conversation[]): Convers
   return anyChanged ? merged : prev;
 }
 
+const CACHE_KEY_PREFIX = 'ally_conversations_cache_';
+const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CachedConversationsData {
+  conversations: Conversation[];
+  hasMore: boolean;
+  nextCursor: string | null;
+  cachedAt: number;
+}
+
+function getCachedConversations(userId: string): CachedConversationsData | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PREFIX + userId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.conversations)) {
+      const cachedAt = Number(parsed.cachedAt) || 0;
+      if (Date.now() - cachedAt > MAX_CACHE_AGE_MS) {
+        localStorage.removeItem(CACHE_KEY_PREFIX + userId);
+        return null;
+      }
+      return {
+        conversations: parsed.conversations,
+        hasMore: Boolean(parsed.hasMore),
+        nextCursor: parsed.nextCursor ?? null,
+        cachedAt,
+      };
+    }
+  } catch {
+    // ignore corrupted cache
+  }
+  return null;
+}
+
+function setCachedConversations(
+  userId: string,
+  conversations: Conversation[],
+  hasMore: boolean,
+  nextCursor: string | null
+) {
+  try {
+    // Only cache up to 30 conversations to keep localStorage lean
+    const toCache = conversations.slice(0, 30);
+    localStorage.setItem(
+      CACHE_KEY_PREFIX + userId,
+      JSON.stringify({
+        conversations: toCache,
+        hasMore,
+        nextCursor,
+        cachedAt: Date.now(),
+      })
+    );
+  } catch {
+    // ignore quota errors
+  }
+}
+
 export function useConversations(userId: string | null) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    if (!userId) return [];
+    const cached = getCachedConversations(userId);
+    return cached?.conversations ?? [];
+  });
+  const [hasMore, setHasMore] = useState(() => {
+    if (!userId) return false;
+    const cached = getCachedConversations(userId);
+    return cached?.hasMore ?? false;
+  });
+  const [nextCursor, setNextCursor] = useState<string | null>(() => {
+    if (!userId) return null;
+    const cached = getCachedConversations(userId);
+    return cached?.nextCursor ?? null;
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    if (!userId) return false;
+    const cached = getCachedConversations(userId);
+    return !cached || cached.conversations.length === 0;
+  });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasLoadedOnceRef = useRef(false);
+  const nextCursorRef = useRef<string | null>(nextCursor);
+  useEffect(() => {
+    nextCursorRef.current = nextCursor;
+  }, [nextCursor]);
 
   const loadConversations = useCallback(async (silent = false) => {
     if (!userId || !isApiConfigured) return;
 
-    // Only ever show the skeleton on the very first load. Every poll or
-    // refresh after that is silent by default — old data stays on screen
-    // until the new data is ready, then we swap in just what changed.
-    const showSkeleton = !silent && !hasLoadedOnceRef.current;
+    // Only show the skeleton if we don't have any cached or existing data.
+    const showSkeleton = !silent && !hasLoadedOnceRef.current && conversations.length === 0;
     if (showSkeleton) {
       setIsLoading(true);
     }
@@ -77,17 +155,23 @@ export function useConversations(userId: string | null) {
         // profile fetch is optional for conversation list
       }
 
-      const mapped = await chatService.getConversations(userId, interests);
+      const result = await chatService.getConversations(userId, interests, { limit: 20 });
 
       const deduped = new Map<string, Conversation>();
-      mapped.forEach((conv) => {
+      result.conversations.forEach((conv) => {
         if (!deduped.has(conv.participantId)) {
           deduped.set(conv.participantId, conv);
         }
       });
       const fresh = Array.from(deduped.values());
 
-      setConversations((prev) => mergeConversations(prev, fresh));
+      setConversations((prev) => {
+        const merged = mergeConversations(prev, fresh);
+        setCachedConversations(userId, merged, result.hasMore, result.nextCursor);
+        return merged;
+      });
+      setHasMore(result.hasMore);
+      setNextCursor(result.nextCursor);
       hasLoadedOnceRef.current = true;
     } catch (err: any) {
       setError(err.message);
@@ -96,13 +180,55 @@ export function useConversations(userId: string | null) {
         setIsLoading(false);
       }
     }
-  }, [userId]);
+  }, [userId, conversations.length]);
+
+  const loadMore = useCallback(async () => {
+    if (!userId || !nextCursorRef.current || !hasMore || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      let interests: string[] = [];
+      try {
+        const profile = await profileService.getMyProfile();
+        interests = profile.interests;
+      } catch {}
+
+      const result = await chatService.getConversations(userId, interests, {
+        limit: 20,
+        cursor: nextCursorRef.current,
+      });
+
+      setConversations((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id));
+        const newRows = result.conversations.filter((c) => !existingIds.has(c.id));
+        return [...prev, ...newRows];
+      });
+      setHasMore(result.hasMore);
+      setNextCursor(result.nextCursor);
+    } catch (err: any) {
+      console.warn('[useConversations.loadMore] error:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [userId, hasMore, isLoadingMore]);
 
   // ── Initial load + Window focus revalidation + Slow safety net ───────────
   useEffect(() => {
     if (!isApiConfigured || !userId) return;
 
-    void loadConversations();
+    // Check if we have cached conversations for instant 0ms display
+    const cached = getCachedConversations(userId);
+    if (cached && cached.conversations.length > 0) {
+      setConversations(cached.conversations);
+      setHasMore(cached.hasMore);
+      setNextCursor(cached.nextCursor);
+      setIsLoading(false);
+      hasLoadedOnceRef.current = true;
+      // Background silent revalidation
+      void loadConversations(true);
+    } else {
+      void loadConversations(false);
+    }
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -200,8 +326,24 @@ export function useConversations(userId: string | null) {
   }, [userId]);
 
   const removeConversation = useCallback((conversationId: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-  }, []);
+    setConversations((prev) => {
+      const updated = prev.filter((c) => c.id !== conversationId);
+      if (userId) {
+        setCachedConversations(userId, updated, hasMore, nextCursorRef.current);
+      }
+      return updated;
+    });
+  }, [userId, hasMore]);
 
-  return { conversations, isLoading, error, refresh: loadConversations, removeConversation };
+  return {
+    conversations,
+    hasMore,
+    nextCursor,
+    isLoading,
+    isLoadingMore,
+    error,
+    refresh: loadConversations,
+    loadMore,
+    removeConversation,
+  };
 }

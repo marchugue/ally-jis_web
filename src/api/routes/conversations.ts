@@ -3,8 +3,21 @@
 import { request } from '../http';
 import type { ConversationRow } from '../types';
 
-export function listConversations() {
-  return request<ConversationRow[]>('/conversations');
+export interface ListConversationsOptions {
+  limit?: number;
+  cursor?: string;
+}
+
+export type ListConversationsResponse =
+  | ConversationRow[]
+  | { conversations: ConversationRow[]; hasMore: boolean; nextCursor: string | null };
+
+export function listConversations(options?: ListConversationsOptions) {
+  const params = new URLSearchParams();
+  if (options?.limit !== undefined) params.set('limit', String(options.limit));
+  if (options?.cursor) params.set('cursor', options.cursor);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return request<ListConversationsResponse>(`/conversations${qs}`);
 }
 
 export function getConversation(conversationId: string) {

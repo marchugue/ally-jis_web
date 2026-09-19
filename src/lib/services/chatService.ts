@@ -105,12 +105,15 @@ export const mapConversationRow = (
     // General PHT streak — backend always returns this now (0 if not started).
     dayStreak: row.dayStreak ?? row.matchInfo?.dayStreak ?? 0,
     streakActiveToday: Boolean(row.streakActiveToday ?? row.matchInfo?.streakActiveToday),
+    // Deadline for restoring a lapsed streak (null if window passed or streak is active).
+    streakRestoreDeadline: row.streakRestoreDeadline ?? row.matchInfo?.streakRestoreDeadline ?? null,
     matchInfo: row.matchInfo
       ? {
           matchId: row.matchInfo.matchId,
           stage: row.matchInfo.stage,
           dayStreak: row.matchInfo.dayStreak,
           streakActiveToday: Boolean(row.matchInfo.streakActiveToday ?? row.streakActiveToday),
+          streakRestoreDeadline: row.matchInfo.streakRestoreDeadline ?? row.streakRestoreDeadline ?? null,
           partnerAlias: row.matchInfo.partnerAlias,
           partnerAvatar: row.matchInfo.partnerAvatar,
           ended: row.matchInfo.ended,
@@ -123,9 +126,26 @@ export const mapConversationRow = (
 };
 
 export const chatService = {
-  async getConversations(userId: string, currentUserInterests: string[] = []) {
-    const data = await apiClient.listConversations();
-    return (data ?? []).map((row) => mapConversationRow(row, userId, currentUserInterests));
+  async getConversations(
+    userId: string,
+    currentUserInterests: string[] = [],
+    options?: { limit?: number; cursor?: string }
+  ): Promise<{ conversations: Conversation[]; hasMore: boolean; nextCursor: string | null }> {
+    const data = await apiClient.listConversations(options);
+    if (data && typeof data === 'object' && 'conversations' in data && Array.isArray((data as any).conversations)) {
+      const paginated = data as { conversations: any[]; hasMore: boolean; nextCursor: string | null };
+      return {
+        conversations: paginated.conversations.map((row) => mapConversationRow(row, userId, currentUserInterests)),
+        hasMore: Boolean(paginated.hasMore),
+        nextCursor: paginated.nextCursor ?? null,
+      };
+    }
+    const rows = Array.isArray(data) ? data : [];
+    return {
+      conversations: rows.map((row) => mapConversationRow(row, userId, currentUserInterests)),
+      hasMore: false,
+      nextCursor: null,
+    };
   },
 
   async getMessages(conversationId: string, options?: { limit?: number; before?: string }) {
@@ -193,7 +213,7 @@ export const chatService = {
   async setMessageReaction(conversationId: string, messageId: string, emoji: string | null) {
     const data = await apiClient.setMessageReaction(conversationId, messageId, emoji);
     return (data ?? []).map((reaction) => ({
-      userId: reaction.user_id,
+      userId: (reaction as any).user_id ?? (reaction as any).userId,
       emoji: reaction.emoji,
     }));
   },

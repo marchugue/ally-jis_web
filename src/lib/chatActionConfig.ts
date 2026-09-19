@@ -22,22 +22,22 @@ export const MOBILE_MESSAGE_ACTION_CONFIG = {
 
   /** Quick-reaction pill row */
   reactionsBar: {
-    buttonSize: 36,
-    emojiSize: 22,
+    buttonSize: 44,
+    emojiSize: 32,
     gap: 4,
-    paddingX: 8,
-    paddingY: 10,
-    maxWidth: 320,
+    paddingX: 10,
+    paddingY: 8,
+    maxWidth: 360,
   },
 
   desktop: {
     reactionsBar: {
-      buttonSize: 28,
-      emojiSize: 18,
-      gap: 2,
-      paddingX: 6,
-      paddingY: 4,
-      maxWidth: 280,
+      buttonSize: 38,
+      emojiSize: 28,
+      gap: 3,
+      paddingX: 8,
+      paddingY: 6,
+      maxWidth: 340,
     },
   },
 } as const;

@@ -142,6 +142,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           localStorage.removeItem('ally-theme');
+          // Clear all cached messages and conversations on logout to protect user privacy
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith('ally_chat_cache_') || k.startsWith('ally_conversations_cache_'))
+            .forEach((k) => localStorage.removeItem(k));
         } catch (e) {}
         document.documentElement.classList.remove('dark');
         document.documentElement.style.colorScheme = 'light';
@@ -165,6 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           localStorage.removeItem('ally-theme');
+          // Clear all cached messages and conversations on account deletion
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith('ally_chat_cache_') || k.startsWith('ally_conversations_cache_'))
+            .forEach((k) => localStorage.removeItem(k));
         } catch (e) {}
         document.documentElement.classList.remove('dark');
         document.documentElement.style.colorScheme = 'light';

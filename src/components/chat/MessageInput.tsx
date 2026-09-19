@@ -8,7 +8,7 @@ import { ReplyQuote } from '@/components/chat/ReplyQuote';
 import { getReplyComposeLabel } from '@/lib/replyLabels';
 
 interface MessageInputProps {
-  onSend: (content: string | null, image?: File | null) => void;
+  onSend: (content: string | null, images?: File[] | File | null) => void;
   disabled?: boolean;
   children?: ReactNode;
   replyTo?: MessageReplyPreview | null;
@@ -40,9 +40,8 @@ export function MessageInput({
   onTextChange,
 }: MessageInputProps) {
   const [text, setText] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isVideoFile, setIsVideoFile] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<{ file: File; url: string; isVideo: boolean }[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
@@ -77,24 +76,37 @@ export function MessageInput({
   }, [replyTo]);
 
   const handleSend = () => {
-    if (!text.trim() && !image) return;
-    onSend(text, image);
+    if (!text.trim() && images.length === 0) return;
+    onSend(text, images.length === 1 ? images[0] : images);
     setText('');
-    setImage(null);
-    setImagePreview(null);
-    setIsVideoFile(false);
+    setImages([]);
+    setImagePreviews([]);
     onTextChange?.('');
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImage(file);
-      const isVideo = file.type.startsWith('video/');
-      setIsVideoFile(isVideo);
-      const objectUrl = URL.createObjectURL(file);
-      setImagePreview(objectUrl);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const remainingSlots = 6 - images.length;
+      const toAdd = files.slice(0, remainingSlots);
+      const newItems = toAdd.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+        isVideo: file.type.startsWith('video/'),
+      }));
+      setImages((prev) => [...prev, ...toAdd].slice(0, 6));
+      setImagePreviews((prev) => [...prev, ...newItems].slice(0, 6));
     }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => {
+      const target = prev[index];
+      if (target?.url) URL.revokeObjectURL(target.url);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleEmojiSelect = (emoji: EmojiMartSelection) => {
@@ -139,23 +151,44 @@ export function MessageInput({
           </button>
         </div>
       )}
-      {imagePreview && (
-        <div className="relative inline-block mb-3">
-          {isVideoFile ? (
-            <video
-              src={imagePreview}
-              className="h-20 w-32 object-cover rounded-xl border border-gray-100 dark:border-white/10"
-              muted
-            />
-          ) : (
-            <img src={imagePreview} alt="Preview" className="h-20 w-20 object-cover rounded-xl border border-gray-100 dark:border-white/10" />
+      {/* Image Preview Strip (up to 6) */}
+      {imagePreviews.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 overflow-x-auto py-1">
+          {imagePreviews.map((item, idx) => (
+            <div key={idx} className="relative flex-shrink-0">
+              {item.isVideo ? (
+                <video
+                  src={item.url}
+                  className="h-20 w-28 object-cover rounded-xl border border-gray-200 dark:border-white/10"
+                  muted
+                />
+              ) : (
+                <img
+                  src={item.url}
+                  alt={`Preview ${idx + 1}`}
+                  className="h-20 w-20 object-cover rounded-xl border border-gray-200 dark:border-white/10"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => handleRemoveImage(idx)}
+                className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-colors"
+                aria-label="Remove image"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {imagePreviews.length < 6 && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-20 w-20 flex-shrink-0 rounded-xl border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-500 flex flex-col items-center justify-center text-gray-400 hover:text-[#1A6B3C] transition-colors"
+            >
+              <ImageIcon size={20} />
+              <span className="text-[10px] font-medium mt-1">Add (max 6)</span>
+            </button>
           )}
-          <button
-            onClick={() => { setImage(null); setImagePreview(null); setIsVideoFile(false); }}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
-          >
-            <X size={12} />
-          </button>
         </div>
       )}
       <div className="flex items-center gap-2">
@@ -170,6 +203,7 @@ export function MessageInput({
           ref={fileInputRef}
           className="hidden"
           accept="image/*,video/mp4,video/webm,video/quicktime"
+          multiple
           onChange={handleImageChange}
         />
 
@@ -246,7 +280,7 @@ export function MessageInput({
         <button
           type="button"
           onClick={handleSend}
-          disabled={disabled || (!text.trim() && !image)}
+          disabled={disabled || (!text.trim() && images.length === 0)}
           aria-label="Send message"
           className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#E2DED7] dark:disabled:bg-white/10 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
         >

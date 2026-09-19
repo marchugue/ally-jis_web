@@ -180,6 +180,7 @@ export interface ConversationMatchInfo {
   stage: number;
   dayStreak: number;
   streakActiveToday?: boolean;
+  streakRestoreDeadline?: string | null;
   myAlias: string | null;
   myAvatar: string | null;
   partnerAlias: string | null;
@@ -202,6 +203,8 @@ export interface ConversationRow {
   /** PHT-based consecutive-day streak — populated by the backend for all conversation types. */
   dayStreak?: number;
   streakActiveToday?: boolean;
+  /** ISO UTC deadline by which a lapsed streak can be restored (null if active, pending, or window expired). */
+  streakRestoreDeadline?: string | null;
 }
 
 // ─── Notifications ──────────────────────────────────────────────────────────

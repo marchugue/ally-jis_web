@@ -51,7 +51,15 @@ export default function MessagesPage() {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student>(CURRENT_USER);
-  const { conversations, isLoading: loadingConvs, refresh: refreshConvs, removeConversation } = useConversations(user?.id ?? null);
+  const {
+    conversations,
+    hasMore: hasMoreConvs,
+    isLoading: loadingConvs,
+    isLoadingMore: isLoadingMoreConvs,
+    loadMore: loadMoreConvs,
+    refresh: refreshConvs,
+    removeConversation,
+  } = useConversations(user?.id ?? null);
   const {
     messages,
     sendMessage,
@@ -64,7 +72,7 @@ export default function MessagesPage() {
     loadOlderMessages,
     hasMore,
     isLoadingOlder,
-  } = useRealtimeMessages(activeConversation?.id ?? null);
+  } = useRealtimeMessages(activeConversation?.id ?? null, user?.id ?? null);
   const isAnonymousConversation = activeConversation?.variant && activeConversation.variant !== 'regular';
   const reveal = useMatchReveal(
     isAnonymousConversation ? activeConversation!.matchInfo?.matchId ?? null : null,
@@ -110,8 +118,9 @@ export default function MessagesPage() {
               ...prev,
               dayStreak: result.newStreak,
               streakActiveToday: true,
+              streakRestoreDeadline: null, // window consumed
               matchInfo: prev.matchInfo
-                ? { ...prev.matchInfo, dayStreak: result.newStreak, streakActiveToday: true }
+                ? { ...prev.matchInfo, dayStreak: result.newStreak, streakActiveToday: true, streakRestoreDeadline: null }
                 : prev.matchInfo,
             }
           : prev
@@ -122,6 +131,35 @@ export default function MessagesPage() {
     }
   }, [activeConversation?.id]);
 
+  // ── Restore window ────────────────────────────────────────────────────────────────────────
+  // True when the streak has lapsed AND the backend restore deadline hasn't passed yet.
+  // The deadline is an ISO UTC string computed server-side from streak_last_active_pht + 42h.
+  const streakDeadlineRaw = activeConversation?.streakRestoreDeadline ?? activeConversation?.matchInfo?.streakRestoreDeadline ?? null;
+  /** Realtime countdown tick — increments every minute to re-derive hoursRemaining without re-fetching */
+  const [nowTick, setNowTick] = useState(0);
+
+  useEffect(() => {
+    if (!streakDeadlineRaw) return;
+    const interval = setInterval(() => setNowTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, [streakDeadlineRaw]);
+
+  const canRestoreStreak = useMemo(() => {
+    return Boolean(streakDeadlineRaw && new Date() < new Date(streakDeadlineRaw));
+  }, [streakDeadlineRaw, nowTick]);
+
+  // Hours remaining in the restore window (rounded down), for the hint text.
+  const restoreHoursRemaining = useMemo(() => {
+    if (!streakDeadlineRaw) return 0;
+    const diffMs = new Date(streakDeadlineRaw).getTime() - Date.now();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+  }, [streakDeadlineRaw, nowTick]);
+
+  // Exact timestamp when the streak lapsed (deadline minus 42 hours window).
+  const streakEndedAt = useMemo(() => {
+    if (!streakDeadlineRaw) return null;
+    return new Date(new Date(streakDeadlineRaw).getTime() - 42 * 60 * 60 * 1000);
+  }, [streakDeadlineRaw]);
 
 
   const handleDeleteConversation = useCallback(async (conv: Conversation, mode: DeleteMode = 'delete_permanently') => {
@@ -251,6 +289,7 @@ export default function MessagesPage() {
       streak?: number;
       streakActiveToday?: boolean;
       status?: string;
+      streakRestoreDeadline?: string | null;
     }) => {
       void refreshConvs(true);
       setActiveConversation((prev) => {
@@ -264,15 +303,20 @@ export default function MessagesPage() {
         const isInactive = payload.status === 'inactive';
         const streak = isInactive ? 0 : (payload.dayStreak ?? payload.streak ?? prev.dayStreak);
         const activeToday = isInactive ? false : (payload.streakActiveToday ?? prev.streakActiveToday ?? false);
+        const deadline = payload.streakRestoreDeadline !== undefined
+          ? payload.streakRestoreDeadline
+          : (isInactive ? prev.streakRestoreDeadline : null);
         return {
           ...prev,
           dayStreak: streak,
           streakActiveToday: activeToday,
+          streakRestoreDeadline: deadline,
           matchInfo: prev.matchInfo
             ? {
                 ...prev.matchInfo,
                 dayStreak: streak,
                 streakActiveToday: activeToday,
+                streakRestoreDeadline: deadline,
               }
             : prev.matchInfo,
         };
@@ -316,7 +360,7 @@ export default function MessagesPage() {
   // ── Icebreakers ───────────────────────────────────────────────────────────
   const lastSentRef = useRef<{ content: string | null; time: number }>({ content: null, time: 0 });
 
-  const handleSendMessage = useCallback(async (content: string | null, image?: File | null) => {
+  const handleSendMessage = useCallback(async (content: string | null, image?: File[] | File | null) => {
     if (!user || !activeConversationRef.current) return;
     if (!content && !image) return;
 
@@ -327,8 +371,11 @@ export default function MessagesPage() {
     }
     lastSentRef.current = { content, time: now };
 
-    let imageUrl = null;
-    if (image) {
+    let imageUrl: string | null = null;
+    if (Array.isArray(image) && image.length > 0) {
+      const uploadedUrls = await Promise.all(image.map((file) => chatService.uploadChatMedia(file)));
+      imageUrl = uploadedUrls.length === 1 ? uploadedUrls[0] : JSON.stringify(uploadedUrls);
+    } else if (image && !Array.isArray(image)) {
       imageUrl = await chatService.uploadChatMedia(image);
     }
 
@@ -740,6 +787,9 @@ export default function MessagesPage() {
                 isLoading={loadingConvs}
                 onlineUserIds={onlineUserIds}
                 currentUserId={user?.id ?? CURRENT_USER.id}
+                hasMore={hasMoreConvs}
+                isLoadingMore={isLoadingMoreConvs}
+                onLoadMore={loadMoreConvs}
               />
             )}
           </div>
@@ -847,19 +897,6 @@ export default function MessagesPage() {
                 style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
               >
               <div className="flex-1 min-h-0 relative flex flex-col">
-                {/* ── Streak Ended Notice ──────────────────────────────────────────── */}
-                {activeConversation.variant !== 'anonymous_ended' && (activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0) === 0 && (
-                  <div className="py-2.5 px-4 text-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 flex items-center justify-center gap-1.5 flex-wrap font-jakarta z-10">
-                    <span>Your daily streak has ended. Keep the conversation going to start a new one.</span>
-                    <button
-                      type="button"
-                      onClick={handleRestoreStreak}
-                      className="text-[#1A6B3C] dark:text-emerald-400 font-bold underline hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center ml-1"
-                    >
-                      Restore Streak
-                    </button>
-                  </div>
-                )}
                 {isAnonymousConversation && activeConversation.variant !== 'anonymous_ended' && (
                   <FloatingStatusBadge
                     stage={activeConversation.matchInfo?.stage ?? 1}
@@ -890,6 +927,31 @@ export default function MessagesPage() {
                   hasMore={hasMore}
                   isLoadingOlder={isLoadingOlder}
                   onLoadOlder={loadOlderMessages}
+                  streakNotice={
+                    activeConversation.variant !== 'anonymous_ended' &&
+                    (activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0) === 0 ? (
+                      <div className="py-4 px-6 text-center text-xs text-gray-400 dark:text-gray-500 select-none font-jakarta flex items-center justify-center gap-1 flex-wrap my-2">
+                        {canRestoreStreak ? (
+                          <>
+                            <span>Your daily streak has ended.</span>
+                            <button
+                              type="button"
+                              onClick={handleRestoreStreak}
+                              className="text-[#1A6B3C] dark:text-emerald-400 font-bold underline hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center ml-0.5"
+                            >
+                              Restore Streak
+                            </button>
+                            {restoreHoursRemaining > 0 && (
+                              <span className="text-gray-400 dark:text-gray-500">({restoreHoursRemaining}h left)</span>
+                            )}
+                          </>
+                        ) : (
+                          <span>Your streak has ended. Keep chatting to start a new one! 🔥</span>
+                        )}
+                      </div>
+                    ) : null
+                  }
+                  streakEndedAt={streakEndedAt}
                 />
               </div>
 

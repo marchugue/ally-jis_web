@@ -121,6 +121,7 @@ function applyReactionToggle(
 
 const CACHE_KEY_PREFIX = 'ally_chat_cache_';
 const MAX_CACHED_MESSAGES = 50;
+const MAX_CHAT_CACHE_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedChatData {
   messages: Message[];
@@ -129,17 +130,49 @@ interface CachedChatData {
   cachedAt: number;
 }
 
-function getCachedMessages(conversationId: string): CachedChatData | null {
+function getCacheKey(conversationId: string, userId?: string | null): string {
+  return userId ? `${CACHE_KEY_PREFIX}${userId}_${conversationId}` : `${CACHE_KEY_PREFIX}${conversationId}`;
+}
+
+function pruneChatCache(userId?: string | null) {
   try {
-    const raw = localStorage.getItem(CACHE_KEY_PREFIX + conversationId);
+    const prefix = userId ? `${CACHE_KEY_PREFIX}${userId}_` : CACHE_KEY_PREFIX;
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+    if (keys.length > 20) {
+      const entries = keys.map((k) => {
+        try {
+          const data = JSON.parse(localStorage.getItem(k) || '{}');
+          return { key: k, cachedAt: Number(data.cachedAt) || 0 };
+        } catch {
+          return { key: k, cachedAt: 0 };
+        }
+      });
+      entries.sort((a, b) => a.cachedAt - b.cachedAt);
+      const toRemove = entries.slice(0, entries.length - 20);
+      toRemove.forEach((e) => localStorage.removeItem(e.key));
+    }
+  } catch {
+    // ignore pruning errors
+  }
+}
+
+function getCachedMessages(conversationId: string, userId?: string | null): CachedChatData | null {
+  try {
+    const key = getCacheKey(conversationId, userId);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed?.messages)) {
+      const cachedAt = Number(parsed.cachedAt) || 0;
+      if (Date.now() - cachedAt > MAX_CHAT_CACHE_AGE_MS) {
+        localStorage.removeItem(key);
+        return null;
+      }
       return {
         messages: parsed.messages,
         hasMore: Boolean(parsed.hasMore),
         nextCursor: parsed.nextCursor ?? null,
-        cachedAt: Number(parsed.cachedAt) || 0,
+        cachedAt,
       };
     }
   } catch {
@@ -152,13 +185,15 @@ function setCachedMessages(
   conversationId: string,
   messages: Message[],
   hasMore: boolean,
-  nextCursor: string | null
+  nextCursor: string | null,
+  userId?: string | null
 ) {
   try {
+    const key = getCacheKey(conversationId, userId);
     // Store only the newest messages up to MAX_CACHED_MESSAGES
     const toCache = messages.slice(-MAX_CACHED_MESSAGES);
     localStorage.setItem(
-      CACHE_KEY_PREFIX + conversationId,
+      key,
       JSON.stringify({
         messages: toCache,
         hasMore,
@@ -166,12 +201,13 @@ function setCachedMessages(
         cachedAt: Date.now(),
       })
     );
+    pruneChatCache(userId);
   } catch {
     // ignore quota errors
   }
 }
 
-export function useRealtimeMessages(conversationId: string | null) {
+export function useRealtimeMessages(conversationId: string | null, userId?: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -216,7 +252,7 @@ export function useRealtimeMessages(conversationId: string | null) {
         });
         const merged = mergeMessages(prev, data.messages);
         const finalMessages = dedupeMessages(pending.length === 0 ? merged : [...merged, ...pending]);
-        setCachedMessages(conversationId, finalMessages, data.hasMore, data.nextCursor);
+        setCachedMessages(conversationId, finalMessages, data.hasMore, data.nextCursor, userId);
         return finalMessages;
       });
       hasLoadedOnceRef.current = true;
@@ -230,7 +266,7 @@ export function useRealtimeMessages(conversationId: string | null) {
         setIsLoading(false);
       }
     }
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!conversationId || !nextCursor || !hasMore || isLoadingOlder) return;
@@ -272,7 +308,7 @@ export function useRealtimeMessages(conversationId: string | null) {
 
     // ── Instant Navigation (0ms display) ──────────────────────────────────
     // If we have cached messages for this conversation, show them immediately!
-    const cached = getCachedMessages(conversationId);
+    const cached = getCachedMessages(conversationId, userId);
     if (cached && cached.messages.length > 0) {
       setMessages(cached.messages);
       setHasMore(cached.hasMore);
@@ -288,7 +324,7 @@ export function useRealtimeMessages(conversationId: string | null) {
       setIsLoading(true);
       void loadMessages(false);
     }
-  }, [conversationId, loadMessages]);
+  }, [conversationId, userId, loadMessages]);
 
   useEffect(() => {
     if (!conversationId) return;

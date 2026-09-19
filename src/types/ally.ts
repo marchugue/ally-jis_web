@@ -74,11 +74,14 @@ export interface Conversation {
   /** PHT consecutive-day streak for this conversation (all types, including regular DMs). */
   dayStreak: number;
   streakActiveToday?: boolean;
+  /** ISO UTC deadline by which a lapsed streak can be restored. Null if active, pending, or window expired. */
+  streakRestoreDeadline?: string | null;
   matchInfo: {
     matchId: string;
     stage: number;
     dayStreak: number;
     streakActiveToday?: boolean;
+    streakRestoreDeadline?: string | null;
     partnerAlias: string | null;
     partnerAvatar: string | null;
     ended: boolean;

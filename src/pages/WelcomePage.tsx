@@ -469,11 +469,11 @@ export default function WelcomePage() {
                                   whileHover={{ rotate: 10 }}
                                   className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces text-base font-bold shadow-xs"
                                 >
-                                  BM
+                                  LM
                                 </motion.div>
                                 <div>
-                                  <h3 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">Bea M.</h3>
-                                  <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400">BSIT • 3rd Year</p>
+                                  <h3 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">Lyca M.</h3>
+                                  <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400">BSIT • 2nd Year</p>
                                 </div>
                               </div>
                               <motion.span 
@@ -486,7 +486,7 @@ export default function WelcomePage() {
                             </div>
 
                             <p className="text-xs font-jakarta text-gray-600 dark:text-gray-300 bg-[#F7F4EF] dark:bg-[#0D131F] p-3 rounded-xl leading-relaxed">
-                              "Looking for hackathon project teammates or someone to study with at the student center."
+                              "Looking for study group partners or someone to geek out with on tech trends!"
                             </p>
 
                             <div className="space-y-1">
@@ -515,7 +515,7 @@ export default function WelcomePage() {
                               {hasConnected ? (
                                 <>
                                   <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400" />
-                                  <span>Request Sent to Bea</span>
+                                  <span>Request Sent to Lyca</span>
                                 </>
                               ) : (
                                 <>
@@ -546,7 +546,7 @@ export default function WelcomePage() {
                               transition={{ delay: 0.05 }}
                               className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2.5 rounded-2xl rounded-tl-none text-gray-700 dark:text-gray-200 max-w-[85%] shadow-sm"
                             >
-                              Hey Bea! Saw you are taking Systems Arch this term.
+                              Hey Trexie! Are you joining the JS workshop this Saturday? 👩‍💻
                             </motion.div>
 
                             <motion.div 
@@ -555,7 +555,7 @@ export default function WelcomePage() {
                               transition={{ delay: 0.15 }}
                               className="bg-[#1A6B3C] dark:bg-emerald-600 text-white p-2.5 rounded-2xl rounded-br-none ml-auto max-w-[85%] shadow-sm"
                             >
-                              Yes! Section 3-A. Let's compare notes after afternoon lectures!
+                              Yes! Let's grab seats early — maybe at 8 AM before it fills up!
                             </motion.div>
 
                             <motion.div 
@@ -564,11 +564,11 @@ export default function WelcomePage() {
                               transition={{ delay: 0.25 }}
                               className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2.5 rounded-2xl rounded-tl-none text-gray-700 dark:text-gray-200 max-w-[85%] shadow-sm"
                             >
-                              Sounds great! Let's meet near the library lobby.
+                              Deal! I'll save you a spot. See you there! ✨
                             </motion.div>
 
                             <div className="pt-3 flex items-center gap-2 bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-2 rounded-full shadow-xs">
-                              <span className="flex-1 text-[11px] text-gray-400 pl-2">Reply to Bea...</span>
+                              <span className="flex-1 text-[11px] text-gray-400 pl-2">Reply to Trexie...</span>
                               <div className="w-6 h-6 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                                 <Send size={10} />
                               </div>
@@ -591,7 +591,7 @@ export default function WelcomePage() {
                               className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-3.5 rounded-2xl space-y-1.5 shadow-sm"
                             >
                               <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 dark:text-gray-400">
-                                <span className="font-bold text-gray-800 dark:text-gray-200">Marco • CCS</span>
+                                <span className="font-bold text-gray-800 dark:text-gray-200">Christine • BSED</span>
                                 <span>15m ago</span>
                               </div>
                               <p className="text-gray-700 dark:text-gray-300">
@@ -819,11 +819,11 @@ export default function WelcomePage() {
                               whileHover={{ rotate: 10 }}
                               className="w-12 h-12 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces font-bold text-lg"
                             >
-                              BM
+                              LM
                             </motion.div>
                             <div>
-                              <div className="font-jakarta font-bold text-base text-gray-900 dark:text-white">Bea M.</div>
-                              <div className="font-mono text-xs text-gray-500 dark:text-gray-400">BS Information Tech • 3rd Year</div>
+                              <div className="font-jakarta font-bold text-base text-gray-900 dark:text-white">Lyca M.</div>
+                              <div className="font-mono text-xs text-gray-500 dark:text-gray-400">BS Information Tech • 2nd Year</div>
                             </div>
                           </div>
                           <motion.span 
@@ -896,11 +896,11 @@ export default function WelcomePage() {
                             whileHover={{ rotate: -10 }}
                             className="w-12 h-12 rounded-full bg-[#E8A838] text-white flex items-center justify-center font-fraunces font-bold text-lg"
                           >
-                            BM
+                            LM
                           </motion.div>
                           <div>
                             <div className="font-jakarta font-bold text-sm text-gray-900 dark:text-white">
-                              Bea M. requested to connect
+                              Lyca M. requested to connect
                             </div>
                             <div className="font-jakarta text-xs text-gray-500 dark:text-gray-400">
                               "Saw we both love UI Design. Let's collaborate this semester!"

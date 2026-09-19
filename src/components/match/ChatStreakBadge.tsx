@@ -1,13 +1,13 @@
 // src/components/match/ChatStreakBadge.tsx
 //
-// Renders the mobile-aligned streak badge:
+// Renders the streak badge:
 // - Visible for any active streak (dayStreak > 0)
-// - Active today: warm orange tint background, orange Flame icon & text
-// - Pending today: soft gray pill, muted gray Flame icon & text
+// - Minimalist: only the emoji and text, no capsule/pill background
+// - Active today: vibrant fire emoji & orange text
+// - Pending today: muted/grayscale fire emoji & gray text
 // - Interactive tooltip & pop animation on update
 
 import React, { useEffect, useRef } from 'react';
-import { Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ChatStreakBadgeProps {
@@ -47,7 +47,6 @@ export const ChatStreakBadge: React.FC<ChatStreakBadgeProps> = ({
   if (!dayStreak || dayStreak <= 0) return null;
 
   const isSm = size === 'sm';
-  const iconSize = isSm ? 12 : 14;
 
   const tooltipText = isStreakActiveToday
     ? `${dayStreak}-day streak • Active today! 🔥`
@@ -76,24 +75,25 @@ export const ChatStreakBadge: React.FC<ChatStreakBadgeProps> = ({
         title={tooltipText}
         aria-label={tooltipText}
         className={cn(
-          'group inline-flex items-center select-none font-jakarta font-bold transition-all duration-200',
-          isSm ? 'gap-1 px-2 py-0.5 rounded-lg text-[11px] leading-tight' : 'gap-1.5 px-2.5 py-1 rounded-lg text-xs',
+          'group inline-flex items-center select-none font-jakarta font-bold transition-all duration-200 bg-transparent border-0 p-0',
+          isSm ? 'gap-0.5 text-[11px] leading-none' : 'gap-1 text-xs leading-none',
           isStreakActiveToday
-            ? 'bg-[#eb5600]/10 text-[#eb5600] border border-[#eb5600]/20 dark:bg-[#eb5600]/20 dark:text-orange-400 dark:border-[#eb5600]/30'
-            : 'bg-gray-100 text-gray-500 border border-gray-200/60 dark:bg-white/10 dark:text-gray-400 dark:border-white/5',
-          onClick && 'cursor-pointer hover:opacity-90 active:scale-95',
+            ? 'text-[#eb5600] dark:text-orange-400'
+            : 'text-gray-400 dark:text-gray-500',
+          onClick && 'cursor-pointer hover:opacity-80 active:scale-95',
           className
         )}
       >
-        <Flame
-          size={iconSize}
+        <span
+          aria-hidden
           className={cn(
-            'flex-shrink-0 transition-transform duration-200 group-hover:scale-110',
-            isStreakActiveToday
-              ? 'text-[#eb5600] dark:text-orange-400 fill-[#eb5600] dark:fill-orange-400'
-              : 'text-gray-400 dark:text-gray-500 fill-gray-300 dark:fill-gray-600'
+            'inline-block select-none transition-transform duration-200 group-hover:scale-110',
+            isSm ? 'text-xs' : 'text-sm',
+            !isStreakActiveToday && 'grayscale opacity-50'
           )}
-        />
+        >
+          🔥
+        </span>
         <span>
           {dayStreak}
           {showDaysSuffix ? 'd' : ''}

@@ -733,11 +733,6 @@ export default function RegisterPage() {
                 </div>
               </motion.div>
 
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 mb-2.5 sm:mb-3 mx-auto">
-                <Shield size={13} />
-                <span>CHMSU Alijis Exclusive</span>
-              </div>
-
               <motion.h1
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -787,9 +782,9 @@ export default function RegisterPage() {
                       >
                         <GraduationCap size={20} />
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E8A838]/20 text-[#B45309] dark:text-amber-300">
-                        Instant Access
-                      </span>
+                      <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                        CHMSU Student Email
+                      </h3>
                     </div>
                     {emailType === 'chmsu' && (
                       <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
@@ -797,9 +792,7 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                      CHMSU Student Email
-                    </h3>
+
                     <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
                       @chmsu.edu.ph
                     </p>
@@ -832,9 +825,9 @@ export default function RegisterPage() {
                       >
                         <FileCheck size={20} />
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/15 dark:bg-emerald-950 text-[#1A6B3C] dark:text-emerald-300">
-                        Student ID Required
-                      </span>
+                      <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                        Personal Email
+                      </h3>
                     </div>
                     {emailType === 'external' && (
                       <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
@@ -842,9 +835,7 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                      Personal Email
-                    </h3>
+
                     <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
                       Gmail, Yahoo, Outlook, etc.
                     </p>
@@ -958,8 +949,8 @@ export default function RegisterPage() {
                 {showOtpView
                   ? 'Verification'
                   : idSubStep !== 'none'
-                  ? 'Student ID Verification'
-                  : `Step ${step} of ${STEPS.length}`}
+                    ? 'Student ID Verification'
+                    : `Step ${step} of ${STEPS.length}`}
               </span>
             </div>
 
@@ -967,24 +958,24 @@ export default function RegisterPage() {
               {showOtpView
                 ? 'Verify your email'
                 : idSubStep === 'front'
-                ? 'Upload Front ID or COR'
-                : idSubStep === 'back'
-                ? 'Upload Back of ID'
-                : idSubStep === 'review'
-                ? 'Review Student ID'
-                : STEPS[step - 1]?.label}
+                  ? 'Upload Front ID or COR'
+                  : idSubStep === 'back'
+                    ? 'Upload Back of ID'
+                    : idSubStep === 'review'
+                      ? 'Review Student ID'
+                      : STEPS[step - 1]?.label}
             </h1>
 
             <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-md leading-relaxed text-center mx-auto">
               {showOtpView
                 ? `We sent a 6-digit verification code to ${form.email}`
                 : idSubStep === 'front'
-                ? 'Please upload the front side of your CHMSU student ID or official Certificate of Registration.'
-                : idSubStep === 'back'
-                ? 'Now upload the back side of your student ID, or skip if your card has no back.'
-                : idSubStep === 'review'
-                ? 'Ensure all student details and photo are sharp and legible before submitting.'
-                : STEPS[step - 1]?.hint}
+                  ? 'Please upload the front side of your CHMSU student ID or official Certificate of Registration.'
+                  : idSubStep === 'back'
+                    ? 'Now upload the back side of your student ID, or skip if your card has no back.'
+                    : idSubStep === 'review'
+                      ? 'Ensure all student details and photo are sharp and legible before submitting.'
+                      : STEPS[step - 1]?.hint}
             </p>
 
             {/* Progress dots */}
@@ -998,8 +989,8 @@ export default function RegisterPage() {
                       num === step
                         ? 'w-7 bg-[#1A6B3C] dark:bg-emerald-500'
                         : num < step
-                        ? 'w-2 bg-[#1A6B3C]/60 dark:bg-emerald-500/60'
-                        : 'w-2 bg-gray-200 dark:bg-white/15'
+                          ? 'w-2 bg-[#1A6B3C]/60 dark:bg-emerald-500/60'
+                          : 'w-2 bg-gray-200 dark:bg-white/15'
                     )}
                   />
                 ))}
@@ -1025,1459 +1016,1459 @@ export default function RegisterPage() {
           {/* ── RIGHT COLUMN: ONBOARDING STEPS FORM (Centered) ── */}
           <div className="md:col-span-7 lg:col-span-1 flex flex-col items-center justify-center w-full max-w-lg md:max-w-none lg:max-w-xl mx-auto">
             <div className="w-full bg-white dark:bg-[#111827] rounded-3xl p-5 sm:p-7 md:p-6 lg:p-8 xl:p-10 border border-[#1A6B3C]/10 dark:border-white/10 shadow-xl">
-          {/* =========================================================================
+              {/* =========================================================================
               OTP VIEW (Step 1 or External ID Upload Completion)
              ========================================================================= */}
-          {showOtpView && (
-            <div className="flex flex-col items-center py-2 space-y-6">
-              {/* 6 Digit Input Boxes */}
-              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                {otpDigits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    id={`otp-digit-${idx}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      const updated = [...otpDigits];
-                      updated[idx] = val.slice(-1);
-                      setOtpDigits(updated);
-                      if (val && idx < 5) {
-                        const next = document.getElementById(`otp-digit-${idx + 1}`);
-                        next?.focus();
-                      }
-                      if (val && idx === 5 && updated.every(Boolean)) {
-                        handleVerifyOtp(updated.join(''));
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
-                        const prev = document.getElementById(`otp-digit-${idx - 1}`);
-                        prev?.focus();
-                      }
-                    }}
-                    onPaste={(e) => {
-                      e.preventDefault();
-                      const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
-                      if (!paste) return;
-                      const nextDigits = [...otpDigits];
-                      paste.split('').forEach((char, i) => {
-                        nextDigits[i] = char;
-                      });
-                      setOtpDigits(nextDigits);
-                      if (paste.length === 6) {
-                        handleVerifyOtp(paste);
-                      }
-                    }}
-                    className={cn(
-                      'w-10 h-12 sm:w-12 sm:h-14 md:w-11 md:h-13 lg:w-13 lg:h-15 text-center font-fraunces text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 transition-all outline-none',
-                      digit
-                        ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-300'
-                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C] dark:focus:border-emerald-500'
-                    )}
-                  />
-                ))}
-              </div>
+              {showOtpView && (
+                <div className="flex flex-col items-center py-2 space-y-6">
+                  {/* 6 Digit Input Boxes */}
+                  <div className="flex items-center justify-center gap-2 sm:gap-3">
+                    {otpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`otp-digit-${idx}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          const updated = [...otpDigits];
+                          updated[idx] = val.slice(-1);
+                          setOtpDigits(updated);
+                          if (val && idx < 5) {
+                            const next = document.getElementById(`otp-digit-${idx + 1}`);
+                            next?.focus();
+                          }
+                          if (val && idx === 5 && updated.every(Boolean)) {
+                            handleVerifyOtp(updated.join(''));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
+                            const prev = document.getElementById(`otp-digit-${idx - 1}`);
+                            prev?.focus();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+                          if (!paste) return;
+                          const nextDigits = [...otpDigits];
+                          paste.split('').forEach((char, i) => {
+                            nextDigits[i] = char;
+                          });
+                          setOtpDigits(nextDigits);
+                          if (paste.length === 6) {
+                            handleVerifyOtp(paste);
+                          }
+                        }}
+                        className={cn(
+                          'w-10 h-12 sm:w-12 sm:h-14 md:w-11 md:h-13 lg:w-13 lg:h-15 text-center font-fraunces text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 transition-all outline-none',
+                          digit
+                            ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-300'
+                            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C] dark:focus:border-emerald-500'
+                        )}
+                      />
+                    ))}
+                  </div>
 
-              {otpError && (
-                <div className="w-full max-w-sm p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 font-jakarta">
-                  <AlertCircle size={16} className="shrink-0" />
-                  <span>{otpError}</span>
+                  {otpError && (
+                    <div className="w-full max-w-sm p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 font-jakarta">
+                      <AlertCircle size={16} className="shrink-0" />
+                      <span>{otpError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={isVerifyingOtp || otpDigits.join('').length < 6}
+                    onClick={() => handleVerifyOtp(otpDigits.join(''))}
+                    className="w-full max-w-sm bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isVerifyingOtp ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>Confirm & Continue</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-center text-xs font-jakarta text-gray-500 space-y-2">
+                    <p>
+                      Didn't get the code?{' '}
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={isResendingOtp || resendCooldown > 0}
+                        className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50 cursor-pointer"
+                      >
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : isResendingOtp ? 'Sending...' : 'Resend Code'}
+                      </button>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCancelRegistration}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline cursor-pointer"
+                    >
+                      ← Change email address or restart
+                    </button>
+                  </div>
                 </div>
               )}
 
-              <button
-                type="button"
-                disabled={isVerifyingOtp || otpDigits.join('').length < 6}
-                onClick={() => handleVerifyOtp(otpDigits.join(''))}
-                className="w-full max-w-sm bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {isVerifyingOtp ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Confirm & Continue</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-
-              <div className="text-center text-xs font-jakarta text-gray-500 space-y-2">
-                <p>
-                  Didn't get the code?{' '}
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={isResendingOtp || resendCooldown > 0}
-                    className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50 cursor-pointer"
-                  >
-                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : isResendingOtp ? 'Sending...' : 'Resend Code'}
-                  </button>
-                </p>
-                <button
-                  type="button"
-                  onClick={handleCancelRegistration}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline cursor-pointer"
-                >
-                  ← Change email address or restart
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
+              {/* =========================================================================
               STUDENT ID SUB-FLOW: FRONT SIDE (External Email)
              ========================================================================= */}
-          {!showOtpView && idSubStep === 'front' && (
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
-                <span>Step 1 of 2 • Front Side</span>
-              </div>
+              {!showOtpView && idSubStep === 'front' && (
+                <div className="space-y-6">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
+                    <span>Step 1 of 2 • Front Side</span>
+                  </div>
 
-              {/* Upload Dropzone */}
-              <input
-                ref={frontInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                className="hidden"
-                onClick={(e) => {
-                  (e.target as HTMLInputElement).value = '';
-                }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFrontFileChange(file);
-                }}
-              />
+                  {/* Upload Dropzone */}
+                  <input
+                    ref={frontInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="hidden"
+                    onClick={(e) => {
+                      (e.target as HTMLInputElement).value = '';
+                    }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFrontFileChange(file);
+                    }}
+                  />
 
-              {frontFile && frontPreview ? (
-                <div className="space-y-3">
-                  {isImageFile(frontFile) ? (
-                    <div
-                      onClick={() =>
-                        setEnlargedImage({
-                          src: frontPreview,
-                          title: 'Front ID Preview',
-                          rotation: frontRotation,
-                        })
-                      }
-                      className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
-                      title="Click to zoom / inspect photo"
-                    >
-                      <img
-                        src={frontPreview}
-                        alt="Front ID Preview"
-                        style={{ transform: `rotate(${frontRotation}deg)` }}
-                        className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                      />
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
-                        <Maximize2 size={16} />
-                        <span>Click anywhere to inspect & zoom</span>
-                      </div>
-                      <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFrontRotation((r) => (r + 90) % 360);
-                          }}
-                          className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                          title="Rotate 90 degrees"
-                        >
-                          <RotateCw size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                  {frontFile && frontPreview ? (
+                    <div className="space-y-3">
+                      {isImageFile(frontFile) ? (
+                        <div
+                          onClick={() =>
                             setEnlargedImage({
                               src: frontPreview,
                               title: 'Front ID Preview',
                               rotation: frontRotation,
-                            });
-                          }}
-                          className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                          title="Zoom / Inspect"
+                            })
+                          }
+                          className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
+                          title="Click to zoom / inspect photo"
                         >
-                          <Maximize2 size={16} />
-                        </button>
+                          <img
+                            src={frontPreview}
+                            alt="Front ID Preview"
+                            style={{ transform: `rotate(${frontRotation}deg)` }}
+                            className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                          />
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
+                            <Maximize2 size={16} />
+                            <span>Click anywhere to inspect & zoom</span>
+                          </div>
+                          <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFrontRotation((r) => (r + 90) % 360);
+                              }}
+                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                              title="Rotate 90 degrees"
+                            >
+                              <RotateCw size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEnlargedImage({
+                                  src: frontPreview,
+                                  title: 'Front ID Preview',
+                                  rotation: frontRotation,
+                                });
+                              }}
+                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                              title="Zoom / Inspect"
+                            >
+                              <Maximize2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* PDF Document Preview Card */
+                        <div
+                          onClick={() => {
+                            if (frontPreview) window.open(frontPreview, '_blank');
+                          }}
+                          className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
+                          title="Click to open / view PDF in new tab"
+                        >
+                          <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
+                              <FileText size={28} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
+                                  PDF Document
+                                </span>
+                                <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                                  {formatFileSize(frontFile.size)}
+                                </span>
+                              </div>
+                              <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
+                                {frontFile.name}
+                              </p>
+                              <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                <ExternalLink size={12} /> Click to preview / open PDF
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (frontInputRef.current) {
+                                  frontInputRef.current.value = '';
+                                  frontInputRef.current.click();
+                                }
+                              }}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              Replace
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
+                        <div className="flex items-center gap-1.5 truncate max-w-[240px]">
+                          <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
+                          <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{frontFile.name}</span>
+                          <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(frontFile.size)})</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (frontInputRef.current) {
+                                frontInputRef.current.value = '';
+                                frontInputRef.current.click();
+                              }
+                            }}
+                            className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                          >
+                            Change photo
+                          </button>
+                          <span className="text-gray-300 dark:text-gray-600">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFrontFile(null);
+                              setFrontPreview(null);
+                              setFrontRotation(0);
+                              if (frontInputRef.current) frontInputRef.current.value = '';
+                            }}
+                            className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    /* PDF Document Preview Card */
                     <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
-                        if (frontPreview) window.open(frontPreview, '_blank');
+                        if (frontInputRef.current) {
+                          frontInputRef.current.value = '';
+                          frontInputRef.current.click();
+                        }
                       }}
-                      className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
-                      title="Click to open / view PDF in new tab"
-                    >
-                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
-                          <FileText size={28} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
-                              PDF Document
-                            </span>
-                            <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                              {formatFileSize(frontFile.size)}
-                            </span>
-                          </div>
-                          <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
-                            {frontFile.name}
-                          </p>
-                          <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                            <ExternalLink size={12} /> Click to preview / open PDF
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (frontInputRef.current) {
-                              frontInputRef.current.value = '';
-                              frontInputRef.current.click();
-                            }
-                          }}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
-                        >
-                          Replace
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
-                    <div className="flex items-center gap-1.5 truncate max-w-[240px]">
-                      <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
-                      <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{frontFile.name}</span>
-                      <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(frontFile.size)})</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
                           if (frontInputRef.current) {
                             frontInputRef.current.value = '';
                             frontInputRef.current.click();
                           }
-                        }}
-                        className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                      >
-                        Change photo
-                      </button>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFrontFile(null);
-                          setFrontPreview(null);
-                          setFrontRotation(0);
-                          if (frontInputRef.current) frontInputRef.current.value = '';
-                        }}
-                        className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
-                      >
-                        Remove
-                      </button>
+                        }
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handleFrontFileChange(file);
+                      }}
+                      className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
+                        <Upload size={24} />
+                      </div>
+                      <div>
+                        <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
+                          Upload Front ID or COR
+                        </p>
+                        <p className="font-jakarta text-xs text-gray-500 mt-1">
+                          Drag and drop image or click anywhere in this box to browse
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
                     </div>
+                  )}
+
+                  {/* Guidelines */}
+                  <div className="p-4 rounded-2xl bg-[#F7F4EF] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10 text-xs font-jakarta text-gray-600 dark:text-gray-300 space-y-1.5">
+                    <p className="font-bold text-gray-900 dark:text-white">Verification Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
+                      <li>Place ID flat on an even, well-lit surface</li>
+                      <li>Avoid camera flash glare, shadows, and blurry edges</li>
+                      <li>Ensure your full name, student number, and photo are clear</li>
+                      <li>Certificate of Registration (COR) accepted if ID is not yet issued</li>
+                    </ul>
                   </div>
-                </div>
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (frontInputRef.current) {
-                      frontInputRef.current.value = '';
-                      frontInputRef.current.click();
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      if (frontInputRef.current) {
-                        frontInputRef.current.value = '';
-                        frontInputRef.current.click();
-                      }
-                    }
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) handleFrontFileChange(file);
-                  }}
-                  className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                    <Upload size={24} />
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIdSubStep('none')}
+                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!frontFile}
+                      onClick={() => setIdSubStep('back')}
+                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      <span>Next: Back Side</span>
+                      <ArrowRight size={16} />
+                    </button>
                   </div>
-                  <div>
-                    <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
-                      Upload Front ID or COR
-                    </p>
-                    <p className="font-jakarta text-xs text-gray-500 mt-1">
-                      Drag and drop image or click anywhere in this box to browse
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
                 </div>
               )}
 
-              {/* Guidelines */}
-              <div className="p-4 rounded-2xl bg-[#F7F4EF] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10 text-xs font-jakarta text-gray-600 dark:text-gray-300 space-y-1.5">
-                <p className="font-bold text-gray-900 dark:text-white">Verification Guidelines:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
-                  <li>Place ID flat on an even, well-lit surface</li>
-                  <li>Avoid camera flash glare, shadows, and blurry edges</li>
-                  <li>Ensure your full name, student number, and photo are clear</li>
-                  <li>Certificate of Registration (COR) accepted if ID is not yet issued</li>
-                </ul>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIdSubStep('none')}
-                  className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={!frontFile}
-                  onClick={() => setIdSubStep('back')}
-                  className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                >
-                  <span>Next: Back Side</span>
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
+              {/* =========================================================================
               STUDENT ID SUB-FLOW: BACK SIDE (Optional)
              ========================================================================= */}
-          {!showOtpView && idSubStep === 'back' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
-                  Step 2 of 2 • Back Side (Optional)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIdSubStep('review')}
-                  className="text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-                >
-                  Skip this step →
-                </button>
-              </div>
-
-              <input
-                ref={backInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                className="hidden"
-                onClick={(e) => {
-                  (e.target as HTMLInputElement).value = '';
-                }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleBackFileChange(file);
-                }}
-              />
-
-              {backFile && backPreview ? (
-                <div className="space-y-3">
-                  {isImageFile(backFile) ? (
-                    <div
-                      onClick={() =>
-                        setEnlargedImage({
-                          src: backPreview,
-                          title: 'Back ID Preview',
-                          rotation: backRotation,
-                        })
-                      }
-                      className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
-                      title="Click to zoom / inspect photo"
+              {!showOtpView && idSubStep === 'back' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
+                      Step 2 of 2 • Back Side (Optional)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIdSubStep('review')}
+                      className="text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
                     >
-                      <img
-                        src={backPreview}
-                        alt="Back ID Preview"
-                        style={{ transform: `rotate(${backRotation}deg)` }}
-                        className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                      />
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
-                        <Maximize2 size={16} />
-                        <span>Click anywhere to inspect & zoom</span>
-                      </div>
-                      <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBackRotation((r) => (r + 90) % 360);
-                          }}
-                          className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                          title="Rotate 90 degrees"
-                        >
-                          <RotateCw size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                      Skip this step →
+                    </button>
+                  </div>
+
+                  <input
+                    ref={backInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="hidden"
+                    onClick={(e) => {
+                      (e.target as HTMLInputElement).value = '';
+                    }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleBackFileChange(file);
+                    }}
+                  />
+
+                  {backFile && backPreview ? (
+                    <div className="space-y-3">
+                      {isImageFile(backFile) ? (
+                        <div
+                          onClick={() =>
                             setEnlargedImage({
                               src: backPreview,
                               title: 'Back ID Preview',
                               rotation: backRotation,
-                            });
-                          }}
-                          className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                          title="Zoom / Inspect"
+                            })
+                          }
+                          className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
+                          title="Click to zoom / inspect photo"
                         >
-                          <Maximize2 size={16} />
-                        </button>
+                          <img
+                            src={backPreview}
+                            alt="Back ID Preview"
+                            style={{ transform: `rotate(${backRotation}deg)` }}
+                            className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                          />
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
+                            <Maximize2 size={16} />
+                            <span>Click anywhere to inspect & zoom</span>
+                          </div>
+                          <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setBackRotation((r) => (r + 90) % 360);
+                              }}
+                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                              title="Rotate 90 degrees"
+                            >
+                              <RotateCw size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEnlargedImage({
+                                  src: backPreview,
+                                  title: 'Back ID Preview',
+                                  rotation: backRotation,
+                                });
+                              }}
+                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                              title="Zoom / Inspect"
+                            >
+                              <Maximize2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* PDF Document Preview Card */
+                        <div
+                          onClick={() => {
+                            if (backPreview) window.open(backPreview, '_blank');
+                          }}
+                          className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
+                          title="Click to open / view PDF in new tab"
+                        >
+                          <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
+                              <FileText size={28} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
+                                  PDF Document
+                                </span>
+                                <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                                  {formatFileSize(backFile.size)}
+                                </span>
+                              </div>
+                              <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
+                                {backFile.name}
+                              </p>
+                              <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                <ExternalLink size={12} /> Click to preview / open PDF
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (backInputRef.current) {
+                                  backInputRef.current.value = '';
+                                  backInputRef.current.click();
+                                }
+                              }}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              Replace
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
+                        <div className="flex items-center gap-1.5 truncate max-w-[240px]">
+                          <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
+                          <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{backFile.name}</span>
+                          <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(backFile.size)})</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (backInputRef.current) {
+                                backInputRef.current.value = '';
+                                backInputRef.current.click();
+                              }
+                            }}
+                            className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                          >
+                            Change photo
+                          </button>
+                          <span className="text-gray-300 dark:text-gray-600">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBackFile(null);
+                              setBackPreview(null);
+                              setBackRotation(0);
+                              if (backInputRef.current) backInputRef.current.value = '';
+                            }}
+                            className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    /* PDF Document Preview Card */
                     <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
-                        if (backPreview) window.open(backPreview, '_blank');
+                        if (backInputRef.current) {
+                          backInputRef.current.value = '';
+                          backInputRef.current.click();
+                        }
                       }}
-                      className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
-                      title="Click to open / view PDF in new tab"
-                    >
-                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
-                          <FileText size={28} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
-                              PDF Document
-                            </span>
-                            <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                              {formatFileSize(backFile.size)}
-                            </span>
-                          </div>
-                          <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
-                            {backFile.name}
-                          </p>
-                          <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                            <ExternalLink size={12} /> Click to preview / open PDF
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (backInputRef.current) {
-                              backInputRef.current.value = '';
-                              backInputRef.current.click();
-                            }
-                          }}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
-                        >
-                          Replace
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
-                    <div className="flex items-center gap-1.5 truncate max-w-[240px]">
-                      <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
-                      <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{backFile.name}</span>
-                      <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(backFile.size)})</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
                           if (backInputRef.current) {
                             backInputRef.current.value = '';
                             backInputRef.current.click();
                           }
-                        }}
-                        className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                      >
-                        Change photo
-                      </button>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBackFile(null);
-                          setBackPreview(null);
-                          setBackRotation(0);
-                          if (backInputRef.current) backInputRef.current.value = '';
-                        }}
-                        className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
-                      >
-                        Remove
-                      </button>
+                        }
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handleBackFileChange(file);
+                      }}
+                      className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
+                        <Upload size={24} />
+                      </div>
+                      <div>
+                        <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
+                          Upload Back of ID (Optional)
+                        </p>
+                        <p className="font-jakarta text-xs text-gray-500 mt-1">
+                          If your student card has emergency contacts or barcode on the back
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (backInputRef.current) {
-                      backInputRef.current.value = '';
-                      backInputRef.current.click();
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      if (backInputRef.current) {
-                        backInputRef.current.value = '';
-                        backInputRef.current.click();
-                      }
-                    }
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) handleBackFileChange(file);
-                  }}
-                  className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                    <Upload size={24} />
-                  </div>
-                  <div>
-                    <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
-                      Upload Back of ID (Optional)
-                    </p>
-                    <p className="font-jakarta text-xs text-gray-500 mt-1">
-                      If your student card has emergency contacts or barcode on the back
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
-                </div>
-              )}
+                  )}
 
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIdSubStep('front')}
-                  className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIdSubStep('review')}
-                  className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>{backFile ? 'Next: Review ID' : 'Skip & Review'}</span>
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
-              STUDENT ID SUB-FLOW: REVIEW & CONFIRM
-             ========================================================================= */}
-          {!showOtpView && idSubStep === 'review' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
-                  Confirm ID Photos
-                </h3>
-                <p className="font-jakarta text-xs text-gray-500 mt-1">
-                  Please review your uploaded photos before proceeding to email verification.
-                </p>
-              </div>
-
-              {/* Cards Side-by-Side or Stacked */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Front Card Review */}
-                <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
-                    <span>Front Side</span>
+                  <div className="flex items-center gap-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setIdSubStep('front')}
-                      className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
+                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIdSubStep('review')}
+                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>{backFile ? 'Next: Review ID' : 'Skip & Review'}</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* =========================================================================
+              STUDENT ID SUB-FLOW: REVIEW & CONFIRM
+             ========================================================================= */}
+              {!showOtpView && idSubStep === 'review' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
+                      Confirm ID Photos
+                    </h3>
+                    <p className="font-jakarta text-xs text-gray-500 mt-1">
+                      Please review your uploaded photos before proceeding to email verification.
+                    </p>
+                  </div>
+
+                  {/* Cards Side-by-Side or Stacked */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Front Card Review */}
+                    <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
+                        <span>Front Side</span>
+                        <button
+                          type="button"
+                          onClick={() => setIdSubStep('front')}
+                          className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
+                        >
+                          Change
+                        </button>
+                      </div>
+                      {frontFile && frontPreview && (
+                        <div
+                          onClick={() => {
+                            if (isPdfFile(frontFile)) {
+                              window.open(frontPreview, '_blank');
+                            } else {
+                              setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                            }
+                          }}
+                          className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
+                          title="Click to inspect preview"
+                        >
+                          {isPdfFile(frontFile) ? (
+                            <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
+                                <FileText size={22} />
+                              </div>
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
+                                {frontFile.name}
+                              </span>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                                <ExternalLink size={10} /> View PDF
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <img
+                                src={frontPreview}
+                                alt="Front ID"
+                                style={{ transform: `rotate(${frontRotation}deg)` }}
+                                className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
+                                <Maximize2 size={14} />
+                                <span>Click to Inspect</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                                }}
+                                className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
+                                title="Zoom / Inspect"
+                              >
+                                <Maximize2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Back Card Review (if any) */}
+                    <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
+                        <span>Back Side</span>
+                        <button
+                          type="button"
+                          onClick={() => setIdSubStep('back')}
+                          className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
+                        >
+                          {backFile ? 'Change' : '+ Add Back'}
+                        </button>
+                      </div>
+                      {backFile && backPreview ? (
+                        <div
+                          onClick={() => {
+                            if (isPdfFile(backFile)) {
+                              window.open(backPreview, '_blank');
+                            } else {
+                              setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                            }
+                          }}
+                          className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
+                          title="Click to inspect preview"
+                        >
+                          {isPdfFile(backFile) ? (
+                            <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
+                                <FileText size={22} />
+                              </div>
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
+                                {backFile.name}
+                              </span>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                                <ExternalLink size={10} /> View PDF
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <img
+                                src={backPreview}
+                                alt="Back ID"
+                                style={{ transform: `rotate(${backRotation}deg)` }}
+                                className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
+                                <Maximize2 size={14} />
+                                <span>Click to Inspect</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                                }}
+                                className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
+                                title="Zoom / Inspect"
+                              >
+                                <Maximize2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => setIdSubStep('back')}
+                          className="h-36 rounded-xl border border-dashed border-gray-300 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-500 flex flex-col items-center justify-center text-center p-3 cursor-pointer transition-colors"
+                        >
+                          <p className="font-jakarta text-xs text-gray-400">Back side skipped</p>
+                          <span className="mt-1 text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold hover:underline">
+                            + Upload photo
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Encryption notice */}
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#E8F5EE] dark:bg-emerald-950/30 border border-[#1A6B3C]/15 dark:border-emerald-500/20 text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-300">
+                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p>
+                      Bank-grade encrypted storage. Only verified CHMSU campus administrators can view your ID for enrollment verification.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIdSubStep('back')}
+                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleConfirmIdAndCreateAccount}
+                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Confirm & Send Code</span>
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* =========================================================================
+              STEP 1: BASIC INFO FORM
+             ========================================================================= */}
+              {!showOtpView && idSubStep === 'none' && step === 1 && (
+                <div className="space-y-5">
+                  {/* Account Type Banner */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#1A6B3C]/10 dark:bg-emerald-950/50 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
+                        {emailType === 'chmsu' ? <GraduationCap size={16} /> : <FileCheck size={16} />}
+                      </div>
+                      <div>
+                        <p className="font-fraunces text-xs font-bold text-gray-900 dark:text-white">
+                          {emailType === 'chmsu' ? 'CHMSU Student Account' : 'Personal Email Account'}
+                        </p>
+                        <p className="font-mono text-[10px] text-gray-500">
+                          {emailType === 'chmsu' ? 'Instant @chmsu.edu.ph verification' : 'Student ID verification required'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPhase('select-email')}
+                      className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
                     >
                       Change
                     </button>
                   </div>
-                  {frontFile && frontPreview && (
-                    <div
-                      onClick={() => {
-                        if (isPdfFile(frontFile)) {
-                          window.open(frontPreview, '_blank');
-                        } else {
-                          setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
-                        }
-                      }}
-                      className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
-                      title="Click to inspect preview"
-                    >
-                      {isPdfFile(frontFile) ? (
-                        <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-                          <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
-                            <FileText size={22} />
-                          </div>
-                          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
-                            {frontFile.name}
-                          </span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                            <ExternalLink size={10} /> View PDF
-                          </span>
-                        </div>
-                      ) : (
-                        <>
-                          <img
-                            src={frontPreview}
-                            alt="Front ID"
-                            style={{ transform: `rotate(${frontRotation}deg)` }}
-                            className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
-                            <Maximize2 size={14} />
-                            <span>Click to Inspect</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
-                            }}
-                            className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
-                            title="Zoom / Inspect"
-                          >
-                            <Maximize2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                {/* Back Card Review (if any) */}
-                <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
-                    <span>Back Side</span>
-                    <button
-                      type="button"
-                      onClick={() => setIdSubStep('back')}
-                      className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
-                    >
-                      {backFile ? 'Change' : '+ Add Back'}
-                    </button>
-                  </div>
-                  {backFile && backPreview ? (
-                    <div
-                      onClick={() => {
-                        if (isPdfFile(backFile)) {
-                          window.open(backPreview, '_blank');
-                        } else {
-                          setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
-                        }
-                      }}
-                      className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
-                      title="Click to inspect preview"
-                    >
-                      {isPdfFile(backFile) ? (
-                        <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-                          <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
-                            <FileText size={22} />
-                          </div>
-                          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
-                            {backFile.name}
-                          </span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                            <ExternalLink size={10} /> View PDF
-                          </span>
-                        </div>
-                      ) : (
-                        <>
-                          <img
-                            src={backPreview}
-                            alt="Back ID"
-                            style={{ transform: `rotate(${backRotation}deg)` }}
-                            className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
-                            <Maximize2 size={14} />
-                            <span>Click to Inspect</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
-                            }}
-                            className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
-                            title="Zoom / Inspect"
-                          >
-                            <Maximize2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => setIdSubStep('back')}
-                      className="h-36 rounded-xl border border-dashed border-gray-300 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-500 flex flex-col items-center justify-center text-center p-3 cursor-pointer transition-colors"
-                    >
-                      <p className="font-jakarta text-xs text-gray-400">Back side skipped</p>
-                      <span className="mt-1 text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold hover:underline">
-                        + Upload photo
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Encryption notice */}
-              <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#E8F5EE] dark:bg-emerald-950/30 border border-[#1A6B3C]/15 dark:border-emerald-500/20 text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-300">
-                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-                <p>
-                  Bank-grade encrypted storage. Only verified CHMSU campus administrators can view your ID for enrollment verification.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIdSubStep('back')}
-                  className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleConfirmIdAndCreateAccount}
-                  className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Confirm & Send Code</span>
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
-              STEP 1: BASIC INFO FORM
-             ========================================================================= */}
-          {!showOtpView && idSubStep === 'none' && step === 1 && (
-            <div className="space-y-5">
-              {/* Account Type Banner */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#1A6B3C]/10 dark:bg-emerald-950/50 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                    {emailType === 'chmsu' ? <GraduationCap size={16} /> : <FileCheck size={16} />}
-                  </div>
+                  {/* Username Input */}
                   <div>
-                    <p className="font-fraunces text-xs font-bold text-gray-900 dark:text-white">
-                      {emailType === 'chmsu' ? 'CHMSU Student Account' : 'Personal Email Account'}
-                    </p>
-                    <p className="font-mono text-[10px] text-gray-500">
-                      {emailType === 'chmsu' ? 'Instant @chmsu.edu.ph verification' : 'Student ID verification required'}
-                    </p>
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">@</span>
+                      <input
+                        type="text"
+                        value={form.username}
+                        onChange={(e) => {
+                          setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s+/g, '') });
+                          setErrors((prev) => ({ ...prev, username: '' }));
+                        }}
+                        placeholder="maria_santos"
+                        className={cn(
+                          'w-full pl-9 pr-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
+                          errors.username
+                            ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
+                            : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                        )}
+                      />
+                    </div>
+                    {errors.username && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.username}</p>}
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPhase('select-email')}
-                  className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-                >
-                  Change
-                </button>
-              </div>
 
-              {/* Username Input */}
-              <div>
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">@</span>
-                  <input
-                    type="text"
-                    value={form.username}
-                    onChange={(e) => {
-                      setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s+/g, '') });
-                      setErrors((prev) => ({ ...prev, username: '' }));
-                    }}
-                    placeholder="maria_santos"
-                    className={cn(
-                      'w-full pl-9 pr-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                      errors.username
-                        ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                        : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                  {/* Email Address */}
+                  <div>
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                      {emailType === 'chmsu' ? 'CHMSU Student Email' : 'Personal Email Address'}
+                    </label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => {
+                        setForm({ ...form, email: e.target.value });
+                        setErrors((prev) => ({ ...prev, email: '' }));
+                      }}
+                      placeholder={emailType === 'chmsu' ? 'name@chmsu.edu.ph' : 'name@gmail.com'}
+                      className={cn(
+                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
+                        errors.email
+                          ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
+                          : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                      )}
+                    />
+                    {errors.email && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.email}</p>}
+                  </div>
+
+                  {/* Password & Confirm Password */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={form.password}
+                          onChange={(e) => {
+                            setForm({ ...form, password: e.target.value });
+                            setErrors((prev) => ({ ...prev, password: '' }));
+                          }}
+                          placeholder="••••••••"
+                          className={cn(
+                            'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
+                            errors.password
+                              ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
+                              : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                          )}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                        Confirm Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={form.confirmPassword}
+                          onChange={(e) => {
+                            setForm({ ...form, confirmPassword: e.target.value });
+                            setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                          }}
+                          placeholder="••••••••"
+                          className={cn(
+                            'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
+                            errors.confirmPassword
+                              ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
+                              : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                          )}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && (
+                        <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleNextFromStep1}
+                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>{emailType === 'external' ? 'Continue to Student ID' : 'Create & Verify Email'}</span>
+                        <ArrowRight size={16} />
+                      </>
                     )}
-                  />
-                </div>
-                {errors.username && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.username}</p>}
-              </div>
+                  </button>
 
-              {/* Email Address */}
-              <div>
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                  {emailType === 'chmsu' ? 'CHMSU Student Email' : 'Personal Email Address'}
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => {
-                    setForm({ ...form, email: e.target.value });
-                    setErrors((prev) => ({ ...prev, email: '' }));
-                  }}
-                  placeholder={emailType === 'chmsu' ? 'name@chmsu.edu.ph' : 'name@gmail.com'}
-                  className={cn(
-                    'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                    errors.email
-                      ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                      : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                  )}
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.email}</p>}
-              </div>
-
-              {/* Password & Confirm Password */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={form.password}
-                      onChange={(e) => {
-                        setForm({ ...form, password: e.target.value });
-                        setErrors((prev) => ({ ...prev, password: '' }));
-                      }}
-                      placeholder="••••••••"
-                      className={cn(
-                        'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                        errors.password
-                          ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                          : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                  <div className="text-center pt-2 text-xs font-jakarta text-gray-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline">
+                      Sign in →
+                    </Link>
                   </div>
-                  {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
                 </div>
+              )}
 
-                <div>
-                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={form.confirmPassword}
-                      onChange={(e) => {
-                        setForm({ ...form, confirmPassword: e.target.value });
-                        setErrors((prev) => ({ ...prev, confirmPassword: '' }));
-                      }}
-                      placeholder="••••••••"
-                      className={cn(
-                        'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                        errors.confirmPassword
-                          ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                          : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
-                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                    >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.confirmPassword}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleNextFromStep1}
-                className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>{emailType === 'external' ? 'Continue to Student ID' : 'Create & Verify Email'}</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-
-              <div className="text-center pt-2 text-xs font-jakarta text-gray-500">
-                Already have an account?{' '}
-                <Link to="/login" className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline">
-                  Sign in →
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
+              {/* =========================================================================
               STEP 2: ACADEMIC DETAILS
              ========================================================================= */}
-          {step === 2 && (
-            <div className="space-y-5">
-              {/* Department Selection */}
-              <div>
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                  College / Department
-                </label>
-                <select
-                  value={form.department}
-                  onChange={(e) => {
-                    const dept = e.target.value;
-                    setForm({ ...form, department: dept, course: '' });
-                    setErrors((prev) => ({ ...prev, department: '', course: '' }));
-                  }}
-                  className={cn(
-                    'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none bg-no-repeat bg-[right_1rem_center]',
-                    errors.department
-                      ? 'border-red-300 bg-red-50/50'
-                      : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]'
-                  )}
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-                {errors.department && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.department}</p>}
-              </div>
-
-              {/* Course Selection (filtered) */}
-              <div>
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                  Academic Course
-                </label>
-                <select
-                  disabled={!form.department}
-                  value={form.course}
-                  onChange={(e) => {
-                    setForm({ ...form, course: e.target.value });
-                    setErrors((prev) => ({ ...prev, course: '' }));
-                  }}
-                  className={cn(
-                    'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none',
-                    errors.course
-                      ? 'border-red-300 bg-red-50/50'
-                      : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]',
-                    !form.department && 'opacity-50 cursor-not-allowed'
-                  )}
-                >
-                  <option value="">
-                    {form.department ? 'Select Course' : 'Select a department first'}
-                  </option>
-                  {currentCourses.map((crs) => (
-                    <option key={crs} value={crs}>
-                      {crs}
-                    </option>
-                  ))}
-                </select>
-                {errors.course && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.course}</p>}
-              </div>
-
-              {/* Year Level */}
-              <div>
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                  Year Level
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {yearLevels.map((yr) => (
-                    <button
-                      key={yr}
-                      type="button"
-                      onClick={() => {
-                        setForm({ ...form, yearLevel: yr });
-                        setErrors((prev) => ({ ...prev, yearLevel: '' }));
+              {step === 2 && (
+                <div className="space-y-5">
+                  {/* Department Selection */}
+                  <div>
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                      College / Department
+                    </label>
+                    <select
+                      value={form.department}
+                      onChange={(e) => {
+                        const dept = e.target.value;
+                        setForm({ ...form, department: dept, course: '' });
+                        setErrors((prev) => ({ ...prev, department: '', course: '' }));
                       }}
                       className={cn(
-                        'py-3 px-3 rounded-xl border text-xs font-jakarta font-bold transition-all text-center cursor-pointer',
-                        form.yearLevel === yr
-                          ? 'border-[#1A6B3C] bg-[#1A6B3C] text-white shadow-xs'
-                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-gray-300'
+                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none bg-no-repeat bg-[right_1rem_center]',
+                        errors.department
+                          ? 'border-red-300 bg-red-50/50'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]'
                       )}
                     >
-                      {yr}
-                    </button>
-                  ))}
+                      <option value="">Select Department</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.department && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.department}</p>}
+                  </div>
+
+                  {/* Course Selection (filtered) */}
+                  <div>
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                      Academic Course
+                    </label>
+                    <select
+                      disabled={!form.department}
+                      value={form.course}
+                      onChange={(e) => {
+                        setForm({ ...form, course: e.target.value });
+                        setErrors((prev) => ({ ...prev, course: '' }));
+                      }}
+                      className={cn(
+                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none',
+                        errors.course
+                          ? 'border-red-300 bg-red-50/50'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]',
+                        !form.department && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      <option value="">
+                        {form.department ? 'Select Course' : 'Select a department first'}
+                      </option>
+                      {currentCourses.map((crs) => (
+                        <option key={crs} value={crs}>
+                          {crs}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.course && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.course}</p>}
+                  </div>
+
+                  {/* Year Level */}
+                  <div>
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                      Year Level
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {yearLevels.map((yr) => (
+                        <button
+                          key={yr}
+                          type="button"
+                          onClick={() => {
+                            setForm({ ...form, yearLevel: yr });
+                            setErrors((prev) => ({ ...prev, yearLevel: '' }));
+                          }}
+                          className={cn(
+                            'py-3 px-3 rounded-xl border text-xs font-jakarta font-bold transition-all text-center cursor-pointer',
+                            form.yearLevel === yr
+                              ? 'border-[#1A6B3C] bg-[#1A6B3C] text-white shadow-xs'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-gray-300'
+                          )}
+                        >
+                          {yr}
+                        </button>
+                      ))}
+                    </div>
+                    {errors.yearLevel && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.yearLevel}</p>}
+                  </div>
+
+                  {/* Campus Organizations */}
+                  <div className="pt-2 border-t border-gray-100 dark:border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Campus Organizations <span className="font-normal text-gray-400 lowercase">(optional)</span>
+                      </label>
+                      {form.organizations.length > 0 && (
+                        <span className="text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold">
+                          {form.organizations.length} joined
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                      {organizations.map((org) => {
+                        const isSelected = form.organizations.includes(org);
+                        return (
+                          <button
+                            key={org}
+                            type="button"
+                            onClick={() => toggleOrg(org)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                              isSelected
+                                ? 'border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-300 font-bold'
+                                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300'
+                            )}
+                          >
+                            {isSelected ? <Check size={13} strokeWidth={2.5} /> : <Plus size={13} />}
+                            <span>{org}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (validateStep2()) setStep(3);
+                    }}
+                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Continue to Interests</span>
+                    <ArrowRight size={16} />
+                  </button>
                 </div>
-                {errors.yearLevel && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.yearLevel}</p>}
-              </div>
+              )}
 
-              {/* Campus Organizations */}
-              <div className="pt-2 border-t border-gray-100 dark:border-white/10">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                    Campus Organizations <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                  </label>
-                  {form.organizations.length > 0 && (
-                    <span className="text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold">
-                      {form.organizations.length} joined
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                  {organizations.map((org) => {
-                    const isSelected = form.organizations.includes(org);
-                    return (
-                      <button
-                        key={org}
-                        type="button"
-                        onClick={() => toggleOrg(org)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
-                          isSelected
-                            ? 'border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-300 font-bold'
-                            : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300'
-                        )}
-                      >
-                        {isSelected ? <Check size={13} strokeWidth={2.5} /> : <Plus size={13} />}
-                        <span>{org}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Next Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (validateStep2()) setStep(3);
-                }}
-                className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Continue to Interests</span>
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          )}
-
-          {/* =========================================================================
+              {/* =========================================================================
               STEP 3: PASSIONS & INTERESTS
              ========================================================================= */}
-          {step === 3 && (
-            <div className="space-y-5">
-              {/* Category Filter Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                {['all', 'Technology', 'Arts & Culture', 'Sports & Fitness', 'Academic', 'Lifestyle'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setActiveCategory(cat)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-bold shrink-0 transition-all cursor-pointer',
-                      activeCategory === cat
-                        ? 'bg-[#1A6B3C] text-white'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-                    )}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Box */}
-              <div className="relative">
-                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={interestSearch}
-                  onChange={(e) => setInterestSearch(e.target.value)}
-                  placeholder="Search interests..."
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
-                />
-              </div>
-
-              {/* Interest Tag Cloud */}
-              <div className="p-1 max-h-56 overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
-                {filteredInterests.map(({ label, color }) => {
-                  const isSelected = form.interests.includes(label);
-                  return (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => toggleInterest(label)}
-                      style={{
-                        borderColor: isSelected ? '#1A6B3C' : undefined,
-                        backgroundColor: isSelected ? '#1A6B3C' : undefined,
-                      }}
-                      className={cn(
-                        'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
-                        isSelected
-                          ? 'text-white shadow-xs'
-                          : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-200 hover:border-gray-300'
-                      )}
-                    >
-                      {isSelected && <Check size={13} strokeWidth={2.5} />}
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Add Custom Interest Input */}
-              <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-white/10">
-                <input
-                  type="text"
-                  value={customInterest}
-                  onChange={(e) => setCustomInterest(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomInterest()}
-                  placeholder="Add custom passion or hobby..."
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCustomInterest}
-                  className="px-4 py-2.5 rounded-xl bg-[#1A6B3C] text-white font-mono text-xs uppercase font-bold hover:bg-[#14532D] transition-colors cursor-pointer"
-                >
-                  Add
-                </button>
-              </div>
-
-              {/* Selected Count & Error */}
-              <div className="flex items-center justify-between text-xs font-jakarta pt-1">
-                <span className="text-gray-500">
-                  Selected:{' '}
-                  <strong className={form.interests.length >= 3 ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-amber-600'}>
-                    {form.interests.length}
-                  </strong>{' '}
-                  (minimum 3 required)
-                </span>
-                {errors.interests && <span className="text-red-500 font-medium">{errors.interests}</span>}
-              </div>
-
-              {/* Next Button */}
-              <button
-                type="button"
-                disabled={form.interests.length < 3}
-                onClick={() => {
-                  if (validateStep3()) setStep(4);
-                }}
-                className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                <span>Continue to Avatar & Bio</span>
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          )}
-
-          {/* =========================================================================
-              STEP 4: AVATAR & BIO
-             ========================================================================= */}
-          {step === 4 && (
-            <div className="space-y-6">
-              {/* Avatar Selector Tabs */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                    Choose Profile Avatar
-                  </label>
-                  <div className="flex rounded-lg bg-gray-100 dark:bg-white/10 p-0.5 text-[11px] font-mono font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setAvatarTab('presets')}
-                      className={cn(
-                        'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
-                        avatarTab === 'presets' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
-                      )}
-                    >
-                      Emoji
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAvatarTab('custom')}
-                      className={cn(
-                        'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
-                        avatarTab === 'custom' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
-                      )}
-                    >
-                      Photo Upload
-                    </button>
-                  </div>
-                </div>
-
-                {avatarTab === 'presets' ? (
-                  <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                    {AVATAR_OPTIONS.map((emoji) => (
+              {step === 3 && (
+                <div className="space-y-5">
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {['all', 'Technology', 'Arts & Culture', 'Sports & Fitness', 'Academic', 'Lifestyle'].map((cat) => (
                       <button
-                        key={emoji}
+                        key={cat}
                         type="button"
-                        onClick={() => setForm({ ...form, avatar: emoji })}
+                        onClick={() => setActiveCategory(cat)}
                         className={cn(
-                          'w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all cursor-pointer',
-                          form.avatar === emoji
-                            ? 'bg-[#1A6B3C] text-white shadow-md scale-110'
-                            : 'hover:bg-white dark:hover:bg-white/10'
+                          'px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-bold shrink-0 transition-all cursor-pointer',
+                          activeCategory === cat
+                            ? 'bg-[#1A6B3C] text-white'
+                            : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
                         )}
                       >
-                        {emoji}
+                        {cat}
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <div>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onClick={(e) => {
-                        (e.target as HTMLInputElement).value = '';
-                      }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setCustomAvatarFile(file);
-                          const url = URL.createObjectURL(file);
-                          setCustomAvatarPreview(url);
-                          setForm({ ...form, avatar: url });
-                        }
-                      }}
-                    />
 
-                    {customAvatarPreview ? (
-                      <div className="flex items-center gap-4 p-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                        <div
-                          onClick={() =>
-                            setEnlargedImage({
-                              src: customAvatarPreview,
-                              title: 'Profile Photo Preview',
-                              rotation: 0,
-                            })
-                          }
-                          className="relative group cursor-pointer shrink-0"
-                          title="Click to inspect photo"
+                  {/* Search Box */}
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={interestSearch}
+                      onChange={(e) => setInterestSearch(e.target.value)}
+                      placeholder="Search interests..."
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
+                    />
+                  </div>
+
+                  {/* Interest Tag Cloud */}
+                  <div className="p-1 max-h-56 overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
+                    {filteredInterests.map(({ label, color }) => {
+                      const isSelected = form.interests.includes(label);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => toggleInterest(label)}
+                          style={{
+                            borderColor: isSelected ? '#1A6B3C' : undefined,
+                            backgroundColor: isSelected ? '#1A6B3C' : undefined,
+                          }}
+                          className={cn(
+                            'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                            isSelected
+                              ? 'text-white shadow-xs'
+                              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-200 hover:border-gray-300'
+                          )}
                         >
-                          <img
-                            src={customAvatarPreview}
-                            alt="Custom Avatar"
-                            className="w-16 h-16 rounded-full object-cover border-2 border-[#1A6B3C] group-hover:scale-105 transition-transform shadow-xs"
-                          />
-                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Maximize2 size={15} />
+                          {isSelected && <Check size={13} strokeWidth={2.5} />}
+                          <span>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add Custom Interest Input */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-white/10">
+                    <input
+                      type="text"
+                      value={customInterest}
+                      onChange={(e) => setCustomInterest(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomInterest()}
+                      placeholder="Add custom passion or hobby..."
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomInterest}
+                      className="px-4 py-2.5 rounded-xl bg-[#1A6B3C] text-white font-mono text-xs uppercase font-bold hover:bg-[#14532D] transition-colors cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Selected Count & Error */}
+                  <div className="flex items-center justify-between text-xs font-jakarta pt-1">
+                    <span className="text-gray-500">
+                      Selected:{' '}
+                      <strong className={form.interests.length >= 3 ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-amber-600'}>
+                        {form.interests.length}
+                      </strong>{' '}
+                      (minimum 3 required)
+                    </span>
+                    {errors.interests && <span className="text-red-500 font-medium">{errors.interests}</span>}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    disabled={form.interests.length < 3}
+                    onClick={() => {
+                      if (validateStep3()) setStep(4);
+                    }}
+                    className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>Continue to Avatar & Bio</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* =========================================================================
+              STEP 4: AVATAR & BIO
+             ========================================================================= */}
+              {step === 4 && (
+                <div className="space-y-6">
+                  {/* Avatar Selector Tabs */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Choose Profile Avatar
+                      </label>
+                      <div className="flex rounded-lg bg-gray-100 dark:bg-white/10 p-0.5 text-[11px] font-mono font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setAvatarTab('presets')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
+                            avatarTab === 'presets' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
+                          )}
+                        >
+                          Emoji
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAvatarTab('custom')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
+                            avatarTab === 'custom' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
+                          )}
+                        >
+                          Photo Upload
+                        </button>
+                      </div>
+                    </div>
+
+                    {avatarTab === 'presets' ? (
+                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                        {AVATAR_OPTIONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setForm({ ...form, avatar: emoji })}
+                            className={cn(
+                              'w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all cursor-pointer',
+                              form.avatar === emoji
+                                ? 'bg-[#1A6B3C] text-white shadow-md scale-110'
+                                : 'hover:bg-white dark:hover:bg-white/10'
+                            )}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onClick={(e) => {
+                            (e.target as HTMLInputElement).value = '';
+                          }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setCustomAvatarFile(file);
+                              const url = URL.createObjectURL(file);
+                              setCustomAvatarPreview(url);
+                              setForm({ ...form, avatar: url });
+                            }
+                          }}
+                        />
+
+                        {customAvatarPreview ? (
+                          <div className="flex items-center gap-4 p-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+                            <div
+                              onClick={() =>
+                                setEnlargedImage({
+                                  src: customAvatarPreview,
+                                  title: 'Profile Photo Preview',
+                                  rotation: 0,
+                                })
+                              }
+                              className="relative group cursor-pointer shrink-0"
+                              title="Click to inspect photo"
+                            >
+                              <img
+                                src={customAvatarPreview}
+                                alt="Custom Avatar"
+                                className="w-16 h-16 rounded-full object-cover border-2 border-[#1A6B3C] group-hover:scale-105 transition-transform shadow-xs"
+                              />
+                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Maximize2 size={15} />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0 text-xs font-jakarta">
+                              <p className="font-bold text-gray-800 dark:text-white truncate">
+                                Custom photo selected
+                              </p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                {customAvatarFile?.name || 'Uploaded photo'}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (avatarInputRef.current) {
+                                      avatarInputRef.current.value = '';
+                                      avatarInputRef.current.click();
+                                    }
+                                  }}
+                                  className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                                >
+                                  Change photo
+                                </button>
+                                <span className="text-gray-300 dark:text-gray-600">•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomAvatarPreview(null);
+                                    setCustomAvatarFile(null);
+                                    setForm((prev) => ({ ...prev, avatar: '😊' }));
+                                    if (avatarInputRef.current) avatarInputRef.current.value = '';
+                                  }}
+                                  className="text-red-500 hover:underline font-semibold cursor-pointer"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0 text-xs font-jakarta">
-                          <p className="font-bold text-gray-800 dark:text-white truncate">
-                            Custom photo selected
-                          </p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                            {customAvatarFile?.name || 'Uploaded photo'}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              if (avatarInputRef.current) {
+                                avatarInputRef.current.value = '';
+                                avatarInputRef.current.click();
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
                                 if (avatarInputRef.current) {
                                   avatarInputRef.current.value = '';
                                   avatarInputRef.current.click();
                                 }
-                              }}
-                              className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                            >
-                              Change photo
-                            </button>
-                            <span className="text-gray-300 dark:text-gray-600">•</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCustomAvatarPreview(null);
-                                setCustomAvatarFile(null);
-                                setForm((prev) => ({ ...prev, avatar: '😊' }));
-                                if (avatarInputRef.current) avatarInputRef.current.value = '';
-                              }}
-                              className="text-red-500 hover:underline font-semibold cursor-pointer"
-                            >
-                              Remove
-                            </button>
+                              }
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const file = e.dataTransfer.files?.[0];
+                              if (file && file.type.startsWith('image/')) {
+                                setCustomAvatarFile(file);
+                                const url = URL.createObjectURL(file);
+                                setCustomAvatarPreview(url);
+                                setForm({ ...form, avatar: url });
+                              }
+                            }}
+                            className="w-full py-6 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-400 flex flex-col items-center justify-center gap-2 cursor-pointer bg-gray-50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/10 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center">
+                              <Camera size={20} />
+                            </div>
+                            <span className="font-jakarta text-xs font-semibold text-gray-700 dark:text-gray-300">
+                              Upload profile photo
+                            </span>
+                            <span className="text-[11px] font-mono text-gray-400">Click or drop image here · JPG, PNG up to 5MB</span>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          if (avatarInputRef.current) {
-                            avatarInputRef.current.value = '';
-                            avatarInputRef.current.click();
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            if (avatarInputRef.current) {
-                              avatarInputRef.current.value = '';
-                              avatarInputRef.current.click();
-                            }
-                          }
-                        }}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const file = e.dataTransfer.files?.[0];
-                          if (file && file.type.startsWith('image/')) {
-                            setCustomAvatarFile(file);
-                            const url = URL.createObjectURL(file);
-                            setCustomAvatarPreview(url);
-                            setForm({ ...form, avatar: url });
-                          }
-                        }}
-                        className="w-full py-6 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-400 flex flex-col items-center justify-center gap-2 cursor-pointer bg-gray-50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/10 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center">
-                          <Camera size={20} />
-                        </div>
-                        <span className="font-jakarta text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          Upload profile photo
-                        </span>
-                        <span className="text-[11px] font-mono text-gray-400">Click or drop image here · JPG, PNG up to 5MB</span>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Bio Textarea */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                    Intro / Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                  </label>
-                  <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
+                  {/* Bio Textarea */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Intro / Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
+                      </label>
+                      <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      maxLength={250}
+                      value={form.bio}
+                      onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                      placeholder="Tell campus allies a bit about yourself, your favorite projects, or what you enjoy doing..."
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 font-jakarta text-sm outline-none focus:border-[#1A6B3C] resize-none"
+                    />
+                  </div>
+
+                  {/* Agreements */}
+                  <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-white/10">
+                    <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => {
+                          setAgreedToTerms(e.target.checked);
+                          setErrors((prev) => ({ ...prev, terms: '' }));
+                        }}
+                        className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
+                      />
+                      <span>
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveModal('terms');
+                          }}
+                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
+                        >
+                          Terms & Conditions
+                        </button>
+                      </span>
+                    </label>
+                    {errors.terms && <p className="text-red-500 text-xs font-jakarta">{errors.terms}</p>}
+
+                    <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={agreedToPrivacy}
+                        onChange={(e) => {
+                          setAgreedToPrivacy(e.target.checked);
+                          setErrors((prev) => ({ ...prev, privacy: '' }));
+                        }}
+                        className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
+                      />
+                      <span>
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveModal('privacy');
+                          }}
+                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
+                        >
+                          Campus Privacy Policy
+                        </button>
+                      </span>
+                    </label>
+                    {errors.privacy && <p className="text-red-500 text-xs font-jakarta">{errors.privacy}</p>}
+                  </div>
+
+                  {/* Finish Button */}
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleCompleteRegistration}
+                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>Complete Registration</span>
+                        <Check size={16} />
+                      </>
+                    )}
+                  </button>
                 </div>
-                <textarea
-                  rows={3}
-                  maxLength={250}
-                  value={form.bio}
-                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                  placeholder="Tell campus allies a bit about yourself, your favorite projects, or what you enjoy doing..."
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 font-jakarta text-sm outline-none focus:border-[#1A6B3C] resize-none"
-                />
-              </div>
-
-              {/* Agreements */}
-              <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-white/10">
-                <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={agreedToTerms}
-                    onChange={(e) => {
-                      setAgreedToTerms(e.target.checked);
-                      setErrors((prev) => ({ ...prev, terms: '' }));
-                    }}
-                    className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveModal('terms');
-                      }}
-                      className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
-                    >
-                      Terms & Conditions
-                    </button>
-                  </span>
-                </label>
-                {errors.terms && <p className="text-red-500 text-xs font-jakarta">{errors.terms}</p>}
-
-                <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={agreedToPrivacy}
-                    onChange={(e) => {
-                      setAgreedToPrivacy(e.target.checked);
-                      setErrors((prev) => ({ ...prev, privacy: '' }));
-                    }}
-                    className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveModal('privacy');
-                      }}
-                      className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
-                    >
-                      Campus Privacy Policy
-                    </button>
-                  </span>
-                </label>
-                {errors.privacy && <p className="text-red-500 text-xs font-jakarta">{errors.privacy}</p>}
-              </div>
-
-              {/* Finish Button */}
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleCompleteRegistration}
-                className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Complete Registration</span>
-                    <Check size={16} />
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+              )}
             </div>
           </div>
         </div>

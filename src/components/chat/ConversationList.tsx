@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { Drama, Trash2 } from 'lucide-react';
 import { Conversation } from '@/types/ally';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,9 @@ interface ConversationListProps {
   currentUserId?: string;
   /** When true, rows render without an inner scroll container (parent scrolls). */
   embedded?: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 interface ConversationRowProps {
@@ -144,7 +147,30 @@ export function ConversationList({
   onlineUserIds,
   currentUserId,
   embedded = false,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: ConversationListProps) {
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || isLoadingMore || !onLoadMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
   // isLoading is now only ever true on the very first mount (see useConversations).
   // It will never flip back to true mid-session, so this skeleton can't
   // re-appear and blank out a list that's already showing data.
@@ -190,11 +216,38 @@ export function ConversationList({
     />
   ));
 
-  if (embedded) return <>{rows}</>;
+  const loadMoreIndicator = hasMore ? (
+    <div ref={sentinelRef} className="p-3 text-center">
+      {isLoadingMore ? (
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-jakarta py-2">
+          <div className="w-3.5 h-3.5 border-2 border-[#1A6B3C] dark:border-emerald-400 border-t-transparent rounded-full animate-spin" />
+          <span>Loading more chats…</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-jakarta font-medium py-1 transition-colors cursor-pointer"
+        >
+          Load more chats
+        </button>
+      )}
+    </div>
+  ) : null;
+
+  if (embedded) {
+    return (
+      <>
+        {rows}
+        {loadMoreIndicator}
+      </>
+    );
+  }
 
   return (
     <div className="overflow-y-auto h-full">
       {rows}
+      {loadMoreIndicator}
     </div>
   );
 }
