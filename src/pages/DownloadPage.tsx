@@ -35,14 +35,14 @@ export default function DownloadPage() {
         current = 100;
         clearInterval(interval);
         setProgress(100);
-        setDownloadedMB('131.4');
+        setDownloadedMB('142.6');
         setIsCompleted(true);
         setDownloading(false);
         // Automatically pop up the "Allow This File" modal right on the website!
         setShowPromptModal(true);
       } else {
         setProgress(current);
-        setDownloadedMB(((current / 100) * 131.4).toFixed(1));
+        setDownloadedMB(((current / 100) * 142.6).toFixed(1));
       }
     }, 75);
   };
@@ -209,7 +209,7 @@ export default function DownloadPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 font-mono">
-                      <span className="font-semibold">{downloadedMB} MB / 131.4 MB</span>
+                      <span className="font-semibold">{downloadedMB} MB / 142.6 MB</span>
                       <span className="text-[#B45309] dark:text-amber-400 font-medium flex items-center gap-1">
                         <Sparkles size={12} /> Preparing Allow Prompt...
                       </span>
@@ -227,7 +227,7 @@ export default function DownloadPage() {
                       <div className="flex items-center gap-3">
                         <CheckCircle2 size={26} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                         <div>
-                          <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download 100% Ready (131.4 MB)</p>
+                          <p className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">Download 100% Ready (142.6 MB)</p>
                           <p className="text-xs text-emerald-700 dark:text-emerald-400">
                             {savedToPhone ? 'Saved to phone Downloads! Tap notification to install.' : 'Tap below to prompt Chrome and save to your phone'}
                           </p>
@@ -270,7 +270,7 @@ export default function DownloadPage() {
                       Download Freezes at 100%? Return to Website:
                     </strong>
                     <p className="leading-relaxed text-[12px] text-gray-700 dark:text-gray-300">
-                      If the download progress appears to freeze or pause at <strong>100%</strong>, Android is running its Google Play Protect scan on the ~131 MB APK before committing the file to disk.
+                      If the download progress appears to freeze or pause at <strong>100%</strong>, Android is running its Google Play Protect scan on the ~143 MB APK before committing the file to disk.
                     </p>
                     <div className="p-3 bg-white/75 dark:bg-black/30 rounded-xl space-y-1 text-[11.5px] text-gray-800 dark:text-gray-200 font-medium border border-emerald-500/20">
                       <p>1. <strong>Go back to this website tab</strong> if you navigated away or opened another app.</p>
@@ -287,7 +287,7 @@ export default function DownloadPage() {
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <FileCode2 size={14} className="text-[#E8A838]" /> ~131 MB
+                    <FileCode2 size={14} className="text-[#E8A838]" /> ~143 MB
                   </span>
                   <span>•</span>
                   <span className="text-emerald-800 dark:text-emerald-400 font-bold">Verified Safe</span>
@@ -517,7 +517,7 @@ export default function DownloadPage() {
                   Allow & Save to Phone
                 </h3>
                 <p className="font-jakarta text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  <code className="font-bold text-[#1A6B3C] dark:text-emerald-400">{apkFileName}</code> (~131.4 MB) is ready. Tap below to send the file to your phone's <strong>Downloads</strong> folder.
+                  <code className="font-bold text-[#1A6B3C] dark:text-emerald-400">{apkFileName}</code> (~142.6 MB) is ready. Tap below to send the file to your phone's <strong>Downloads</strong> folder.
                 </p>
               </div>
 
