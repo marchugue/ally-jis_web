@@ -51,7 +51,7 @@ export default function DownloadPage() {
     <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] dark:selection:bg-emerald-500 selection:text-white flex flex-col justify-between overflow-x-hidden">
       <div>
         {/* ── TOP NAVIGATION ── */}
-        <motion.header 
+        <motion.header
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
@@ -60,7 +60,7 @@ export default function DownloadPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.08, rotate: -4 }}
                 whileTap={{ scale: 0.94 }}
                 className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
@@ -70,9 +70,6 @@ export default function DownloadPage() {
               <div className="flex flex-col">
                 <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
-                </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
-                  CHMSU Alijis
                 </span>
               </div>
             </Link>
@@ -86,8 +83,8 @@ export default function DownloadPage() {
                 <Link to="/download" className="text-[#1A6B3C] dark:text-white font-bold underline underline-offset-8 decoration-[#E8A838] decoration-2">App</Link>
               </div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-                <Link 
-                  to="/" 
+                <Link
+                  to="/"
                   className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
                 >
                   <ArrowLeft size={14} /> Back
@@ -100,7 +97,7 @@ export default function DownloadPage() {
         {/* ── EDITORIAL HERO ── */}
         <section className="pt-16 sm:pt-24 pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
           <div className="space-y-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -114,7 +111,7 @@ export default function DownloadPage() {
               </span>
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
@@ -124,7 +121,7 @@ export default function DownloadPage() {
               <span className="italic font-normal text-[#E8A838]">Companion.</span>
             </motion.h1>
 
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -136,9 +133,9 @@ export default function DownloadPage() {
 
           {/* Asymmetric 2-Column Action & Verification Spread (No boxed cards!) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 pt-16 items-start">
-            
+
             {/* Left Column: Download Action (7 cols) */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -192,7 +189,7 @@ export default function DownloadPage() {
                 )}
 
                 {downloading && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-3.5 p-5 bg-[#EDE7DB] dark:bg-[#0D131F] rounded-2xl border border-[#1A6B3C]/10 dark:border-white/10 shadow-sm"
@@ -221,7 +218,7 @@ export default function DownloadPage() {
                 )}
 
                 {isCompleted && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500/30 rounded-2xl space-y-4 shadow-sm"
@@ -299,7 +296,7 @@ export default function DownloadPage() {
             </motion.div>
 
             {/* Right Column: Security Notice & Technical Ledger (5 cols) */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
@@ -347,8 +344,8 @@ export default function DownloadPage() {
         {/* ── BORDERLESS TONAL SECTION: 3-STEP INSTALLATION GUIDE ── */}
         <section className="bg-[#EDE7DB] dark:bg-[#0D131F] py-20 sm:py-28 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto space-y-16">
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -370,9 +367,9 @@ export default function DownloadPage() {
 
             {/* Asymmetric Staggered Steps (No boxed cards!) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-start">
-              
+
               {/* Step 01 */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -394,7 +391,7 @@ export default function DownloadPage() {
               </motion.div>
 
               {/* Step 02 */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -416,7 +413,7 @@ export default function DownloadPage() {
               </motion.div>
 
               {/* Step 03 */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -444,7 +441,7 @@ export default function DownloadPage() {
         {/* ── BORDERLESS HIGH CONTRAST BLOCK ── */}
         <section className="bg-[#1A6B3C] dark:bg-[#111827] text-[#F7F4EF] dark:text-white py-20 sm:py-28 px-4 sm:px-8 border-y border-[#1A6B3C] dark:border-white/10">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 25 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -463,7 +460,7 @@ export default function DownloadPage() {
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
@@ -530,7 +527,7 @@ export default function DownloadPage() {
                   <AlertCircle size={15} className="text-amber-600 dark:text-amber-400" />
                   Android Chrome Prompt Guide
                 </div>
-                
+
                 {/* Visual mockup of the prompt */}
                 <div className="p-3 bg-white dark:bg-[#182030] rounded-xl border border-amber-500/20 shadow-xs space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">

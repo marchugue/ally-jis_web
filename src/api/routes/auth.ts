@@ -31,20 +31,37 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function forgotPassword(email: string): Promise<void> {
-  await request<void>('/auth/forgot-password', {
+export async function forgotPassword(
+  email: string,
+  source: 'web' | 'mobile' = 'web'
+): Promise<{ trackingToken: string }> {
+  return request<{ trackingToken: string }>('/auth/forgot-password', {
     method: 'POST',
     auth: false,
-    body: { email },
+    body: { email, source },
   });
 }
- 
-export async function resetPassword(token: string, password: string): Promise<void> {
-  await request<void>('/auth/reset-password', {
+
+export type ResetPasswordResult = {
+  source: 'web' | 'mobile';
+  trackingToken: string;
+  mobileRedirectUrl?: string;
+};
+
+export async function resetPassword(token: string, password: string): Promise<ResetPasswordResult> {
+  return request<ResetPasswordResult>('/auth/reset-password', {
     method: 'POST',
     auth: false,
     body: { token, password },
   });
+}
+
+export async function getPasswordResetStatus(trackingToken: string): Promise<{
+  status: 'pending' | 'completed' | 'unknown';
+  source?: 'web' | 'mobile';
+  completedAt?: string | null;
+}> {
+  return request(`/auth/password-reset/status/${encodeURIComponent(trackingToken)}`, { auth: false });
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

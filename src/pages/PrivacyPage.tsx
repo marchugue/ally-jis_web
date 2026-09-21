@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] dark:selection:bg-emerald-500 selection:text-white flex flex-col justify-between overflow-x-hidden">
       <div>
         {/* ── TOP NAVIGATION ── */}
-        <motion.header 
+        <motion.header
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.08, rotate: -4 }}
                 whileTap={{ scale: 0.94 }}
                 className="w-11 h-11 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-fraunces font-bold text-xl shadow-sm transition-transform"
@@ -28,9 +28,7 @@ export default function PrivacyPage() {
                 <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
-                  CHMSU Alijis
-                </span>
+
               </div>
             </Link>
 
@@ -43,8 +41,8 @@ export default function PrivacyPage() {
                 <Link to="/download" className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors">App</Link>
               </div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-                <Link 
-                  to="/" 
+                <Link
+                  to="/"
                   className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all shadow-xs border border-transparent dark:border-white/10"
                 >
                   <ArrowLeft size={14} /> Back
@@ -57,7 +55,7 @@ export default function PrivacyPage() {
         {/* ── EDITORIAL HERO ── */}
         <section className="pt-16 sm:pt-24 pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
           <div className="space-y-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -71,7 +69,7 @@ export default function PrivacyPage() {
               </span>
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
@@ -81,7 +79,7 @@ export default function PrivacyPage() {
               <span className="italic font-normal text-[#E8A838]">Integrity.</span>
             </motion.h1>
 
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -98,9 +96,9 @@ export default function PrivacyPage() {
           {/* Commitment & What We Collect */}
           <section className="border-t border-[#1A6B3C]/15 dark:border-white/10 py-16 sm:py-24 px-4 sm:px-8">
             <div className="max-w-7xl mx-auto space-y-16">
-              
+
               {/* Campus Commitment */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -127,7 +125,7 @@ export default function PrivacyPage() {
 
               {/* 01: Information We Collect */}
               <div className="pt-12 border-t border-[#1A6B3C]/15 dark:border-white/10 space-y-10">
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -154,7 +152,7 @@ export default function PrivacyPage() {
                     { tag: '[C]', title: 'Connections & Chat', desc: 'Friend requests, matches, and direct messages exchanged with peers.' },
                     { tag: '[D]', title: 'Account Security', desc: 'Email address and encrypted authentication credentials for sign in.' },
                   ].map((col, i) => (
-                    <motion.div 
+                    <motion.div
                       key={col.tag}
                       initial={{ opacity: 0, y: 25 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -178,9 +176,9 @@ export default function PrivacyPage() {
           {/* Tonal Shift: 02 & 03 (#EDE7DB) */}
           <section className="bg-[#EDE7DB] dark:bg-[#0D131F] py-20 sm:py-28 px-4 sm:px-8">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-              
+
               {/* 02: How We Use Your Information (6 cols) */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -215,7 +213,7 @@ export default function PrivacyPage() {
               </motion.div>
 
               {/* 03: We Never Sell Your Data (6 cols) */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -246,9 +244,9 @@ export default function PrivacyPage() {
           {/* Chapters 04 & 05: Security and Control */}
           <section className="py-20 sm:py-28 px-4 sm:px-8 border-b border-[#1A6B3C]/15 dark:border-white/10">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-              
+
               {/* 04: Security & Storage (6 cols) */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -274,7 +272,7 @@ export default function PrivacyPage() {
               </motion.div>
 
               {/* 05: Your Rights and Control (6 cols) */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -305,7 +303,7 @@ export default function PrivacyPage() {
           {/* ── BORDERLESS HIGH CONTRAST BLOCK: CONTACT ── */}
           <section className="bg-[#1A6B3C] dark:bg-[#111827] text-[#F7F4EF] dark:text-white py-20 sm:py-28 px-4 sm:px-8 border-y border-[#1A6B3C] dark:border-white/10">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 25 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -324,7 +322,7 @@ export default function PrivacyPage() {
                 </p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.96 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}

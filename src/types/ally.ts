@@ -131,6 +131,7 @@ export interface Notification {
   title: string;
   description: string;
   timestamp: string;
+  created_at?: string;
   isRead: boolean;
   fromUserId?: string;
   fromUserName?: string;

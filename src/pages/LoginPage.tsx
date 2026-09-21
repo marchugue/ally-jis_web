@@ -269,7 +269,6 @@ export default function LoginPage() {
                   ) : (
                     <>
                       <span>Login</span>
-                      <ArrowRight size={16} />
                     </>
                   )}
                 </motion.button>
@@ -292,7 +291,7 @@ export default function LoginPage() {
                   to="/register"
                   className="font-mono text-xs uppercase tracking-wider font-bold text-[#1A6B3C] dark:text-emerald-400 bg-white dark:bg-white/10 hover:bg-[#F7F4EF] dark:hover:bg-white/20 px-5 py-2.5 rounded-full transition-all shadow-xs"
                 >
-                  Join Circle Now →
+                  Join Circle Now
                 </Link>
               </div>
 

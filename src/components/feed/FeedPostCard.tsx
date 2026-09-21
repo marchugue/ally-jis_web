@@ -5,6 +5,7 @@ import { Heart, MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { apiClient } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import ReportPostModal from './ReportPostModal';
@@ -108,8 +109,11 @@ export default function FeedPostCard({
   const [showReportModal, setShowReportModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const author = post.author;
-  const displayName = author?.full_name || author?.username || 'Ally member';
   const isOwn = post.author_id === currentUser.id;
+  const isAlly = Boolean(post.author?.is_ally || isOwn);
+  const displayName = isAlly
+    ? (author?.full_name || author?.username || 'Ally member')
+    : 'Anonymous Peer';
 
   const [isFollowing, setIsFollowing] = useState(Boolean(author?.is_following));
   const [followBusy, setFollowBusy] = useState(false);
@@ -169,13 +173,16 @@ export default function FeedPostCard({
     }
   })();
 
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
+  const isLongContent = Boolean(post.content && post.content.length > 120);
+
   return (
     <article
       id={`post-${post.id}`}
       className={cn(
         'bg-white dark:bg-[#181818] p-4 sm:p-6 transition-colors',
         showBorder
-          ? 'border-0 border-b sm:border border-gray-200/80 dark:border-white/10 rounded-none sm:rounded-2xl shadow-none sm:shadow-2xs'
+          ? 'border-0 border-b border-[#E2DED7] dark:border-white/10 rounded-none sm:rounded-2xl sm:border sm:border-gray-200/80 dark:sm:border-white/10 shadow-none sm:shadow-2xs'
           : 'rounded-none sm:rounded-2xl border-0 shadow-none',
         className
       )}
@@ -183,18 +190,28 @@ export default function FeedPostCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div
-          className={`flex items-center gap-3 min-w-0 ${onAuthorClick && !isOwn ? 'cursor-pointer' : ''}`}
+          className={`flex items-center gap-3 min-w-0 ${onAuthorClick && !isOwn && post.author_id ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
           onClick={() => { if (onAuthorClick && !isOwn && post.author_id) onAuthorClick(post.author_id); }}
         >
-          <AvatarDisplay
-            src={author?.avatar_url}
-            name={displayName}
-            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-          />
+          {isAlly ? (
+            <AvatarDisplay
+              src={author?.avatar_url}
+              name={displayName}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <AnonymousAvatar
+              avatarKey={author?.avatarKey || 'fox'}
+              size={40}
+              className="rounded-full flex-shrink-0 shadow-xs"
+            />
+          )}
           <div className="min-w-0">
-            <p className="font-jakarta font-bold text-sm text-gray-900 dark:text-white truncate">{displayName}</p>
+            <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">{displayName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">{timeAgo}</span>
+              <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">
+                {isAlly && author?.username ? `@${author.username} · ` : ''}{timeAgo}
+              </span>
               <span className="text-gray-200 dark:text-gray-700">·</span>
               {post.audience === 'public' ? (
                 <Globe2 size={11} className="text-gray-400 dark:text-gray-500" />
@@ -206,16 +223,16 @@ export default function FeedPostCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {!isOwn && post.author_id && (
+          {!isOwn && isAlly && post.author_id && (
             <button
               type="button"
               onClick={handleToggleFollow}
               disabled={followBusy}
               className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-jakarta font-semibold transition-all flex items-center gap-1 disabled:opacity-60",
+                "px-3 py-1 rounded-full text-[11px] font-jakarta font-semibold transition-all flex items-center gap-1 disabled:opacity-60 cursor-pointer",
                 isFollowing
                   ? "bg-gray-100 hover:bg-gray-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10"
-                  : "bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/15 text-[#1A6B3C] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30"
+                  : "bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/15 text-[#1A6B3C] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 border border-[#1A6B3C]/25 dark:border-emerald-500/30 font-bold"
               )}
             >
               {isFollowing ? "Following" : "+ Follow"}
@@ -227,7 +244,7 @@ export default function FeedPostCard({
             <button
               type="button"
               onClick={() => setShowMenu((v) => !v)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
               aria-label="Post settings"
             >
               <MoreHorizontal size={17} />
@@ -277,9 +294,27 @@ export default function FeedPostCard({
       </div>
 
       {/* Content */}
-      <p className="mt-3 font-jakarta text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words">
-        {post.content}
-      </p>
+      {post.content && (
+        <div className="mt-2.5">
+          <p
+            className={cn(
+              "font-jakarta text-[14.5px] sm:text-[15px] text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap break-words",
+              isLongContent && !isContentExpanded && "line-clamp-3"
+            )}
+          >
+            {post.content}
+          </p>
+          {isLongContent && (
+            <button
+              type="button"
+              onClick={() => setIsContentExpanded(!isContentExpanded)}
+              className="font-jakarta text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 mt-1 hover:underline cursor-pointer focus:outline-none"
+            >
+              {isContentExpanded ? 'Show less' : '...more'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Media */}
       <MediaGrid media={post.media} onMediaClick={() => onCommentClick(post)} />

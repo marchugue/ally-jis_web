@@ -1,6 +1,7 @@
 // src/pages/admin/AdminUsersPage.tsx
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Search, MoreHorizontal, ShieldCheck, ShieldOff, Ban, Clock,
@@ -155,8 +156,19 @@ const STATUS_FILTERS: { value: ListUsersQuery['status']; label: string }[] = [
   { value: 'suspended', label: 'Suspended' },
 ];
 
+const ensurePointerEvents = () => {
+  // Radix UI can leave pointer-events stuck at 'none' on document.body
+  // when an element or overlay is unmounted mid-animation or mid-action.
+  setTimeout(() => {
+    document.body.style.pointerEvents = '';
+  }, 50);
+};
+
 export default function AdminUsersPage() {
-  const [activeTab, setActiveTab] = useState<'users' | 'pending'>('users');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'users' | 'pending'>(() => {
+    return searchParams.get('tab') === 'pending' ? 'pending' : 'users';
+  });
   const [users, setUsers] = useState<AdminUserListItem[] | null>(null);
   const [total, setTotal] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -168,8 +180,19 @@ export default function AdminUsersPage() {
   const [pendingItems, setPendingItems] = useState<PendingVerificationItem[] | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Sync tab with URL search parameter
+  const handleTabChange = (tab: 'users' | 'pending') => {
+    setActiveTab(tab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'pending') next.set('tab', 'pending');
+      else next.delete('tab');
+      return next;
+    });
+  };
+
   const loadPending = () => {
-    setPendingItems(null);
+    setPendingItems((prev) => (prev === null ? null : prev));
     apiClient.adminListPendingVerifications()
       .then((items) => {
         setPendingItems(items);
@@ -179,11 +202,17 @@ export default function AdminUsersPage() {
         console.error('Failed to load pending verifications:', err);
         setPendingItems([]);
         notify.error('Failed to load pending verifications', err.message);
+      })
+      .finally(() => {
+        ensurePointerEvents();
       });
   };
 
   const load = (nextC: string | null = null) => {
-    setUsers(null);
+    // Only blank out users on initial uninitialized load to prevent violent DOM unmounting
+    if (users === null) {
+      setUsers(null);
+    }
     apiClient
       .adminListUsers({ search: search || undefined, status, cursor: nextC })
       .then((res) => {
@@ -194,8 +223,11 @@ export default function AdminUsersPage() {
       })
       .catch((err: any) => {
         console.error('Failed to load users:', err);
-        setUsers([]);
+        if (!users) setUsers([]);
         notify.error('Failed to load users', err.message);
+      })
+      .finally(() => {
+        ensurePointerEvents();
       });
   };
 
@@ -207,19 +239,53 @@ export default function AdminUsersPage() {
 
   const runAction = async (userId: string, label: string, action: () => Promise<void>) => {
     try {
+      // Optimistic updates to make UI instantaneous and prevent stale UI freezing
+      const lower = label.toLowerCase();
+      if (lower.includes('delete')) {
+        setUsers((prev) => (prev ? prev.filter((u) => u.id !== userId) : prev));
+        setTotal((prev) => Math.max(0, prev - 1));
+      } else if (lower.includes('unban')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, is_banned: false } : u)) : prev
+        );
+      } else if (lower.includes('ban')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, is_banned: true } : u)) : prev
+        );
+      } else if (lower.includes('unsuspend')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, is_suspended: false } : u)) : prev
+        );
+      } else if (lower.includes('suspend')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, is_suspended: true } : u)) : prev
+        );
+      } else if (lower.includes('grant') || lower.includes('verified')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, admin_verified: true } : u)) : prev
+        );
+      } else if (lower.includes('revoke')) {
+        setUsers((prev) =>
+          prev ? prev.map((u) => (u.id === userId ? { ...u, admin_verified: false } : u)) : prev
+        );
+      }
+
       await action();
       notify.success(label);
       load(cursor);
       if (activeTab === 'pending') loadPending();
     } catch (err: any) {
       notify.error(`Could not ${label.toLowerCase()}`, err.message);
+      load(cursor);
+    } finally {
+      ensurePointerEvents();
     }
   };
 
   return (
     <div className="space-y-6 w-full pb-8">
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161D19] p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-white/5 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161D19] p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-xs">
         <div>
           <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             User Directory
@@ -232,8 +298,8 @@ export default function AdminUsersPage() {
         {/* Tab switcher */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl w-full sm:w-auto">
           <button
-            onClick={() => setActiveTab('users')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
+            onClick={() => handleTabChange('users')}
+            className={`flex-1 sm:flex-none px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
               activeTab === 'users'
                 ? 'bg-white dark:bg-white/10 text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
                 : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
@@ -242,8 +308,8 @@ export default function AdminUsersPage() {
             All Users
           </button>
           <button
-            onClick={() => setActiveTab('pending')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
+            onClick={() => handleTabChange('pending')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
               activeTab === 'pending'
                 ? 'bg-white dark:bg-white/10 text-amber-600 dark:text-amber-400 shadow-xs'
                 : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
@@ -421,22 +487,44 @@ export default function AdminUsersPage() {
       )}
 
       {/* Confirmation Modal */}
-      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
-        <AlertDialogContent className="max-w-md">
+      <AlertDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(null);
+            ensurePointerEvents();
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-md bg-white dark:bg-[#161D19] border border-gray-200 dark:border-white/10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold">{confirmAction?.label}</AlertDialogTitle>
+            <AlertDialogTitle className="text-lg font-bold text-gray-900 dark:text-white">{confirmAction?.label}</AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-gray-500 dark:text-white/50">
               This action will be logged into the permanent administrative activity audit trail.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmAction(null);
+                ensurePointerEvents();
+              }}
+              className="dark:bg-white/5 dark:border-white/10 dark:text-white"
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
               onClick={async () => {
                 if (!confirmAction) return;
-                await runAction(confirmAction.userId, 'Action executed', confirmAction.run);
+                const target = confirmAction;
                 setConfirmAction(null);
+                ensurePointerEvents();
+                await runAction(
+                  target.userId,
+                  target.label.toLowerCase().includes('delete') ? 'Account Deleted' : 'Action executed',
+                  target.run
+                );
               }}
             >
               Confirm Execution
@@ -463,59 +551,120 @@ function UserActionDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 transition-colors">
+        <button
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+          aria-label="User actions"
+        >
           <MoreHorizontal size={18} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-[#161D19] border border-gray-200 dark:border-white/10 shadow-xl rounded-2xl p-1.5">
         {user.is_banned ? (
-          <DropdownMenuItem onClick={() => onAction(user.id, 'User Unbanned', () => apiClient.adminUnbanUser(user.id))}>
-            <ShieldCheck size={14} className="mr-2 text-emerald-600" /> Unban Account
+          <DropdownMenuItem
+            onSelect={() => {
+              ensurePointerEvents();
+              onAction(user.id, 'User Unbanned', () => apiClient.adminUnbanUser(user.id));
+            }}
+            className="cursor-pointer text-xs rounded-xl py-2"
+          >
+            <ShieldCheck size={14} className="mr-2 text-emerald-600 dark:text-emerald-400" /> Unban Account
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
-            onClick={() => onConfirm({ userId: user.id, label: `Ban @${user.username ?? user.full_name}?`, run: () => apiClient.adminBanUser(user.id) })}
-            className="text-red-600 dark:text-red-400"
+            onSelect={(e) => {
+              e.preventDefault();
+              setTimeout(() => {
+                onConfirm({ userId: user.id, label: `Ban @${user.username ?? user.full_name}?`, run: () => apiClient.adminBanUser(user.id) });
+                ensurePointerEvents();
+              }, 50);
+            }}
+            className="text-red-600 dark:text-red-400 cursor-pointer text-xs rounded-xl py-2"
           >
             <Ban size={14} className="mr-2" /> Ban Account
           </DropdownMenuItem>
         )}
 
         {user.is_suspended ? (
-          <DropdownMenuItem onClick={() => onAction(user.id, 'User Unsuspended', () => apiClient.adminUnsuspendUser(user.id))}>
-            <ShieldOff size={14} className="mr-2 text-amber-600" /> Remove Suspension
+          <DropdownMenuItem
+            onSelect={() => {
+              ensurePointerEvents();
+              onAction(user.id, 'User Unsuspended', () => apiClient.adminUnsuspendUser(user.id));
+            }}
+            className="cursor-pointer text-xs rounded-xl py-2"
+          >
+            <ShieldOff size={14} className="mr-2 text-amber-600 dark:text-amber-400" /> Remove Suspension
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem onClick={() => onAction(user.id, 'User Suspended for 24h', () => apiClient.adminSuspendUser(user.id))}>
-            <Clock size={14} className="mr-2 text-amber-600" /> Suspend (24h)
+          <DropdownMenuItem
+            onSelect={() => {
+              ensurePointerEvents();
+              onAction(user.id, 'User Suspended for 24h', () => apiClient.adminSuspendUser(user.id));
+            }}
+            className="cursor-pointer text-xs rounded-xl py-2"
+          >
+            <Clock size={14} className="mr-2 text-amber-600 dark:text-amber-400" /> Suspend (24h)
           </DropdownMenuItem>
         )}
 
         {user.admin_verified ? (
-          <DropdownMenuItem onClick={() => onAction(user.id, 'Verification Revoked', () => apiClient.adminUnverifyUser(user.id))}>
+          <DropdownMenuItem
+            onSelect={() => {
+              ensurePointerEvents();
+              onAction(user.id, 'Verification Revoked', () => apiClient.adminUnverifyUser(user.id));
+            }}
+            className="cursor-pointer text-xs rounded-xl py-2"
+          >
             <X size={14} className="mr-2 text-gray-500" /> Revoke Verification
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem onClick={() => onAction(user.id, 'User Verified', () => apiClient.adminVerifyUser(user.id))}>
-            <BadgeCheck size={14} className="mr-2 text-emerald-600" /> Grant Verification
+          <DropdownMenuItem
+            onSelect={() => {
+              ensurePointerEvents();
+              onAction(user.id, 'User Verified', () => apiClient.adminVerifyUser(user.id));
+            }}
+            className="cursor-pointer text-xs rounded-xl py-2"
+          >
+            <BadgeCheck size={14} className="mr-2 text-emerald-600 dark:text-emerald-400" /> Grant Verification
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-gray-100 dark:bg-white/5" />
 
-        <DropdownMenuItem onClick={() => onAction(user.id, 'User Forced Signed Out', () => apiClient.adminForceLogoutUser(user.id))}>
+        <DropdownMenuItem
+          onSelect={() => {
+            ensurePointerEvents();
+            onAction(user.id, 'User Forced Signed Out', () => apiClient.adminForceLogoutUser(user.id));
+          }}
+          className="cursor-pointer text-xs rounded-xl py-2"
+        >
           <LogOutIcon size={14} className="mr-2" /> Force Logout
         </DropdownMenuItem>
 
-        <DropdownMenuItem onClick={() => onAction(user.id, 'Password Reset Sent', () => apiClient.adminResetUserPassword(user.id))}>
+        <DropdownMenuItem
+          onSelect={() => {
+            ensurePointerEvents();
+            onAction(user.id, 'Password Reset Sent', () => apiClient.adminResetUserPassword(user.id));
+          }}
+          className="cursor-pointer text-xs rounded-xl py-2"
+        >
           <KeyRound size={14} className="mr-2" /> Reset Password
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-gray-100 dark:bg-white/5" />
 
         <DropdownMenuItem
-          onClick={() => onConfirm({ userId: user.id, label: `Permanently delete account for ${user.email}?`, run: () => apiClient.adminDeleteUser(user.id) })}
-          className="text-red-600 dark:text-red-400 font-semibold"
+          onSelect={(e) => {
+            e.preventDefault();
+            setTimeout(() => {
+              onConfirm({
+                userId: user.id,
+                label: `Permanently delete account for ${user.email}?`,
+                run: () => apiClient.adminDeleteUser(user.id),
+              });
+              ensurePointerEvents();
+            }, 50);
+          }}
+          className="text-red-600 dark:text-red-400 font-semibold cursor-pointer text-xs rounded-xl py-2 focus:bg-red-50 dark:focus:bg-red-950/20"
         >
           <Trash2 size={14} className="mr-2" /> Delete Account
         </DropdownMenuItem>

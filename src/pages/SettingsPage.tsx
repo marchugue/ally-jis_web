@@ -77,9 +77,9 @@ function PasswordField({
           className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 focus:ring-2 focus:ring-[#1A6B3C]/10 dark:focus:ring-emerald-500/20 bg-white dark:bg-white/5 font-jakarta text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none transition-all shadow-xs"
           autoComplete="new-password"
         />
-        <button 
-          type="button" 
-          onClick={onToggleShow} 
+        <button
+          type="button"
+          onClick={onToggleShow}
           className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
         >
           {show ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -110,9 +110,8 @@ function ToggleItem({
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${
-          checked ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
-        }`}
+        className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${checked ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+          }`}
       >
         <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
       </button>
@@ -120,7 +119,7 @@ function ToggleItem({
   );
 }
 
-{/* Account Deletion Informative Modal with Real-Time Progress Bar */}
+{/* Account Deletion Informative Modal with Real-Time Progress Bar */ }
 function AccountDeletionModal({
   isOpen,
   onClose,
@@ -146,7 +145,7 @@ function AccountDeletionModal({
 
   const handleStartDeletion = async () => {
     setIsDeleting(true);
-    
+
     // Animated progression sequence showcasing what is being deleted
     const steps = [
       { p: 20, msg: 'Purging message history & conversation logs...' },
@@ -174,7 +173,7 @@ function AccountDeletionModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#111827] border border-gray-200 dark:border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-        
+
         {!isDeleting ? (
           <>
             {/* Header */}
@@ -431,8 +430,8 @@ export default function SettingsPage() {
                   <div
                     className={cn(
                       'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
-                      isActive 
-                        ? 'bg-[#1A6B3C] text-white shadow-xs dark:bg-emerald-600' 
+                      isActive
+                        ? 'bg-[#1A6B3C] text-white shadow-xs dark:bg-emerald-600'
                         : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'
                     )}
                   >
@@ -479,16 +478,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Admin Banner Button (if user is Admin) */}
-          {adminRole && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white text-xs font-bold shadow-xs transition-all active:scale-[0.97] cursor-pointer"
-            >
-              <ShieldCheck size={16} />
-              <span>Go to Admin Dashboard &rarr;</span>
-            </button>
-          )}
+
         </div>
 
         {/* Detail Content Body Container - Expanded to full available space */}
@@ -498,7 +488,7 @@ export default function SettingsPage() {
             {/* TAB 1: SECURITY */}
             {activeTab === 'security' && (
               <div className="space-y-6">
-                
+
                 {/* Password Change Card */}
                 <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
                   <div className="border-b border-gray-100 dark:border-white/10 pb-4">
@@ -526,7 +516,7 @@ export default function SettingsPage() {
                         placeholder="Min. 8 characters"
                       />
                     </div>
-                    
+
                     <PasswordField
                       label="Confirm New Password"
                       value={confirmPassword}
@@ -775,7 +765,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
+
                     {/* Sign Out Card */}
                     <div className="p-5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex flex-col justify-between space-y-4">
                       <div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Bot, Flag, BarChart3, ShieldCheck,
+  LayoutDashboard, Users, Flag, ShieldCheck,
   ScrollText, Bell, Search, Settings, Sun, Moon, ChevronRight, LogOut, UserCog, ImageIcon,
   Menu, Sparkles, Command
 } from 'lucide-react';
@@ -30,9 +30,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/admin', icon: LayoutDashboard, permission: 'view_analytics', enabled: true },
   { label: 'Users', path: '/admin/users', icon: Users, permission: 'manage_users', enabled: true },
-  { label: 'Bots', path: '/admin/bots', icon: Bot, permission: 'manage_bots', enabled: false },
   { label: 'Reports', path: '/admin/reports', icon: Flag, permission: 'view_reports', enabled: true },
-  { label: 'Analytics', path: '/admin/analytics', icon: BarChart3, permission: 'view_analytics', enabled: false },
   { label: 'Admins', path: '/admin/admins', icon: ShieldCheck, permission: 'manage_admins', enabled: true },
   { label: 'Activity Log', path: '/admin/activity', icon: ScrollText, enabled: true },
   { label: 'Settings', path: '/admin/settings', icon: Settings, permission: 'manage_settings', enabled: true },
@@ -108,7 +106,7 @@ export function AdminLayout() {
               end={item.path === '/admin'}
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
+                `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium min-h-[44px] transition-all duration-150 active:scale-[0.98] ${
                   isActive
                     ? 'bg-[#1A6B3C] text-white dark:bg-emerald-600 shadow-sm'
                     : 'text-gray-600 dark:text-white/70 hover:bg-gray-100/70 dark:hover:bg-white/5'
@@ -134,7 +132,7 @@ export function AdminLayout() {
         <Link
           to="/settings"
           onClick={() => setMobileMenuOpen(false)}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98]"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm min-h-[44px] text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98]"
         >
           <UserCog size={16} />
           <span>Account Settings</span>
@@ -144,7 +142,7 @@ export function AdminLayout() {
             setMobileMenuOpen(false);
             setShowLogoutConfirm(true);
           }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-medium active:scale-[0.98] cursor-pointer"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm min-h-[44px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-medium active:scale-[0.98] cursor-pointer"
         >
           <LogOut size={16} />
           <span>Log out</span>

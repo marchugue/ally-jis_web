@@ -28,6 +28,7 @@ import { useMatchmaking } from '@/hooks/useMatchmaking';
 import { MatchmakingOverlay } from '@/components/match/MatchmakingOverlay';
 import { AnimatePresence } from 'framer-motion';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 
 const MOCK_PARTNERS: MatchIdentityView[] = [
   { myAlias: 'Velvet Fox', myAvatar: 'fox', partnerAlias: 'Midnight Wolf', partnerAvatar: 'wolf' },
@@ -672,16 +673,15 @@ export default function DiscoverPage() {
                       />
                     </div>
                     <div className="relative inline-block mb-3">
-                      <AvatarDisplay
-                        src={match.student.avatar}
-                        name={match.student.name}
-                        className="w-16 h-16 rounded-2xl object-cover shadow-md"
+                      <AnonymousAvatar
+                        avatarKey={idx % 4 === 0 ? 'fox' : idx % 4 === 1 ? 'panda' : idx % 4 === 2 ? 'owl' : 'wolf'}
+                        className="w-16 h-16 rounded-2xl shadow-md"
                       />
                       {isOnline(match.student.id) && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full shadow-sm" title="Online" />
                       )}
                     </div>
-                    <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-base leading-tight">{match.student.name}</h3>
+                    <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-base leading-tight">Anonymous Peer</h3>
                     <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">{match.student.course}</p>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200 font-jakarta text-xs px-2 py-0.5 rounded-full font-medium">
@@ -735,9 +735,9 @@ export default function DiscoverPage() {
                         status === 'accepted' && 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
                       )}
                     >
-                      {status === 'none' && <><UserPlus size={13} /> Connect</>}
-                      {status === 'pending' && <>⏳ Request Sent</>}
-                      {status === 'accepted' && <><Check size={13} /> Connected</>}
+                      {status === 'none' && <><UserPlus size={13} /> Request Match</>}
+                      {status === 'pending' && <>⏳ Match Requested</>}
+                      {status === 'accepted' && <><Check size={13} /> Chatting</>}
                     </button>
                     {status === 'accepted' && (
                       <button
@@ -771,17 +771,16 @@ export default function DiscoverPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="relative">
-                    <AvatarDisplay
-                      src={selectedCard.student.avatar}
-                      name={selectedCard.student.name}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-lg"
+                    <AnonymousAvatar
+                      avatarKey="fox"
+                      className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg"
                     />
                     {isOnline(selectedCard.student.id) && (
                       <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full" title="Online" />
                     )}
                   </div>
                   <div>
-                    <h3 className="font-fraunces text-xl font-bold text-white leading-tight">{selectedCard.student.name}</h3>
+                    <h3 className="font-fraunces text-xl font-bold text-white leading-tight">Anonymous Peer</h3>
                     <p className="font-jakarta text-xs text-white/80 mt-0.5">{selectedCard.student.course}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="bg-white/20 text-white font-jakarta text-xs px-2.5 py-0.5 rounded-full font-medium">
@@ -873,29 +872,11 @@ export default function DiscoverPage() {
             <div className="p-6 pt-0 flex gap-3">
               <button
                 type="button"
-                onClick={(e) => handleConnect(selectedCard.student.id, e)}
-                disabled={getConnectionStatus(selectedCard.student.id) === 'accepted' || getConnectionStatus(selectedCard.student.id) === 'pending'}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-jakarta font-bold text-sm transition-all cursor-pointer',
-                  getConnectionStatus(selectedCard.student.id) === 'none' && 'bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-500 shadow-lg',
-                  getConnectionStatus(selectedCard.student.id) === 'pending' && 'bg-[#E8A838]/15 text-[#E8A838] border border-[#E8A838]/30',
-                  getConnectionStatus(selectedCard.student.id) === 'accepted' && 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
-                )}
+                onClick={() => setSelectedCard(null)}
+                className="w-full py-3 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 font-jakarta font-semibold text-sm text-gray-700 dark:text-gray-200 transition-all cursor-pointer"
               >
-                {getConnectionStatus(selectedCard.student.id) === 'none' && <><UserPlus size={16} /> Send Connect Request</>}
-                {getConnectionStatus(selectedCard.student.id) === 'pending' && <>⏳ Request Sent</>}
-                {getConnectionStatus(selectedCard.student.id) === 'accepted' && <><Check size={16} /> Connected!</>}
+                Close Preview
               </button>
-
-              {getConnectionStatus(selectedCard.student.id) === 'accepted' && (
-                <button
-                  type="button"
-                  onClick={(e) => handleMessage(selectedCard.student.id, e)}
-                  className="px-4 py-3 rounded-2xl bg-[#3B8C7E] dark:bg-teal-600 text-white hover:bg-[#327a6d] dark:hover:bg-teal-500 transition-all shadow-lg flex items-center justify-center cursor-pointer"
-                >
-                  <MessageCircle size={20} />
-                </button>
-              )}
             </div>
           </div>
         </div>

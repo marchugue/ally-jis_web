@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, X } from 'lucide-react';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { cn } from '@/lib/utils';
 import { apiClient } from '@/api/client';
 import type { AllyListItem, FollowListItem, FollowSortBy } from '@/api/client';
 import {
@@ -174,25 +176,38 @@ export function RelationshipListModal({ open, onOpenChange, userId, kind }: Rela
             </p>
           ) : (
             <div className="space-y-1">
-              {items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => goToProfile(item.id)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
-                >
-                  <AvatarDisplay
-                    src={item.avatarUrl}
-                    name={item.fullName ?? item.username ?? 'Student'}
-                    className="w-11 h-11 rounded-full object-cover flex-shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">
-                      {item.username ? `@${item.username}` : item.fullName ?? 'Student'}
-                    </p>
-                    {item.course && <p className="font-jakarta text-xs text-gray-400 truncate">{item.course}</p>}
-                  </div>
-                </button>
-              ))}
+              {items.map((item) => {
+                const isAlly = kind === 'allies' || (item as any).isAlly || (item as any).is_ally;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => goToProfile(item.id)}
+                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors text-left hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer"
+                  >
+                    {isAlly ? (
+                      <AvatarDisplay
+                        src={item.avatarUrl}
+                        name={item.fullName ?? item.username ?? 'Student'}
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <AnonymousAvatar
+                        avatarKey={(item as any).avatarKey || 'fox'}
+                        size={44}
+                        className="rounded-full flex-shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">
+                        {isAlly ? (item.username ? `@${item.username}` : item.fullName ?? 'Student') : 'Anonymous Peer'}
+                      </p>
+                      <p className="font-jakarta text-xs text-gray-400 truncate">
+                        {isAlly ? item.course : 'Protected · Campus Student'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
 
               {cursor && (
                 <button

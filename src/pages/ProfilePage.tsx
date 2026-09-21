@@ -27,6 +27,7 @@ import { RelationshipButtons } from '@/components/profile/RelationshipButtons';
 import { RelationshipListModal } from '@/components/profile/RelationshipListModal';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 
 const PAGE_SIZE = 10;
 
@@ -333,24 +334,10 @@ export default function ProfilePage() {
       : await apiClient.likeComment(comment.id);
   }, [useBackend, activePost]);
 
-  const toggleConnect = async (targetId: string) => {
-    if (!useBackend || !user) {
-      setConnections((prev) => ({ ...prev, [targetId]: prev[targetId] === 'pending' ? 'none' : 'pending' }));
-      return;
-    }
-    if (connections[targetId] === 'pending' || connections[targetId] === 'accepted') return;
-    try {
-      setConnections((prev) => ({ ...prev, [targetId]: 'pending' }));
-      await interactionService.sendRequest(user.id, targetId);
-    } catch (err: any) {
-      setConnections((prev) => ({ ...prev, [targetId]: 'none' }));
-      notify.error('Connection failed', err.message);
-    }
-  };
-
   // ── early return for loading ──────────────────────────────────────────────
   if (!profile) return <ProfileSkeleton isOwnProfile={isOwnProfile} />;
 
+  const isConfirmedAlly = isOwnProfile || relationship?.allyStatus === 'allies';
   const currentUser = profile ?? CURRENT_USER;
 
   // ── Right Side Blended Information Panel Content ─────────────────────────
@@ -361,13 +348,19 @@ export default function ProfilePage() {
         <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 mb-3 flex items-center gap-1.5">
           <MessageSquare size={13} className="text-[#1A6B3C] dark:text-emerald-400" /> About
         </h3>
-        {profile.bio ? (
-          <p className="font-jakarta text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">
-            {profile.bio}
-          </p>
+        {isConfirmedAlly ? (
+          profile.bio ? (
+            <p className="font-jakarta text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">
+              {profile.bio}
+            </p>
+          ) : (
+            <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 italic">
+              {isOwnProfile ? 'No bio yet. Click "Edit profile" to introduce yourself.' : 'No bio provided.'}
+            </p>
+          )
         ) : (
-          <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 italic">
-            {isOwnProfile ? 'No bio yet. Click "Edit profile" to introduce yourself.' : 'No bio provided.'}
+          <p className="font-jakarta text-sm text-gray-500 dark:text-gray-400 italic">
+            Identity and bio will be revealed once you complete the matching roadmap and become Campus Allies.
           </p>
         )}
       </div>
@@ -492,22 +485,6 @@ export default function ProfilePage() {
                     </div>
                     <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 truncate">{person.course}</p>
                     <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">{person.yearLevel}</p>
-                    <button
-                      type="button"
-                      onClick={() => toggleConnect(person.id)}
-                      disabled={status === 'accepted'}
-                      className={cn(
-                        'mt-2 flex items-center gap-1.5 px-3 py-1 rounded-lg font-jakarta text-xs font-semibold transition-all disabled:cursor-default',
-                        status === 'none' && 'border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5',
-                        status === 'pending' && 'bg-[#E8A838]/10 text-[#E8A838] border border-[#E8A838]/30',
-                        status === 'accepted' && 'bg-[#1A6B3C]/10 text-[#1A6B3C] border border-[#1A6B3C]/20',
-                      )}
-                    >
-                      <UserPlus size={12} />
-                      {status === 'none' && 'Connect'}
-                      {status === 'pending' && 'Requested'}
-                      {status === 'accepted' && 'Connected'}
-                    </button>
                   </div>
                 </div>
               );
@@ -540,12 +517,20 @@ export default function ProfilePage() {
             {/* Avatar overhanging cover */}
             <div className="absolute bottom-0 left-6 sm:left-8 translate-y-1/2 z-10">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-[#181818] border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center">
-                <AvatarDisplay
-                  src={profile.avatar}
-                  name={profile.username || profile.name}
-                  className="w-full h-full object-cover rounded-full"
-                  textClassName="text-4xl sm:text-5xl"
-                />
+                {isConfirmedAlly ? (
+                  <AvatarDisplay
+                    src={profile.avatar}
+                    name={profile.username || profile.name}
+                    className="w-full h-full object-cover rounded-full"
+                    textClassName="text-4xl sm:text-5xl"
+                  />
+                ) : (
+                  <AnonymousAvatar
+                    avatarKey={(profile as any).avatarKey || 'fox'}
+                    size={96}
+                    className="w-full h-full rounded-full"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -555,20 +540,18 @@ export default function ProfilePage() {
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                  {profile.name || (profile.username ? `@${profile.username}` : 'Student')}
+                  {isConfirmedAlly ? (profile.name || (profile.username ? `@${profile.username}` : 'Student')) : 'Anonymous Peer'}
                 </h1>
-                {profile.isVerified && (
+                {isConfirmedAlly && profile.isVerified && (
                   <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-md">
                     <Shield size={11} />
                     <span className="font-jakarta text-xs font-semibold">CHMSU VERIFIED</span>
                   </span>
                 )}
               </div>
-              {profile.username && (
-                <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
-                  @{profile.username}
-                </p>
-              )}
+              <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                {isConfirmedAlly ? (profile.username ? `@${profile.username}` : '') : '@anonymous'}
+              </p>
             </div>
 
             {/* Profile Action Buttons */}
@@ -579,7 +562,7 @@ export default function ProfilePage() {
                 ) : relationship && viewedUserId ? (
                   <RelationshipButtons
                     targetUserId={viewedUserId}
-                    targetName={profile.username ? `@${profile.username}` : profile.name ?? 'this student'}
+                    targetName={isConfirmedAlly ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student') : 'Anonymous Peer'}
                     allyStatus={relationship.allyStatus}
                     isFollowing={relationship.isFollowing}
                     isFollowedBy={relationship.isFollowedBy}
@@ -605,7 +588,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats Bar */}
-          {(isOwnProfile ? true : !!relationship) && (
+          {(isOwnProfile ? true : isConfirmedAlly) && (
             <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
               <button
                 type="button"
@@ -681,8 +664,18 @@ export default function ProfilePage() {
             'lg:col-span-7 xl:col-span-8 space-y-0 sm:space-y-4 min-w-0',
             mobileTab !== 'posts' && 'hidden lg:block'
           )}>
-            {/* Feed & Media Sub-Tabs */}
-            <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-4 sm:px-6 flex items-center gap-8 shadow-none sm:shadow-2xs">
+            {!isConfirmedAlly ? (
+              <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-12 text-center shadow-none sm:shadow-2xs">
+                <Shield size={36} className="mx-auto text-[#1A6B3C] dark:text-emerald-400 mb-3 opacity-60" />
+                <h4 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Profile is Protected</h4>
+                <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+                  Posts and media are only visible to confirmed Campus Allies. Complete the matching roadmap to reveal profiles and posts.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Feed & Media Sub-Tabs */}
+                <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-4 sm:px-6 flex items-center gap-8 shadow-none sm:shadow-2xs">
               <button
                 type="button"
                 onClick={() => setStreamTab('feed')}
@@ -871,6 +864,8 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            )}
+            </>
             )}
           </div>
 

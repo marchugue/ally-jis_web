@@ -2,7 +2,7 @@
 //
 // Shown to external-email students whose student ID is pending admin review.
 // They are hard-locked here (via ProtectedRoute) until approved.
-// Polls the session every 30s and auto-redirects to /dashboard on approval.
+// Fast-polls every 5s + fires on tab focus for near-realtime approval detection.
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
 type VerificationStatus = 'pending' | 'approved' | 'rejected' | null;
 
 export default function PendingApprovalPage() {
-  const { session, signOut, isPendingApproval } = useAuth();
+  const { session, signOut, completeLogin, isPendingApproval } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -30,9 +30,11 @@ export default function PendingApprovalPage() {
     }
   }, [isPendingApproval, session, navigate]);
 
-  // Poll every 30s — refresh the session to get updated metadata
+  // Poll every 5s — fast enough to feel near-realtime
+  const isCheckingRef = useRef(false);
   const checkStatus = async () => {
-    if (checking) return;
+    if (isCheckingRef.current) return;
+    isCheckingRef.current = true;
     setChecking(true);
     try {
       const updated = await apiClient.getSession();
@@ -40,24 +42,40 @@ export default function PendingApprovalPage() {
 
       const updatedStatus = updated.user?.user_metadata?.student_verification_status;
       const stillPending = updated.user?.user_metadata?.pending_student_verification;
+      const isApproved = updated.user?.user_metadata?.is_approved;
 
-      if (!stillPending || updatedStatus === 'approved') {
-        // Approved! Redirect to dashboard
+      if (isApproved || !stillPending || updatedStatus === 'approved') {
+        // ✅ Approved — update AuthContext atomically then navigate
+        completeLogin(updated, true);
         navigate('/dashboard', { replace: true });
-        window.location.reload(); // force AuthContext to hydrate fresh session
       }
     } catch {
-      // Silently ignore — we'll try again next tick
+      // Silently ignore — try again next tick
     } finally {
+      isCheckingRef.current = false;
       setChecking(false);
     }
   };
 
   useEffect(() => {
-    intervalRef.current = setInterval(checkStatus, 30_000);
+    // Check immediately on mount
+    void checkStatus();
+    intervalRef.current = setInterval(checkStatus, 5_000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Also check immediately when user switches back to this browser tab
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void checkStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

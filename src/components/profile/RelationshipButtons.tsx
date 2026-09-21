@@ -1,7 +1,7 @@
 // src/components/profile/RelationshipButtons.tsx
 
 import { useState } from 'react';
-import { Check, Clock, MessageCircle, UserCheck, UserMinus, UserPlus, X } from 'lucide-react';
+import { MessageCircle, UserCheck, UserMinus } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { chatService } from '@/lib/services/chatService';
 import type { RelationshipStatus } from '@/api/client';
@@ -42,55 +42,6 @@ export function RelationshipButtons({
   const [allyBusy, setAllyBusy] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [messageBusy, setMessageBusy] = useState(false);
-
-  const handleAddAlly = async () => {
-    setAllyBusy(true);
-    try {
-      await apiClient.sendConnectionRequest(targetUserId);
-      onAllyStatusChange('pending_outgoing');
-    } catch (err: any) {
-      notify.error('Could not send request', err?.message);
-    } finally {
-      setAllyBusy(false);
-    }
-  };
-
-  const handleCancelRequest = async () => {
-    setAllyBusy(true);
-    try {
-      await apiClient.cancelConnectionRequest(targetUserId);
-      onAllyStatusChange('none');
-    } catch (err: any) {
-      notify.error('Could not cancel request', err?.message);
-    } finally {
-      setAllyBusy(false);
-    }
-  };
-
-  const handleAccept = async () => {
-    setAllyBusy(true);
-    try {
-      const result = await apiClient.acceptConnection(targetUserId);
-      onAllyStatusChange('allies');
-      if (result?.conversationId) onConversationReady?.(result.conversationId);
-    } catch (err: any) {
-      notify.error('Could not accept request', err?.message);
-    } finally {
-      setAllyBusy(false);
-    }
-  };
-
-  const handleReject = async () => {
-    setAllyBusy(true);
-    try {
-      await apiClient.rejectConnection(targetUserId);
-      onAllyStatusChange('none');
-    } catch (err: any) {
-      notify.error('Could not decline request', err?.message);
-    } finally {
-      setAllyBusy(false);
-    }
-  };
 
   const handleRemoveAlly = async () => {
     setAllyBusy(true);
@@ -133,57 +84,18 @@ export function RelationshipButtons({
 
   return (
     <div className="flex items-center gap-2">
-      {/* Ally action */}
-      {allyStatus === 'none' && (
-        <button
-          onClick={handleAddAlly}
-          disabled={allyBusy}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
-        >
-          <UserPlus size={14} /> Add Ally
-        </button>
-      )}
+      {/* Message action */}
+      <button
+        onClick={handleMessage}
+        disabled={messageBusy}
+        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
+      >
+        <MessageCircle size={14} /> Message
+      </button>
 
-      {allyStatus === 'pending_outgoing' && (
-        <button
-          onClick={handleCancelRequest}
-          disabled={allyBusy}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-jakarta text-sm font-semibold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-60"
-        >
-          <Clock size={14} /> Request Sent
-        </button>
-      )}
-
-      {allyStatus === 'pending_incoming' && (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleAccept}
-            disabled={allyBusy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
-          >
-            <Check size={14} /> Accept
-          </button>
-          <button
-            onClick={handleReject}
-            disabled={allyBusy}
-            className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-60"
-            aria-label="Decline request"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
+      {/* Confirmed Allies badge & Remove dialog */}
       {allyStatus === 'allies' && (
-        <>
-          <button
-            onClick={handleMessage}
-            disabled={messageBusy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] text-white font-jakarta text-sm font-semibold border border-transparent transition-colors disabled:opacity-60"
-          >
-            <MessageCircle size={14} /> Message
-          </button>
-          <AlertDialog>
+        <AlertDialog>
           <AlertDialogTrigger asChild>
             <button
               disabled={allyBusy}
@@ -207,7 +119,6 @@ export function RelationshipButtons({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        </>
       )}
 
       {/* Follow action */}

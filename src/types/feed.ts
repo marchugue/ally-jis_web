@@ -13,6 +13,8 @@ export interface FeedAuthor {
   full_name: string | null;
   avatar_url: string | null;
   is_following?: boolean;
+  is_ally?: boolean;
+  avatarKey?: string | null;
 }
 
 export interface PostMedia {

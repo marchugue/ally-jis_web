@@ -27,13 +27,17 @@ export function AdminThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    return () => {
+      document.documentElement.classList.remove('dark');
+    };
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
     <AdminThemeContext.Provider value={{ theme, toggleTheme }}>
-      <div className={theme === 'dark' ? 'dark' : ''}>{children}</div>
+      <div className={theme === 'dark' ? 'dark min-h-screen' : 'min-h-screen'}>{children}</div>
     </AdminThemeContext.Provider>
   );
 }

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowRight, 
-  Download, 
-  Smartphone, 
-  Check, 
-  Heart, 
-  MessageSquare, 
-  Users, 
-  Shield, 
+import {
+  ArrowRight,
+  Download,
+  Smartphone,
+  Check,
+  Heart,
+  MessageSquare,
+  Users,
+  Shield,
   Send,
   CheckCircle2,
   Sparkles,
@@ -87,10 +87,10 @@ export default function WelcomePage() {
   // Motion animation presets
   const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } 
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
     }
   };
 
@@ -107,9 +107,9 @@ export default function WelcomePage() {
 
   return (
     <div className="min-h-screen bg-[#F7F4EF] text-[#1A6B3C] selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
-      
+
       {/* ── TOP NAVIGATION (GLASSMORPHISM) ── */}
-      <motion.header 
+      <motion.header
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -118,7 +118,7 @@ export default function WelcomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-[84px] flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.08, rotate: -4 }}
               whileTap={{ scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 350, damping: 20 }}
@@ -130,32 +130,29 @@ export default function WelcomePage() {
               <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                 Ally<span className="text-[#E8A838]">-jis</span>
               </span>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
-                CHMSU Alijis
-              </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-mono uppercase tracking-wider text-[#1A6B3C]/75 dark:text-gray-300">
-            <motion.a 
+            <motion.a
               whileHover={{ y: -1 }}
-              href="#how-it-works" 
+              href="#how-it-works"
               className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors"
             >
               Methodology
             </motion.a>
-            <motion.a 
+            <motion.a
               whileHover={{ y: -1 }}
-              href="#mobile-app" 
+              href="#mobile-app"
               className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors flex items-center gap-1.5"
             >
-              <Smartphone size={14} className="text-[#E8A838]" /> 
+              <Smartphone size={14} className="text-[#E8A838]" />
               <span>Android Edition</span>
             </motion.a>
             <motion.div whileHover={{ y: -1 }}>
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="hover:text-[#1A6B3C] dark:hover:text-white transition-colors"
               >
                 Manifesto
@@ -165,15 +162,6 @@ export default function WelcomePage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-              <Link
-                to="/download"
-                className="text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-4 py-2.5 rounded-full transition-all hidden sm:inline-flex items-center gap-2 font-semibold shadow-xs border border-transparent dark:border-white/10"
-              >
-                <Download size={14} className="text-[#E8A838]" /> 
-                <span>APK v1.0</span>
-              </Link>
-            </motion.div>
 
             {user ? (
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
@@ -208,7 +196,7 @@ export default function WelcomePage() {
                     to="/register"
                     className="font-mono text-xs uppercase tracking-wider font-bold bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full transition-all shadow-md inline-block"
                   >
-                    Join Circle
+                    Join Ally
                   </Link>
                 </motion.div>
               </div>
@@ -223,19 +211,19 @@ export default function WelcomePage() {
         {/* ── HERO SECTION: EDITORIAL TYPOGRAPHY & ASYMMETRIC CONTRAST ── */}
         <section className="pt-14 pb-24 sm:pt-20 sm:pb-36 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto">
-            
+
             {/* Magazine Header Ledger */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-[#1A6B3C]/15 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70"
             >
               <div className="flex items-center gap-2.5">
-                <motion.span 
+                <motion.span
                   animate={{ scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-2.5 h-2.5 rounded-full bg-[#E8A838]" 
+                  className="w-2.5 h-2.5 rounded-full bg-[#E8A838]"
                 />
                 <span>CHMSU Alijis Campus Edition</span>
               </div>
@@ -244,22 +232,22 @@ export default function WelcomePage() {
             </motion.div>
 
             {/* Asymmetric Grid-Breaking Hero */}
-            <motion.div 
+            <motion.div
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
               className="pt-12 sm:pt-16 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start"
             >
-              
+
               {/* Massive Editorial Headline with Animated Reveal */}
               <div className="lg:col-span-8 space-y-6">
-                <motion.h1 
+                <motion.h1
                   variants={fadeInUp}
                   className="font-fraunces text-6xl sm:text-8xl lg:text-[7.5rem] font-bold tracking-tight text-[#1A6B3C] leading-[0.92]"
                 >
                   Find your <br />
                   people at <br />
-                  <motion.span 
+                  <motion.span
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
@@ -271,16 +259,16 @@ export default function WelcomePage() {
               </div>
 
               {/* Staggered Offset Statement & CTAs */}
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 className="lg:col-span-4 lg:pt-8 space-y-8"
               >
                 <div className="space-y-4">
-                  <motion.div 
+                  <motion.div
                     initial={{ scaleX: 0, originX: 0 }}
                     animate={{ scaleX: 1 }}
                     transition={{ delay: 0.5, duration: 0.7, ease: "easeOut" }}
-                    className="w-16 h-0.5 bg-[#1A6B3C]" 
+                    className="w-16 h-0.5 bg-[#1A6B3C]"
                   />
                   <p className="font-jakarta text-base sm:text-lg text-gray-700 leading-relaxed">
                     Ally-jis connects students of Carlos Hilado Memorial State University – Alijis Campus based on shared interests, course specializations, and student organizations. Step outside your block section.
@@ -337,11 +325,11 @@ export default function WelcomePage() {
         {/* ── BORDERLESS TONAL BLOCK: MOBILE COMPANION & LIVE UI ── */}
         <section id="mobile-app" className="bg-[#EDE7DB] dark:bg-[#0D131F] text-[#1A6B3C] dark:text-emerald-400 py-24 sm:py-36 px-4 sm:px-8 transition-colors duration-200">
           <div className="max-w-7xl mx-auto">
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-              
+
               {/* Left Column: Editorial Specs Ledger */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
@@ -369,7 +357,7 @@ export default function WelcomePage() {
                     { label: 'Notification Engine', val: 'Instant Mutual Match Alerts' },
                     { label: 'OS Support', val: 'Android 8.0 Oreo or Newer' },
                   ].map((row, i) => (
-                    <motion.div 
+                    <motion.div
                       key={row.label}
                       initial={{ opacity: 0, y: 15 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -397,14 +385,14 @@ export default function WelcomePage() {
               </motion.div>
 
               {/* Right Column: Dynamic Live Preview Device with Floating Spring Animation */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="lg:col-span-6 flex flex-col items-center"
               >
-                
+
                 {/* Mode Selector (Pill Custom Geometry with Layout Animation) */}
                 <div className="mb-6 inline-flex p-1.5 bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-full text-xs font-mono uppercase tracking-wider shadow-sm">
                   {(['match', 'chat', 'feed'] as ViewMode[]).map((tab) => {
@@ -418,9 +406,8 @@ export default function WelcomePage() {
                       <button
                         key={tab}
                         onClick={() => setActiveView(tab)}
-                        className={`relative px-4 py-2 rounded-full transition-colors z-10 ${
-                          isActive ? 'text-white' : 'text-[#1A6B3C]/70 hover:text-[#1A6B3C] dark:text-gray-400 dark:hover:text-white'
-                        }`}
+                        className={`relative px-4 py-2 rounded-full transition-colors z-10 ${isActive ? 'text-white' : 'text-[#1A6B3C]/70 hover:text-[#1A6B3C] dark:text-gray-400 dark:hover:text-white'
+                          }`}
                       >
                         {isActive && (
                           <motion.div
@@ -436,14 +423,14 @@ export default function WelcomePage() {
                 </div>
 
                 {/* Clean Frame with Floating Gentle Physics */}
-                <motion.div 
+                <motion.div
                   animate={{ y: [0, -8, 0] }}
                   transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                   whileHover={{ scale: 1.02 }}
                   className="w-[300px] sm:w-[330px] h-[520px] bg-[#1c2e22] rounded-[40px] p-3 shadow-2xl border-4 border-[#1c2e22]"
                 >
                   <div className="w-full h-full bg-[#F7F4EF] dark:bg-[#111827] rounded-[32px] overflow-hidden flex flex-col justify-between">
-                    
+
                     {/* Top Status */}
                     <div className="pt-2 px-6 pb-2 flex items-center justify-between text-[#1A6B3C] dark:text-emerald-400 text-[10px] font-mono font-semibold">
                       <span>9:41</span>
@@ -465,7 +452,7 @@ export default function WelcomePage() {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2.5">
-                                <motion.div 
+                                <motion.div
                                   whileHover={{ rotate: 10 }}
                                   className="w-11 h-11 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces text-base font-bold shadow-xs"
                                 >
@@ -476,7 +463,7 @@ export default function WelcomePage() {
                                   <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400">BSIT • 2nd Year</p>
                                 </div>
                               </div>
-                              <motion.span 
+                              <motion.span
                                 animate={{ scale: [1, 1.06, 1] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                                 className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#E8A838]/20 text-[#B45309] dark:text-[#E8A838]"
@@ -502,15 +489,14 @@ export default function WelcomePage() {
                               </div>
                             </div>
 
-                            <motion.button 
+                            <motion.button
                               onClick={() => setHasConnected(!hasConnected)}
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.94 }}
-                              className={`w-full mt-2 text-xs font-mono uppercase tracking-wider py-2.5 rounded-full flex items-center justify-center gap-1.5 transition-all shadow-xs ${
-                                hasConnected 
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 font-bold' 
-                                  : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold'
-                              }`}
+                              className={`w-full mt-2 text-xs font-mono uppercase tracking-wider py-2.5 rounded-full flex items-center justify-center gap-1.5 transition-all shadow-xs ${hasConnected
+                                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 font-bold'
+                                : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold'
+                                }`}
                             >
                               {hasConnected ? (
                                 <>
@@ -540,7 +526,7 @@ export default function WelcomePage() {
                               MUTUAL CONSENT UNLOCKED
                             </div>
 
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.05 }}
@@ -549,7 +535,7 @@ export default function WelcomePage() {
                               Hey Trexie! Are you joining the JS workshop this Saturday? 👩‍💻
                             </motion.div>
 
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, x: 10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.15 }}
@@ -558,7 +544,7 @@ export default function WelcomePage() {
                               Yes! Let's grab seats early — maybe at 8 AM before it fills up!
                             </motion.div>
 
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.25 }}
@@ -585,7 +571,7 @@ export default function WelcomePage() {
                             transition={{ duration: 0.22, ease: "easeOut" }}
                             className="space-y-2.5 text-xs font-jakarta"
                           >
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               className="bg-white dark:bg-[#1E293B] border border-transparent dark:border-white/10 p-3.5 rounded-2xl space-y-1.5 shadow-sm"
@@ -602,7 +588,7 @@ export default function WelcomePage() {
                               </div>
                             </motion.div>
 
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: 0.1 }}
@@ -638,9 +624,9 @@ export default function WelcomePage() {
         {/* ── BORDERLESS EDITORIAL WORKSPACE: HOW IT WORKS ── */}
         <section id="how-it-works" className="py-24 sm:py-36 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto space-y-16">
-            
+
             {/* Editorial Title Block */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 25 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
@@ -672,11 +658,10 @@ export default function WelcomePage() {
                     onClick={() => setActiveStepIndex(idx)}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.96 }}
-                    className={`px-6 py-3 rounded-full font-mono text-xs uppercase tracking-wider transition-all flex items-center gap-2.5 ${
-                      isActive
-                        ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
-                        : 'bg-[#EDE7DB] dark:bg-[#111827] text-[#1A6B3C] dark:text-gray-300 hover:bg-[#e4ddcf] dark:hover:bg-[#1f293d] border border-transparent dark:border-white/10'
-                    }`}
+                    className={`px-6 py-3 rounded-full font-mono text-xs uppercase tracking-wider transition-all flex items-center gap-2.5 ${isActive
+                      ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
+                      : 'bg-[#EDE7DB] dark:bg-[#111827] text-[#1A6B3C] dark:text-gray-300 hover:bg-[#e4ddcf] dark:hover:bg-[#1f293d] border border-transparent dark:border-white/10'
+                      }`}
                   >
                     <span className="font-bold">{step.number}.</span>
                     <span>{step.title}</span>
@@ -687,9 +672,9 @@ export default function WelcomePage() {
 
             {/* Grid-Breaking Staggered Simulation Studio */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center min-h-[380px]">
-              
+
               {/* Left Side: Step Narrative */}
-              <motion.div 
+              <motion.div
                 key={`narrative-${activeStepIndex}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -705,7 +690,7 @@ export default function WelcomePage() {
                 <p className="font-jakarta text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                   {steps[activeStepIndex].summary}
                 </p>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.15 }}
@@ -719,7 +704,7 @@ export default function WelcomePage() {
               {/* Right Side: Interactive Dynamic Playground */}
               <div className="lg:col-span-7 bg-[#EDE7DB] dark:bg-[#0D131F] border border-transparent dark:border-white/10 p-8 sm:p-12 rounded-[32px] flex flex-col justify-between shadow-xs">
                 <AnimatePresence mode="wait">
-                  
+
                   {/* STEP 01 SIMULATION */}
                   {activeStepIndex === 0 && (
                     <motion.div
@@ -756,11 +741,10 @@ export default function WelcomePage() {
                               whileHover={{ scale: 1.04, y: -1 }}
                               whileTap={{ scale: 0.94 }}
                               transition={{ type: 'spring', stiffness: 350, damping: 20 }}
-                              className={`px-5 py-2.5 rounded-full font-jakarta text-xs sm:text-sm font-medium transition-all ${
-                                isSelected
-                                  ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
-                                  : 'bg-white dark:bg-[#111827] text-gray-800 dark:text-gray-200 border border-transparent dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10'
-                              }`}
+                              className={`px-5 py-2.5 rounded-full font-jakarta text-xs sm:text-sm font-medium transition-all ${isSelected
+                                ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-md'
+                                : 'bg-white dark:bg-[#111827] text-gray-800 dark:text-gray-200 border border-transparent dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10'
+                                }`}
                             >
                               {isSelected && <span className="mr-1.5 font-bold">✓</span>}
                               {tag}
@@ -770,7 +754,7 @@ export default function WelcomePage() {
                       </div>
 
                       <div className="pt-4 flex items-center justify-between border-t border-[#1A6B3C]/15 dark:border-white/10 font-mono text-xs">
-                        <motion.span 
+                        <motion.span
                           key={demoTags.length}
                           initial={{ scale: 1.2, color: '#E8A838' }}
                           animate={{ scale: 1, color: '#1A6B3C' }}
@@ -807,7 +791,7 @@ export default function WelcomePage() {
                         <h4 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Peer Affinity Breakdown:</h4>
                       </div>
 
-                      <motion.div 
+                      <motion.div
                         initial={{ scale: 0.97, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.3 }}
@@ -815,7 +799,7 @@ export default function WelcomePage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <motion.div 
+                            <motion.div
                               whileHover={{ rotate: 10 }}
                               className="w-12 h-12 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white flex items-center justify-center font-fraunces font-bold text-lg"
                             >
@@ -826,7 +810,7 @@ export default function WelcomePage() {
                               <div className="font-mono text-xs text-gray-500 dark:text-gray-400">BS Information Tech • 2nd Year</div>
                             </div>
                           </div>
-                          <motion.span 
+                          <motion.span
                             animate={{ scale: [1, 1.08, 1] }}
                             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                             className="font-mono text-sm font-bold px-3.5 py-1.5 rounded-full bg-[#E8A838]/20 text-[#B45309] dark:text-[#E8A838]"
@@ -885,14 +869,14 @@ export default function WelcomePage() {
                         <h4 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Zero Unsolicited Messages:</h4>
                       </div>
 
-                      <motion.div 
+                      <motion.div
                         initial={{ scale: 0.97, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 0.3 }}
                         className="bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 p-6 rounded-2xl space-y-4 shadow-sm"
                       >
                         <div className="flex items-center gap-3">
-                          <motion.div 
+                          <motion.div
                             whileHover={{ rotate: -10 }}
                             className="w-12 h-12 rounded-full bg-[#E8A838] text-white flex items-center justify-center font-fraunces font-bold text-lg"
                           >
@@ -912,11 +896,10 @@ export default function WelcomePage() {
                           onClick={() => setDemoRequestAccepted(!demoRequestAccepted)}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.95 }}
-                          className={`w-full py-3.5 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${
-                            demoRequestAccepted
-                              ? 'bg-emerald-700 dark:bg-emerald-600 text-white shadow-md'
-                              : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white shadow-md'
-                          }`}
+                          className={`w-full py-3.5 rounded-full font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${demoRequestAccepted
+                            ? 'bg-emerald-700 dark:bg-emerald-600 text-white shadow-md'
+                            : 'bg-[#1A6B3C] hover:bg-[#13502D] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white shadow-md'
+                            }`}
                         >
                           {demoRequestAccepted ? (
                             <>
@@ -963,11 +946,11 @@ export default function WelcomePage() {
         {/* ── BORDERLESS HIGH CONTRAST BLOCK: CAMPUS MANIFESTO ── */}
         <section id="about" className="bg-[#1A6B3C] text-[#F7F4EF] py-24 sm:py-36 px-4 sm:px-8">
           <div className="max-w-7xl mx-auto">
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-              
+
               {/* Left Column: Extreme Display Typography */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
@@ -988,7 +971,7 @@ export default function WelcomePage() {
 
               {/* Right Column: Grouped by Typography & Negative Space (No card boxes) */}
               <div className="lg:col-span-5 space-y-10">
-                
+
                 {[
                   {
                     num: '01 • Strict Campus Exclusivity',
@@ -1006,7 +989,7 @@ export default function WelcomePage() {
                     desc: 'Conversations only begin when both peers approve. Harassment and impersonation result in immediate student ID suspension.'
                   }
                 ].map((item, i) => (
-                  <motion.div 
+                  <motion.div
                     key={item.num}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -1031,7 +1014,7 @@ export default function WelcomePage() {
             </div>
 
             {/* Final Call to Action Strip */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -1053,7 +1036,7 @@ export default function WelcomePage() {
                     <span>Get APK v1.0</span>
                   </Link>
                 </motion.div>
-                
+
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Link
                     to="/register"

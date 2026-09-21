@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
+import type { PresetAvatarRow } from '@/api/types';
+import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { profileService } from '@/lib/services/profileService';
 import { useLookupOptions } from '@/hooks/useLookupOptions';
 import { notify } from '@/components/ui/sonner';
@@ -206,7 +208,9 @@ export default function RegisterPage() {
   const [interestSearch, setInterestSearch] = useState('');
 
   // Step 4 Avatar & Bio & Legal
-  const [avatarTab, setAvatarTab] = useState<'presets' | 'custom'>('presets');
+  const [avatarTab, setAvatarTab] = useState<'presets' | 'emoji' | 'custom'>('presets');
+  const [presetAvatars, setPresetAvatars] = useState<PresetAvatarRow[]>([]);
+  const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   const [customAvatarPreview, setCustomAvatarPreview] = useState<string | null>(null);
   const [customAvatarFile, setCustomAvatarFile] = useState<File | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -217,6 +221,26 @@ export default function RegisterPage() {
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const interestListRef = useRef<HTMLDivElement>(null);
+
+  // Load admin-curated preset avatars
+  useEffect(() => {
+    if (!isApiConfigured) return;
+    setIsLoadingPresets(true);
+    apiClient
+      .getPresetAvatars()
+      .then((res) => {
+        if (res?.avatars) {
+          setPresetAvatars(res.avatars);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load preset avatars:', err);
+      })
+      .finally(() => {
+        setIsLoadingPresets(false);
+      });
+  }, []);
 
   // Onboarding & register are strictly light-mode only — ensure dark class is removed on mount
   useEffect(() => {
@@ -264,6 +288,18 @@ export default function RegisterPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [enlargedImage, activeModal]);
 
+  // Reset interest tag cloud scroll position when filtering by category or search
+  useEffect(() => {
+    if (interestListRef.current) {
+      interestListRef.current.scrollTop = 0;
+    }
+  }, [activeCategory, interestSearch]);
+
+  // Scroll window to top when step changes so the user is positioned at the top of each onboarding step
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step, idSubStep, showOtpView]);
+
   // Handle clean file previews
   const handleFrontFileChange = (file: File) => {
     setFrontFile(file);
@@ -307,10 +343,20 @@ export default function RegisterPage() {
     }
 
     // Password validation
+    const pwRules = [
+      { test: (p: string) => p.length >= 8,           msg: 'at least 8 characters' },
+      { test: (p: string) => /[A-Z]/.test(p),         msg: 'an uppercase letter' },
+      { test: (p: string) => /[a-z]/.test(p),         msg: 'a lowercase letter' },
+      { test: (p: string) => /[0-9]/.test(p),         msg: 'a number' },
+      { test: (p: string) => /[^A-Za-z0-9]/.test(p), msg: 'a special character' },
+    ];
     if (!form.password) {
       errs.password = 'Password is required.';
-    } else if (form.password.length < 6) {
-      errs.password = 'Password must be at least 6 characters.';
+    } else {
+      const failed = pwRules.filter(r => !r.test(form.password));
+      if (failed.length > 0) {
+        errs.password = `Password must include ${failed.map(r => r.msg).join(', ')}.`;
+      }
     }
 
     // Confirm password
@@ -637,15 +683,46 @@ export default function RegisterPage() {
   // Available courses dynamically computed from selected department
   const currentCourses = form.department ? coursesByDept[form.department] || [] : [];
 
-  // Filtered interests based on category & search query
-  const allInterestItems = Object.entries(interestsByCategory).flatMap(([cat, list]) =>
-    list.map((item) => ({ ...item, category: cat }))
-  );
-  const filteredInterests = allInterestItems.filter((item) => {
-    const matchesCat = activeCategory === 'all' || item.category.toLowerCase() === activeCategory.toLowerCase();
-    const matchesSearch = !interestSearch || item.label.toLowerCase().includes(interestSearch.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
+  // Available categories dynamically derived from lookup data
+  const availableCategories = useMemo(() => {
+    const cats = Object.keys(interestsByCategory);
+    return ['all', ...(cats.length > 0 ? cats : ['Technology', 'Arts', 'Nature', 'Sports', 'Leadership', 'Lifestyle'])];
+  }, [interestsByCategory]);
+
+  const knownLabels = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(interestsByCategory).forEach((list) => {
+      list.forEach((i) => set.add(i.label.toLowerCase()));
+    });
+    return set;
+  }, [interestsByCategory]);
+
+  const customInterests = useMemo(() => {
+    return form.interests.filter((item) => !knownLabels.has(item.toLowerCase()));
+  }, [form.interests, knownLabels]);
+
+  // Filtered interests based on category & search query (including custom interests)
+  const allInterestItems = useMemo(() => {
+    const standard = Object.entries(interestsByCategory).flatMap(([cat, list]) =>
+      list.map((item) => ({ ...item, category: cat }))
+    );
+    const custom = customInterests.map((item) => ({
+      label: item,
+      color: 'emerald',
+      category: 'Custom',
+    }));
+    return [...standard, ...custom];
+  }, [interestsByCategory, customInterests]);
+
+  const filteredInterests = useMemo(() => {
+    return allInterestItems.filter((item) => {
+      const matchesCat =
+        activeCategory === 'all' || item.category.toLowerCase() === activeCategory.toLowerCase();
+      const matchesSearch =
+        !interestSearch.trim() || item.label.toLowerCase().includes(interestSearch.trim().toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+  }, [allInterestItems, activeCategory, interestSearch]);
 
   // ── Celebratory Completion View ───────────────────────────────────────────
   if (isDone) {
@@ -943,16 +1020,6 @@ export default function RegisterPage() {
                 </div>
               </div>
             </motion.div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 mb-2 mx-auto">
-              <span>
-                {showOtpView
-                  ? 'Verification'
-                  : idSubStep !== 'none'
-                    ? 'Student ID Verification'
-                    : `Step ${step} of ${STEPS.length}`}
-              </span>
-            </div>
 
             <h1 className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight text-center">
               {showOtpView
@@ -1885,6 +1952,49 @@ export default function RegisterPage() {
                         </button>
                       </div>
                       {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
+
+                      {/* ── Dynamic Password Strength Validator ────────────── */}
+                      {form.password.length > 0 && (() => {
+                        const rules = [
+                          { key: 'length',  label: 'At least 8 characters',         test: (p: string) => p.length >= 8 },
+                          { key: 'upper',   label: 'One uppercase letter (A–Z)',     test: (p: string) => /[A-Z]/.test(p) },
+                          { key: 'lower',   label: 'One lowercase letter (a–z)',     test: (p: string) => /[a-z]/.test(p) },
+                          { key: 'digit',   label: 'One number (0–9)',               test: (p: string) => /[0-9]/.test(p) },
+                          { key: 'special', label: 'One special character (!@#…)',   test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+                        ];
+                        const passed = rules.filter(r => r.test(form.password)).length;
+                        const pct = Math.round((passed / rules.length) * 100);
+                        const barColor = pct <= 20 ? '#EF4444' : pct <= 40 ? '#F97316' : pct <= 60 ? '#EAB308' : pct <= 80 ? '#84CC16' : '#22C55E';
+                        const strengthLabel = pct <= 20 ? 'Very weak' : pct <= 40 ? 'Weak' : pct <= 60 ? 'Fair' : pct <= 80 ? 'Strong' : 'Very strong';
+                        return (
+                          <div className="mt-2.5 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                              </div>
+                              <span className="text-[11px] font-bold font-jakarta" style={{ color: barColor }}>{strengthLabel}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-y-1">
+                              {rules.map(rule => {
+                                const ok = rule.test(form.password);
+                                return (
+                                  <div key={rule.key} className="flex items-center gap-1.5">
+                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${ok ? 'bg-green-500' : 'bg-gray-200 dark:bg-white/10'}`}>
+                                      {ok
+                                        ? <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        : <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 2L6 6M6 2L2 6" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                      }
+                                    </div>
+                                    <span className={`text-[11px] font-jakarta transition-colors ${ok ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
+                                      {rule.label}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
@@ -2098,8 +2208,8 @@ export default function RegisterPage() {
               {step === 3 && (
                 <div className="space-y-5">
                   {/* Category Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                    {['all', 'Technology', 'Arts & Culture', 'Sports & Fitness', 'Academic', 'Lifestyle'].map((cat) => (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                    {availableCategories.map((cat) => (
                       <button
                         key={cat}
                         type="button"
@@ -2128,31 +2238,78 @@ export default function RegisterPage() {
                     />
                   </div>
 
+                  {/* Selected Interests Summary Chips (if any selected) */}
+                  {form.interests.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-jakarta font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Selected ({form.interests.length})
+                        </span>
+                        {form.interests.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, interests: [] }))}
+                            className="text-[11px] font-jakarta text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto overscroll-contain custom-scrollbar p-1">
+                        {form.interests.map((label) => (
+                          <span
+                            key={label}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-jakarta font-medium bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30"
+                          >
+                            <span>{label}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleInterest(label)}
+                              className="hover:text-red-500 transition-colors text-xs font-bold leading-none cursor-pointer ml-0.5"
+                              title={`Remove ${label}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Interest Tag Cloud */}
-                  <div className="p-1 max-h-56 overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
-                    {filteredInterests.map(({ label, color }) => {
-                      const isSelected = form.interests.includes(label);
-                      return (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => toggleInterest(label)}
-                          style={{
-                            borderColor: isSelected ? '#1A6B3C' : undefined,
-                            backgroundColor: isSelected ? '#1A6B3C' : undefined,
-                          }}
-                          className={cn(
-                            'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
-                            isSelected
-                              ? 'text-white shadow-xs'
-                              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-200 hover:border-gray-300'
-                          )}
-                        >
-                          {isSelected && <Check size={13} strokeWidth={2.5} />}
-                          <span>{label}</span>
-                        </button>
-                      );
-                    })}
+                  <div
+                    ref={interestListRef}
+                    className="p-1 max-h-64 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar flex flex-wrap content-start gap-2"
+                  >
+                    {filteredInterests.length === 0 ? (
+                      <div className="w-full py-8 text-center text-xs font-jakarta text-gray-400">
+                        No interests matching "{interestSearch}".
+                      </div>
+                    ) : (
+                      filteredInterests.map(({ label, color }) => {
+                        const isSelected = form.interests.includes(label);
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => toggleInterest(label)}
+                            style={{
+                              borderColor: isSelected ? '#1A6B3C' : undefined,
+                              backgroundColor: isSelected ? '#1A6B3C' : undefined,
+                            }}
+                            className={cn(
+                              'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                              isSelected
+                                ? 'text-white shadow-xs'
+                                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-200 hover:border-gray-300'
+                            )}
+                          >
+                            {isSelected && <Check size={13} strokeWidth={2.5} />}
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
 
                   {/* Add Custom Interest Input */}
@@ -2208,17 +2365,36 @@ export default function RegisterPage() {
                 <div className="space-y-6">
                   {/* Avatar Selector Tabs */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                        Choose Profile Avatar
-                      </label>
-                      <div className="flex rounded-lg bg-gray-100 dark:bg-white/10 p-0.5 text-[11px] font-mono font-bold">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3">
+                      <div>
+                        <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                          Choose Profile Avatar
+                        </label>
+                        <p className="text-[11px] font-jakarta text-gray-400 dark:text-gray-500 mt-0.5">
+                          Pick an illustrated avatar, choose an emoji, or upload your own
+                        </p>
+                      </div>
+                      <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/10 p-1 text-[11px] font-mono font-bold self-start sm:self-auto border border-gray-200/60 dark:border-white/5">
                         <button
                           type="button"
                           onClick={() => setAvatarTab('presets')}
                           className={cn(
-                            'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
-                            avatarTab === 'presets' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
+                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
+                            avatarTab === 'presets'
+                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                          )}
+                        >
+                          Presets
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAvatarTab('emoji')}
+                          className={cn(
+                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
+                            avatarTab === 'emoji'
+                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                           )}
                         >
                           Emoji
@@ -2227,8 +2403,10 @@ export default function RegisterPage() {
                           type="button"
                           onClick={() => setAvatarTab('custom')}
                           className={cn(
-                            'px-2.5 py-1 rounded-md transition-colors cursor-pointer',
-                            avatarTab === 'custom' ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs' : 'text-gray-500'
+                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
+                            avatarTab === 'custom'
+                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                           )}
                         >
                           Photo Upload
@@ -2236,15 +2414,85 @@ export default function RegisterPage() {
                       </div>
                     </div>
 
-                    {avatarTab === 'presets' ? (
-                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                    {avatarTab === 'presets' && (
+                      isLoadingPresets ? (
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-3 p-3 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                          {Array.from({ length: 8 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="aspect-square rounded-2xl bg-gray-200/80 dark:bg-white/10 animate-pulse"
+                            />
+                          ))}
+                        </div>
+                      ) : presetAvatars.length === 0 ? (
+                        <div className="p-6 rounded-2xl border border-gray-200/80 dark:border-white/10 text-center bg-gray-50/50 dark:bg-white/5 space-y-2">
+                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">
+                            No preset avatars found. You can choose an emoji or upload your own photo!
+                          </p>
+                          <div className="flex items-center justify-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setAvatarTab('emoji')}
+                              className="text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
+                            >
+                              Choose Emoji →
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-3 max-h-56 sm:max-h-64 overflow-y-auto p-2.5 custom-scrollbar bg-gray-50/70 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10">
+                          {presetAvatars.map((preset) => {
+                            const isSelected = form.avatar === preset.url;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => {
+                                  setForm((prev) => ({ ...prev, avatar: preset.url }));
+                                  setCustomAvatarPreview(null);
+                                  setCustomAvatarFile(null);
+                                }}
+                                className={cn(
+                                  'relative aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer group focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/50',
+                                  isSelected
+                                    ? 'border-[#1A6B3C] dark:border-emerald-500 scale-105 shadow-sm ring-2 ring-[#1A6B3C]/20 dark:ring-emerald-500/20'
+                                    : 'border-transparent hover:border-[#1A6B3C]/40 dark:hover:border-emerald-500/40 hover:scale-102 bg-white dark:bg-[#111827]'
+                                )}
+                                title={preset.label ?? 'Preset avatar'}
+                              >
+                                <img
+                                  src={preset.url}
+                                  alt={preset.label ?? 'Preset avatar'}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-[#1A6B3C]/20 dark:bg-emerald-500/20 flex items-center justify-center pointer-events-none">
+                                    <span className="w-5 h-5 rounded-full bg-[#1A6B3C] dark:bg-emerald-500 text-white text-[11px] flex items-center justify-center shadow-xs">
+                                      <Check size={12} strokeWidth={3} />
+                                    </span>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )
+                    )}
+
+                    {avatarTab === 'emoji' && (
+                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2.5 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10">
                         {AVATAR_OPTIONS.map((emoji) => (
                           <button
                             key={emoji}
                             type="button"
-                            onClick={() => setForm({ ...form, avatar: emoji })}
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, avatar: emoji }));
+                              setCustomAvatarPreview(null);
+                              setCustomAvatarFile(null);
+                            }}
                             className={cn(
-                              'w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all cursor-pointer',
+                              'w-10 h-10 sm:w-11 sm:h-11 rounded-xl text-xl sm:text-2xl flex items-center justify-center transition-all cursor-pointer',
                               form.avatar === emoji
                                 ? 'bg-[#1A6B3C] text-white shadow-md scale-110'
                                 : 'hover:bg-white dark:hover:bg-white/10'
@@ -2254,7 +2502,9 @@ export default function RegisterPage() {
                           </button>
                         ))}
                       </div>
-                    ) : (
+                    )}
+
+                    {avatarTab === 'custom' && (
                       <div>
                         <input
                           ref={avatarInputRef}
@@ -2376,6 +2626,41 @@ export default function RegisterPage() {
                         )}
                       </div>
                     )}
+                  </div>
+
+                  {/* Profile Preview Card */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#1A6B3C]/5 dark:bg-white/5 border border-[#1A6B3C]/15 dark:border-white/10">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
+                        Profile Preview
+                      </span>
+                      <span className="text-[11px] font-jakarta text-gray-400 dark:text-gray-500">
+                        How others see you
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border-2 border-[#1A6B3C]/30 dark:border-emerald-500/30 flex-shrink-0 bg-white dark:bg-[#111827] shadow-xs">
+                        <AvatarDisplay
+                          src={customAvatarPreview ?? form.avatar}
+                          name={form.username || 'User'}
+                          className="w-full h-full object-cover"
+                          textClassName="text-2xl sm:text-3xl"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-jakarta font-bold text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                          {form.username || 'your_username'}
+                        </p>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {form.course || 'Your Course'}{form.yearLevel ? ` · ${form.yearLevel}` : ''}
+                        </p>
+                        {form.bio && (
+                          <p className="font-jakarta text-xs text-gray-600 dark:text-gray-300 line-clamp-2 mt-1 italic">
+                            "{form.bio}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bio Textarea */}

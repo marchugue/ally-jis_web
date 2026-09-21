@@ -43,6 +43,14 @@ interface ChatWindowProps {
 
 export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
 
+const EMOJI_ONLY_REGEX = /^[\s\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]+$/u;
+function isOnlyEmoji(text?: string | null): boolean {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (!trimmed || /[a-zA-Z0-9]/.test(trimmed)) return false;
+  return EMOJI_ONLY_REGEX.test(trimmed);
+}
+
 const GROUPING_MAX_GAP_MS = 5 * 60 * 1000;
 
 function isConsecutiveWith(current: Message, adjacent: Message | null): boolean {
@@ -234,6 +242,7 @@ const MessageBubble = memo(function MessageBubble({
   const primaryMedia = images[0] || '';
   const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
   const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
+  const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
   const isMobile = useIsMobile();
 
   const openActionMenu = useCallback(() => {
@@ -336,14 +345,14 @@ const MessageBubble = memo(function MessageBubble({
         ref={bubbleRef}
         {...mobileLongPressHandlers}
         onClick={() => {
-          if (!isImageOnly) {
+          if (!isImageOnly && !isEmojiOnly) {
             onToggleTime?.();
           }
         }}
-        style={isImageOnly ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
+        style={isImageOnly || isEmojiOnly ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
         className={cn(
           'max-w-full text-sm font-jakarta transition-opacity select-none',
-          isImageOnly
+          isImageOnly || isEmojiOnly
             ? 'p-0 bg-transparent dark:bg-transparent shadow-none border-none'
             : cn(
                 'px-4 py-2 cursor-pointer',
@@ -468,7 +477,16 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           </div>
         )}
-        {msg.content && <p className={cn(isImageOnly ? 'hidden' : undefined)}>{msg.content}</p>}
+        {msg.content && (
+          <p
+            className={cn(
+              isImageOnly ? 'hidden' : undefined,
+              isEmojiOnly ? 'text-4xl sm:text-5xl leading-tight py-1 my-0.5' : undefined
+            )}
+          >
+            {msg.content}
+          </p>
+        )}
 
         {/* On phone/click: expands to show the time at the bottom of the message; on sending: shows sending status */}
         {(isActiveTime || isSending) && (
@@ -793,7 +811,7 @@ export function ChatWindow({
       ref={scrollContainerRef}
       onScroll={handleScroll}
       className={cn(
-        'flex-1 overflow-y-auto p-4 h-full min-h-0 custom-scrollbar flex flex-col',
+        'flex-1 overflow-y-auto px-3 md:px-6 py-4 pb-6 h-full min-h-0 custom-scrollbar flex flex-col relative z-10',
         uniqueMessages.length === 0 && 'justify-center'
       )}
     >

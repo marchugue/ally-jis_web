@@ -1,7 +1,7 @@
 // src/components/match/MatchRevealPanel.tsx
 
 import { useEffect, useState } from 'react';
-import { Lock, LogOut, MessageSquareText, UserPlus } from 'lucide-react';
+import { Check, Lock, LogOut, MessageSquareText, UserPlus } from 'lucide-react';
 import { AnonymousAvatar } from './AnonymousAvatar';
 import { apiClient } from '@/api/client';
 import type { RevealData, TimelineData, MatchIdentityView } from '@/api/client';
@@ -118,20 +118,8 @@ export function MatchRevealPanel({
   onEndMatch,
   ended,
 }: MatchRevealPanelProps) {
-  const [sendingRequest, setSendingRequest] = useState(false);
   const partnerAlias = identity?.partnerAlias ?? 'your match';
   const partner = reveal?.partner;
-
-  const handleFriendRequest = async () => {
-    if (!partner?.userId) return;
-    setSendingRequest(true);
-    try {
-      await apiClient.sendConnectionRequest(partner.userId);
-      onFriendRequestSent?.();
-    } finally {
-      setSendingRequest(false);
-    }
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -254,14 +242,10 @@ export function MatchRevealPanel({
                 )}
 
                 {stage >= 4 && partner?.userId && (
-                  <button
-                    onClick={handleFriendRequest}
-                    disabled={sendingRequest}
-                    className="w-full flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-semibold py-3 rounded-2xl hover:bg-[#155a33] dark:hover:bg-emerald-500 transition-colors disabled:opacity-60"
-                  >
-                    <UserPlus size={16} />
-                    {sendingRequest ? 'Sending…' : `Add ${partner.fullName ?? partnerAlias}`}
-                  </button>
+                  <div className="w-full flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-400 font-semibold py-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/40">
+                    <Check size={16} />
+                    You are now Campus Allies!
+                  </div>
                 )}
               </>
             )}

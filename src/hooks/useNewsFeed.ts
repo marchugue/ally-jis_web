@@ -12,7 +12,7 @@ import { profileService, profileMapper } from '@/lib/services/profileService';
 import type { Student } from '@/types/ally';
 import type { FeedPost, PostAudience } from '@/types/feed';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 30;
 
 export type FeedFilterTab = 'popular' | 'allies' | 'following';
 
@@ -83,7 +83,7 @@ export function useNewsfeed() {
   }, [useBackend, user?.id, activeFilter]);
 
   const loadMore = useCallback(async () => {
-    if (!useBackend || isLoadingMore || !hasMore) return;
+    if (!useBackend || isLoadingMore || !hasMore || !cursorRef.current) return;
     setIsLoadingMore(true);
     try {
       const nextPage = await apiClient.listFeed({
@@ -91,9 +91,15 @@ export function useNewsfeed() {
         before: cursorRef.current,
         filter: activeFilter,
       });
-      setPosts((prev) => [...prev, ...nextPage]);
-      setHasMore(nextPage.length === PAGE_SIZE);
-      if (nextPage.length > 0) {
+      if (nextPage.length === 0) {
+        setHasMore(false);
+      } else {
+        setPosts((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newUniquePosts = nextPage.filter((p) => !existingIds.has(p.id));
+          return [...prev, ...newUniquePosts];
+        });
+        setHasMore(nextPage.length === PAGE_SIZE);
         cursorRef.current = nextPage[nextPage.length - 1].created_at;
       }
     } catch (err: any) {

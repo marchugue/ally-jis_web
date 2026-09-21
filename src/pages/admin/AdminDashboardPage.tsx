@@ -88,16 +88,20 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
+  const [pendingVerificationsCount, setPendingVerificationsCount] = useState<number | null>(null);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [k, c] = await Promise.all([
+      const [k, c, pendingList] = await Promise.all([
         apiClient.getDashboardKpis(),
         apiClient.getDashboardCharts(),
+        apiClient.adminListPendingVerifications().catch(() => []),
       ]);
       setKpis(k);
       setCharts(c);
+      setPendingVerificationsCount(pendingList.length);
     } catch (err: any) {
       setError(err.message ?? 'Failed to load dashboard metrics');
     } finally {
@@ -113,13 +117,13 @@ export default function AdminDashboardPage() {
   const sliceCount = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
   const filteredRegistrations = (charts?.registrations ?? []).slice(-sliceCount);
   const filteredActiveUsers = (charts?.activeUsers ?? []).slice(-sliceCount);
-  const filteredReportsTrend = (charts?.reportsTrend ?? []).slice(-sliceCount);
 
   // Verification donut chart data
   const totalVerified = (kpis?.totalUsers ?? 0) - (kpis?.pendingReports ?? 0);
+  const pendingCount = pendingVerificationsCount ?? 0;
   const verificationBreakdownData = [
-    { name: 'CHMSU Verified', value: Math.max(0, totalVerified - 3), color: '#10B981' },
-    { name: 'Pending Review', value: Math.max(1, kpis?.pendingReports ?? 0), color: '#F59E0B' },
+    { name: 'CHMSU Verified', value: Math.max(0, totalVerified - pendingCount), color: '#10B981' },
+    { name: 'Pending Review', value: pendingCount, color: '#F59E0B' },
     { name: 'Banned Accounts', value: kpis?.bannedUsers ?? 0, color: '#EF4444' },
   ];
 
@@ -141,7 +145,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6 w-full pb-8">
       {/* Top Header & Range Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161D19] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161D19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-xs">
         <div>
           <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             System Overview
@@ -156,14 +160,14 @@ export default function AdminDashboardPage() {
 
         <div className="flex items-center gap-2">
           {/* Time Range Filter Buttons */}
-          <div className="flex items-center p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5 text-xs font-semibold">
+          <div className="flex items-center p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/10 text-xs font-semibold">
             {(['7d', '30d', '90d'] as const).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1.5 rounded-lg uppercase transition-all ${
                   timeRange === range
-                    ? 'bg-white dark:bg-[#1A6B3C] text-gray-900 dark:text-white shadow-sm font-bold'
+                    ? 'bg-white dark:bg-[#1A6B3C] text-gray-900 dark:text-white shadow-xs font-bold'
                     : 'text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
@@ -183,70 +187,49 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      {/* Streamlined KPI Cards Grid: 4 Actionable Metrics per AdminLTE guidelines */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* 1. Total Registered Students */}
         <KpiCard
-          label="Total Registered Users"
+          label="Total Registered Students"
           value={kpis?.totalUsers ?? null}
-          trend="+14.2%"
+          trend={kpis?.newUsersThisMonth ? `+${kpis.newUsersThisMonth} this month` : '+14.2% MoM'}
           trendUp={true}
           icon={Users}
-          accent="bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/10 dark:text-emerald-400"
+          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           onClick={() => navigate('/admin/users')}
         />
+
+        {/* 2. Active / Online Now */}
         <KpiCard
-          label="Active Users (7 Days)"
-          value={kpis?.activeUsers ?? null}
-          trend="+8.5%"
-          trendUp={true}
-          icon={UserCheck}
-          accent="bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-        />
-        <KpiCard
-          label="Online Now"
+          label="Active / Online Now"
           value={kpis?.onlineUsers ?? null}
           trend="Realtime"
           trendUp={true}
           icon={Wifi}
-          accent="bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400"
+          accent="bg-teal-500/10 text-teal-600 dark:text-teal-400"
         />
+
+        {/* 3. Pending ID Verifications (Actionable Queue) */}
         <KpiCard
-          label="Verification Pending"
-          value={kpis?.pendingReports ?? null}
-          trend="Needs Review"
-          trendUp={false}
+          label="Pending ID Verifications"
+          value={pendingVerificationsCount}
+          trend={pendingVerificationsCount && pendingVerificationsCount > 0 ? 'Requires Review' : 'All Clear'}
+          trendUp={!pendingVerificationsCount || pendingVerificationsCount === 0}
           icon={Clock}
-          accent="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
-          onClick={() => navigate('/admin/users')}
+          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          onClick={() => navigate('/admin/users?tab=pending')}
         />
+
+        {/* 4. Flagged Reports (Actionable Queue) */}
         <KpiCard
-          label="New Registrations Today"
-          value={kpis?.newUsersToday ?? null}
-          trend="+5 today"
-          trendUp={true}
-          icon={Sunrise}
-          accent="bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"
-        />
-        <KpiCard
-          label="New This Week"
-          value={kpis?.newUsersThisWeek ?? null}
-          trend="+18%"
-          trendUp={true}
-          icon={Sparkles}
-          accent="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-        />
-        <KpiCard
-          label="Reported Profiles"
-          value={kpis?.reportedUsers ?? null}
+          label="Flagged Reports"
+          value={kpis?.pendingReports ?? null}
+          trend={kpis?.pendingReports && kpis.pendingReports > 0 ? 'Action Needed' : 'All Clear'}
+          trendUp={!kpis?.pendingReports || kpis.pendingReports === 0}
           icon={Flag}
-          accent="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          accent="bg-rose-500/10 text-rose-600 dark:text-rose-400"
           onClick={() => navigate('/admin/reports')}
-        />
-        <KpiCard
-          label="Banned Accounts"
-          value={kpis?.bannedUsers ?? null}
-          icon={Ban}
-          accent="bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
         />
       </div>
 

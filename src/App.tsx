@@ -4,6 +4,8 @@ import { AnimatePresence } from "framer-motion";
 import WelcomePage from "@/pages/WelcomePage";
 import LoginPage from "@/pages/LoginPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import PasswordResetSuccessPage from "@/pages/PasswordResetSuccessPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import RegisterPage from "@/pages/RegisterPage";
 import NewsfeedPage from "@/pages/NewsfeedPage";
@@ -123,6 +125,16 @@ function App() {
           <Route path="/forgot-password" element={
             <PageTransition>
               <ForgotPasswordPage />
+            </PageTransition>
+          } />
+          <Route path="/reset-password" element={
+            <PageTransition>
+              <ResetPasswordPage />
+            </PageTransition>
+          } />
+          <Route path="/password-reset-success" element={
+            <PageTransition>
+              <PasswordResetSuccessPage />
             </PageTransition>
           } />
 

@@ -1,58 +1,106 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, RefreshCcw, UserPlus, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  RefreshCcw,
+  UserPlus,
+  X,
+  Sparkles,
+  Shield,
+  Clock,
+  Compass,
+  Filter,
+  ChevronDown,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient, isApiConfigured } from '@/api/client';
 import { interactionService } from '@/lib/services/interactionService';
-import { chatService } from '@/lib/services/chatService';
 import { notificationService } from '@/lib/services/notificationService';
 import { profileMapper } from '@/lib/services/profileService';
-import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { usePresence } from '@/context/PresenceContext';
+import { PageTransition } from '@/components/PageTransition';
 import { cn } from '@/lib/utils';
 
-type RequestStatus = 'pending' | 'accepted' | 'rejected';
+const ANIMAL_KEYS = [
+  'fox', 'wolf', 'whale', 'owl', 'panda', 'otter', 'falcon', 'koala', 'lynx', 'dolphin', 'raven', 'badger'
+];
+
+function getAnonAvatarKey(id?: string | null, avatarPreset?: string | null): string {
+  if (avatarPreset && ANIMAL_KEYS.includes(avatarPreset.toLowerCase().trim())) {
+    return avatarPreset.toLowerCase().trim();
+  }
+  const seed = id || 'default';
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return ANIMAL_KEYS[hash % ANIMAL_KEYS.length];
+}
 
 type RequestItem = {
   id: string;
   fromUserId: string;
   fromName: string;
-  avatarUrl: string | null;
+  avatarKey: string;
   course: string | null;
   title: string;
   description: string;
   timestamp: string;
   isRead: boolean;
-  status: RequestStatus;
-  acceptedAt: string | null;
 };
 
+type RequestFilter = 'all' | 'unread' | 'recent';
+
 const POLL_INTERVAL_MS = 15000;
+
+function formatTimestamp(dateStr?: string): string {
+  if (!dateStr) return 'Just now';
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return dateStr;
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return `${Math.floor(diffDay / 7)}w ago`;
+}
+
+function isRecent(timestampStr?: string): boolean {
+  if (!timestampStr) return true;
+  const then = new Date(timestampStr).getTime();
+  if (isNaN(then)) return true;
+  return Date.now() - then < 24 * 60 * 60 * 1000;
+}
 
 export default function RequestsPage() {
   const { user } = useAuth();
   const { isOnline } = usePresence();
   const navigate = useNavigate();
   const useBackend = Boolean(isApiConfigured && user);
+
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [banner, setBanner] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({});
+  const [activeFilter, setActiveFilter] = useState<RequestFilter>('all');
+  const [showMobileFilterDropdown, setShowMobileFilterDropdown] = useState(false);
 
-  const pendingCount = useMemo(
-    () => requests.filter((request) => request.status === 'pending').length,
-    [requests]
-  );
+  const pendingCount = requests.length;
 
-  const loadRequests = async () => {
+  const loadRequests = async (showSpinner = false) => {
     if (!useBackend || !user) {
       setRequests([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setBanner(null);
+    if (showSpinner) setLoading(true);
 
     try {
       const notifData = await notificationService.listFriendRequests();
@@ -61,7 +109,11 @@ export default function RequestsPage() {
         new Set(notifData.map((row) => row.from_user_id).filter(Boolean))
       ) as string[];
 
-      const profileMap = new Map<string, { name: string; avatarUrl: string | null; course: string | null }>();
+      const profileMap = new Map<
+        string,
+        { name: string; avatarUrl: string | null; course: string | null; avatarKey: string }
+      >();
+
       if (requesterIds.length > 0) {
         const profiles = await apiClient.getProfilesByIds(requesterIds);
         profiles.forEach((profile) => {
@@ -70,68 +122,47 @@ export default function RequestsPage() {
             name: mapped.name,
             avatarUrl: mapped.avatar,
             course: mapped.course,
+            avatarKey: (profile as any).avatar_preset_id || (profile as any).avatarKey || 'fox',
           });
         });
       }
-
-      const statusMap = new Map<string, { status: RequestStatus; acceptedAt: string | null }>();
-      if (requesterIds.length > 0) {
-        const interactions = await apiClient.listIncomingInteractions(requesterIds);
-        interactions.forEach((row) => {
-          if (row.user_id) {
-            statusMap.set(row.user_id, {
-              status: row.status as RequestStatus,
-              acceptedAt: row.accepted_at ?? null,
-            });
-          }
-        });
-      }
-
-      const expirationMs = 1 * 60 * 60 * 1000;
-      const cutoff = Date.now() - expirationMs;
 
       const nextRequests = notifData
         .filter((row) => Boolean(row.from_user_id))
         .map((row) => {
           const requesterId = row.from_user_id as string;
           const profile = profileMap.get(requesterId);
-          const statusInfo = statusMap.get(requesterId);
-          const status = statusInfo?.status ?? 'pending';
-          const acceptedAt = statusInfo?.acceptedAt ?? (status === 'accepted' ? row.created_at : null);
+          // Derive an anonymous avatar key — never expose real identity on this page
+          const anonAvatarKey = getAnonAvatarKey(requesterId, profile?.avatarKey);
           return {
             id: row.id,
             fromUserId: requesterId,
-            fromName: profile?.name ?? 'Student',
-            avatarUrl: profile?.avatarUrl ?? null,
-            course: profile?.course ?? null,
-            title: row.title,
-            description: row.description ?? '',
-            timestamp: new Date(row.created_at).toLocaleString(),
+            fromName: `Anonymous ${anonAvatarKey.charAt(0).toUpperCase() + anonAvatarKey.slice(1)}`,
+            avatarKey: anonAvatarKey,
+            course: 'CHMSU Student',
+            title: row.title || 'New Match Request',
+            description:
+              row.description || 'An anonymous peer wants to connect with you! Say hello in anonymous chat.',
+            timestamp: row.created_at,
             isRead: row.is_read,
-            status,
-            acceptedAt,
           } as RequestItem;
-        })
-        .filter((request) => {
-          if (request.status !== 'accepted' || !request.acceptedAt) return true;
-          return new Date(request.acceptedAt).getTime() >= cutoff;
         });
 
       setRequests(nextRequests);
     } catch (err: any) {
-      setBanner(err?.message ?? 'Failed to load requests.');
+      setBanner({ type: 'error', message: err?.message ?? 'Failed to load requests.' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadRequests();
+    void loadRequests(true);
 
     if (!useBackend || !user) return;
 
     const interval = setInterval(() => {
-      void loadRequests();
+      void loadRequests(false);
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
@@ -146,24 +177,25 @@ export default function RequestsPage() {
     setBusy(request.id, true);
     setBanner(null);
 
-    setRequests(prev => prev.map(r =>
-      r.id === request.id ? { ...r, status: 'accepted', acceptedAt: new Date().toISOString() } : r
-    ));
+    setRequests((prev) => prev.filter((r) => r.id !== request.id));
 
     try {
       const result = await interactionService.acceptRequest(user.id, request.fromUserId);
       await notificationService.markAsRead(request.id);
 
+      setBanner({
+        type: 'success',
+        message: 'Match request accepted! Opening anonymous chat...',
+      });
+
       if (result?.conversationId) {
-        navigate('/messages', { state: { conversationId: result.conversationId } });
-      } else {
-        await loadRequests();
+        setTimeout(() => {
+          navigate('/messages', { state: { conversationId: result.conversationId } });
+        }, 500);
       }
     } catch (err: any) {
-      setBanner(err?.message ?? 'Failed to accept request.');
-      setRequests(prev => prev.map(r =>
-        r.id === request.id ? { ...r, status: 'pending', acceptedAt: null } : r
-      ));
+      setBanner({ type: 'error', message: err?.message ?? 'Failed to accept match request.' });
+      void loadRequests(false);
     } finally {
       setBusy(request.id, false);
     }
@@ -174,189 +206,366 @@ export default function RequestsPage() {
     setBusy(request.id, true);
     setBanner(null);
 
-    setRequests(prev => prev.map(r =>
-      r.id === request.id ? { ...r, status: 'rejected' } : r
-    ));
+    setRequests((prev) => prev.filter((r) => r.id !== request.id));
 
     try {
       await interactionService.rejectRequest(user.id, request.fromUserId);
       await notificationService.markAsRead(request.id);
+      setBanner({ type: 'success', message: 'Match request declined.' });
     } catch (err: any) {
-      setBanner(err?.message ?? 'Failed to reject request.');
-      setRequests(prev => prev.map(r =>
-        r.id === request.id ? { ...r, status: 'pending' } : r
-      ));
+      setBanner({ type: 'error', message: err?.message ?? 'Failed to decline request.' });
+      void loadRequests(false);
     } finally {
       setBusy(request.id, false);
     }
   };
 
-  const handleMessage = async (request: RequestItem) => {
-    if (!user) return;
-    setBusy(request.id, true);
-    setBanner(null);
+  const counts = useMemo(() => {
+    return {
+      all: requests.length,
+      unread: requests.filter((r) => !r.isRead).length,
+      recent: requests.filter((r) => isRecent(r.timestamp)).length,
+    };
+  }, [requests]);
 
-    try {
-      const conversationId = await chatService.getOrCreateConversation(request.fromUserId);
-      if (conversationId) {
-        navigate('/messages', { state: { conversationId } });
-      } else {
-        navigate('/messages');
-      }
-    } catch (err: any) {
-      setBanner('Could not start conversation: ' + err.message);
-    } finally {
-      setBusy(request.id, false);
-    }
-  };
+  const filteredRequests = useMemo(() => {
+    return requests.filter((r) => {
+      if (activeFilter === 'unread') return !r.isRead;
+      if (activeFilter === 'recent') return isRecent(r.timestamp);
+      return true;
+    });
+  }, [requests, activeFilter]);
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-32 md:pb-12 w-full">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-fraunces text-3xl font-bold text-[#1A6B3C] dark:text-emerald-400">Requests</h1>
-            <p className="font-jakarta text-[#1A6B3C]/60 dark:text-gray-400 mt-1">
-              {pendingCount > 0
-                ? `You have ${pendingCount} pending connection request${pendingCount === 1 ? '' : 's'}`
-                : 'No new requests at the moment.'}
-            </p>
-          </div>
-          <button
-            onClick={() => loadRequests()}
-            className="p-2.5 rounded-xl border border-[#1A6B3C]/10 dark:border-white/10 bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-sm hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5 transition-all"
-            title="Refresh requests"
-          >
-            <RefreshCcw size={18} className={cn(loading && "animate-spin")} />
-          </button>
-        </div>
+    <PageTransition>
+      <div className="flex-1 overflow-y-auto pb-28 md:pb-12 custom-scrollbar">
+        <div className="max-w-3xl mx-auto px-0 sm:px-6 pt-4 sm:pt-6">
+          {/* ═══ Header with Back Button, Title & Actions ═══ */}
+          <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6 px-4 sm:px-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/notifications')}
+                className="w-9 h-9 rounded-xl border border-[#1A6B3C]/10 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-700 dark:text-gray-200 hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5 flex items-center justify-center shadow-xs transition-all cursor-pointer"
+                title="Back to Notifications"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="font-fraunces font-bold text-2xl sm:text-3xl text-[#1A6B3C] dark:text-white tracking-tight">
+                    Match Requests
+                  </h1>
+                  {pendingCount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-jakarta font-extrabold bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-xs">
+                      {pendingCount}
+                    </span>
+                  )}
+                </div>
+                <p className="font-jakarta text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Review anonymous invitations from campus peers. Accept to start an anonymous chat.
+                </p>
+              </div>
+            </div>
 
-        {banner && (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-jakarta text-amber-700 flex items-center justify-between">
-            <span>{banner}</span>
-            <button onClick={() => setBanner(null)} className="text-amber-500 hover:text-amber-700">
-              <X size={16} />
+            <button
+              type="button"
+              onClick={() => void loadRequests(true)}
+              className="p-2.5 rounded-xl border border-[#1A6B3C]/10 dark:border-white/10 bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs hover:bg-[#1A6B3C]/5 dark:hover:bg-white/5 transition-all cursor-pointer flex-shrink-0"
+              title="Refresh requests"
+            >
+              <RefreshCcw size={17} className={cn(loading && 'animate-spin')} />
             </button>
           </div>
-        )}
 
-        <div className="space-y-4">
-          {loading && requests.length === 0 ? (
-            <div className="bg-white dark:bg-[#111827] rounded-3xl p-12 text-center border border-[#1A6B3C]/6 dark:border-white/10 card-shadow">
-              <div className="w-12 h-12 border-4 border-[#1A6B3C]/10 dark:border-white/10 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin mx-auto mb-4" />
-              <p className="font-jakarta text-gray-400">Loading your requests...</p>
-            </div>
-          ) : requests.length === 0 ? (
-            <div className="bg-white dark:bg-[#111827] rounded-3xl p-16 text-center border border-[#1A6B3C]/6 dark:border-white/10 card-shadow">
-              <div className="w-20 h-20 bg-[#1A6B3C]/5 dark:bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                <UserPlus size={40} className="text-[#1A6B3C]/20 dark:text-emerald-400/40" />
-              </div>
-              <h3 className="font-fraunces text-2xl font-bold text-gray-700 dark:text-white mb-2">All caught up!</h3>
-              <p className="font-jakarta text-gray-400 max-w-sm mx-auto mb-8">
-                You don't have any pending requests. Why not explore the community and find new allies?
-              </p>
-              <button
-                onClick={() => navigate('/discover')}
-                className="bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold px-8 py-3 rounded-2xl transition-all shadow-lg"
+          {/* ═══ Alert Banner ═══ */}
+          {banner && (
+            <div className="px-4 sm:px-0 mb-4">
+              <div
+                className={cn(
+                  'rounded-2xl px-4 py-3 text-sm font-jakarta flex items-center justify-between transition-all',
+                  banner.type === 'error'
+                    ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/40'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40'
+                )}
               >
-                Discover New Allies
-              </button>
-            </div>
-          ) : (
-            requests.map((request) => {
-              const isBusy = busyIds[request.id];
-              const isAccepted = request.status === 'accepted';
-              const isRejected = request.status === 'rejected';
-
-              return (
-                <div
-                  key={request.id}
-                  className={cn(
-                    "bg-white dark:bg-[#111827] rounded-3xl p-5 border border-[#1A6B3C]/6 dark:border-white/10 card-shadow transition-all duration-300",
-                    isBusy && "opacity-70 grayscale-[0.5]"
-                  )}
+                <span>{banner.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setBanner(null)}
+                  className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-                    <div className="flex-1 flex items-start gap-4">
-                      <div className="relative flex-shrink-0">
-                        <AvatarDisplay
-                          src={request.avatarUrl}
-                          name={request.fromName}
-                          className="w-16 h-16 rounded-2xl object-cover shadow-md"
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ Filter Controls: Desktop Tabs & Mobile Responsive Dropdown ═══ */}
+          <div className="mb-4 sm:mb-6 px-4 sm:px-0">
+            {/* Desktop Tabs */}
+            <div className="hidden sm:flex items-center gap-2">
+              {[
+                { id: 'all', label: 'All Requests', count: counts.all },
+                { id: 'unread', label: 'Unread', count: counts.unread },
+                { id: 'recent', label: 'Recent', count: counts.recent },
+              ].map((tab) => {
+                const isActive = activeFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveFilter(tab.id as RequestFilter)}
+                    className={cn(
+                      'px-4 py-1.5 rounded-2xl font-jakarta text-xs transition-all cursor-pointer select-none flex items-center gap-1.5',
+                      isActive
+                        ? 'bg-[#1A6B3C] text-white font-extrabold shadow-xs'
+                        : 'bg-white dark:bg-[#181818] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 font-semibold border border-gray-200/80 dark:border-white/10'
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={cn(
+                        'px-1.5 py-0.2 rounded-full text-[10px] font-bold',
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Responsive Filter Dropdown */}
+            <div className="sm:hidden relative">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilterDropdown((prev) => !prev)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#181818] border border-gray-200 dark:border-white/10 shadow-xs text-xs font-jakarta font-bold text-gray-800 dark:text-white cursor-pointer active:scale-95 transition-all"
+                >
+                  <Filter size={14} className="text-[#1A6B3C] dark:text-emerald-400" />
+                  <span>
+                    {activeFilter === 'all'
+                      ? 'All Requests'
+                      : activeFilter === 'unread'
+                      ? 'Unread'
+                      : 'Recent'}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400 font-bold">
+                    {counts[activeFilter]}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={cn(
+                      'text-gray-400 transition-transform duration-200',
+                      showMobileFilterDropdown && 'rotate-180'
+                    )}
+                  />
+                </button>
+
+                <span className="text-[11px] font-jakarta text-gray-500 dark:text-gray-400 font-medium">
+                  Showing {filteredRequests.length} of {requests.length}
+                </span>
+              </div>
+
+              {showMobileFilterDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMobileFilterDropdown(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-[#181818] border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {[
+                      { id: 'all', label: 'All Requests', count: counts.all },
+                      { id: 'unread', label: 'Unread', count: counts.unread },
+                      { id: 'recent', label: 'Recent (Last 24h)', count: counts.recent },
+                    ].map((item) => {
+                      const isSelected = activeFilter === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveFilter(item.id as RequestFilter);
+                            setShowMobileFilterDropdown(false);
+                          }}
+                          className={cn(
+                            'w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-jakarta transition-colors text-left cursor-pointer',
+                            isSelected
+                              ? 'bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 font-bold'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 font-medium'
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isSelected ? (
+                              <Check size={14} className="stroke-[2.5]" />
+                            ) : (
+                              <div className="w-3.5" />
+                            )}
+                            <span>{item.label}</span>
+                          </div>
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                              isSelected
+                                ? 'bg-[#1A6B3C] text-white'
+                                : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                            )}
+                          >
+                            {item.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ═══ Content List ═══ */}
+          <div className="space-y-4">
+            {loading && requests.length === 0 ? (
+              <div className="bg-white dark:bg-[#111827] rounded-none sm:rounded-3xl p-12 text-center border-y sm:border border-x-0 sm:border-x border-[#1A6B3C]/10 dark:border-white/10 shadow-none sm:shadow-xs">
+                <div className="w-10 h-10 border-3 border-[#1A6B3C]/20 dark:border-white/10 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin mx-auto mb-3" />
+                <p className="font-jakarta text-sm text-gray-500 dark:text-gray-400">
+                  Loading match requests...
+                </p>
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              /* ── Empty State ── */
+              <div className="bg-white dark:bg-[#111827] rounded-none sm:rounded-3xl p-10 sm:p-14 text-center border-y sm:border border-x-0 sm:border-x border-[#1A6B3C]/10 dark:border-white/10 shadow-none sm:shadow-xs">
+                <div className="w-16 h-16 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 rounded-3xl flex items-center justify-center mx-auto mb-4 text-[#1A6B3C] dark:text-emerald-400 shadow-inner">
+                  <Sparkles size={30} />
+                </div>
+                <h3 className="font-fraunces font-bold text-2xl text-gray-900 dark:text-white mb-2">
+                  {activeFilter === 'all'
+                    ? 'All caught up!'
+                    : `No ${activeFilter} requests`}
+                </h3>
+                <p className="font-jakarta text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6 leading-relaxed">
+                  {activeFilter === 'all'
+                    ? "You don't have any pending match requests right now. Explore the community on Discover to meet new campus peers."
+                    : `You don't have any ${activeFilter} match requests right now.`}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/notifications')}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-jakarta font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-all cursor-pointer"
+                  >
+                    Back to Notifications
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/discover')}
+                    className="px-6 py-2.5 rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Compass size={16} />
+                    <span>Discover Peers</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Request Cards ── */
+              filteredRequests.map((request) => {
+                const isBusy = busyIds[request.id];
+                const online = isOnline(request.fromUserId);
+
+                return (
+                  <div
+                    key={request.id}
+                    className={cn(
+                      'bg-white dark:bg-[#111827] rounded-none sm:rounded-3xl p-5 sm:p-6 border-y sm:border border-x-0 sm:border-x border-[#1A6B3C]/10 dark:border-white/10 shadow-none sm:shadow-xs hover:shadow-md transition-all duration-200',
+                      isBusy && 'opacity-60 pointer-events-none'
+                    )}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
+                      {/* Left: Protected Avatar with Online Presence */}
+                      <div className="relative flex-shrink-0 self-start">
+                        <AnonymousAvatar
+                          avatarKey={request.avatarKey || 'fox'}
+                          size={54}
+                          className="rounded-2xl shadow-sm"
                         />
-                        {isOnline(request.fromUserId) && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#111827] rounded-full shadow-sm" title="Online" />
-                        )}
-                        {request.status === 'pending' && !isOnline(request.fromUserId) && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#E8A838] border-2 border-white dark:border-[#111827] rounded-full animate-pulse" />
+                        {online && (
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#111827] rounded-full shadow-xs"
+                            title="Online now"
+                          />
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-jakarta font-bold text-gray-900 dark:text-white truncate">
-                            {request.fromName}
+
+                      {/* Middle: Details & Message */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="font-jakarta font-bold text-base text-gray-900 dark:text-white truncate">
+                            Anonymous Peer
                           </h3>
-                          <span className={cn(
-                            "text-[10px] font-jakarta font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
-                            isAccepted ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300" :
-                            isRejected ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" :
-                            "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
-                          )}>
-                            {request.status}
+                          <span className="inline-flex items-center gap-1 text-[10px] font-jakarta font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 uppercase tracking-tight">
+                            <Sparkles size={10} />
+                            <span>Match Request</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-jakarta font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 uppercase tracking-tight">
+                            <Shield size={10} />
+                            <span>Protected Student</span>
                           </span>
                         </div>
+
                         <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mb-2">
                           {request.course || 'CHMSU Student'}
                         </p>
-                        <p className="font-jakarta text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-2 italic">
-                          "{request.description || request.title}"
-                        </p>
-                        <p className="text-[10px] text-[#3B8C7E] dark:text-emerald-400/80 mt-2 font-medium">
-                          Sent {request.timestamp}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex sm:flex-col gap-2 min-w-[140px]">
-                      {request.status === 'pending' ? (
-                        <>
-                          <button
-                            onClick={() => handleAccept(request)}
-                            disabled={isBusy}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-50"
-                          >
-                            <Check size={16} /> Accept
-                          </button>
-                          <button
-                            onClick={() => handleReject(request)}
-                            disabled={isBusy}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-jakarta font-bold text-sm px-6 py-2.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
-                          >
-                            <X size={16} /> Ignore
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          <div className={cn(
-                            "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-jakarta font-bold text-xs border w-full",
-                            isAccepted ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800/30" : "bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-400 border-gray-100 dark:border-white/10"
-                          )}>
-                            {isAccepted ? (
-                              <><Check size={14} /> Connected</>
-                            ) : (
-                              <><X size={14} /> Ignored</>
-                            )}
+                        {/* Message Box */}
+                        <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-xl px-3.5 py-2.5 my-2">
+                          <p className="font-jakarta text-xs sm:text-sm text-gray-700 dark:text-gray-200 leading-relaxed italic">
+                            "{request.description}"
+                          </p>
+                        </div>
+
+                        {/* Timestamp only — profile is hidden until allied */}
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                            <Clock size={12} />
+                            <span>Sent {formatTimestamp(request.timestamp)}</span>
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Right: Actions (Two column one row on mobile, column on desktop) */}
+                      <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2.5 pt-2 sm:pt-0 sm:min-w-[150px] flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleAccept(request)}
+                          disabled={isBusy}
+                          className="flex items-center justify-center gap-2 bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-sm px-4 sm:px-5 py-2.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <Check size={16} className="stroke-[2.5]" />
+                          <span>Accept Request</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReject(request)}
+                          disabled={isBusy}
+                          className="flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-white/10 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 text-gray-600 dark:text-gray-300 font-jakarta font-semibold text-sm px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <X size={15} />
+                          <span>Decline Request</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
+

@@ -314,6 +314,12 @@ function ReportDetailSheet({
   const isPostReport = Boolean(report.post_id || report.post);
   const post = report.post;
 
+  const ensurePointerEvents = () => {
+    setTimeout(() => {
+      document.body.style.pointerEvents = '';
+    }, 50);
+  };
+
   const setStatus = async (status: ReportStatus) => {
     setBusy(true);
     try {
@@ -325,6 +331,7 @@ function ReportDetailSheet({
       notify.error('Could not update report', err.message);
     } finally {
       setBusy(false);
+      ensurePointerEvents();
     }
   };
 
@@ -338,6 +345,7 @@ function ReportDetailSheet({
       notify.error(`Could not ${label.toLowerCase()}`, err.message);
     } finally {
       setBusy(false);
+      ensurePointerEvents();
     }
   };
 

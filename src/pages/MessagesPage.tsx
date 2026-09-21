@@ -9,7 +9,6 @@ import { usePresence } from '@/context/PresenceContext';
 import { useIcebreakers } from '@/hooks/useIcebreakers';
 import { useChatView } from '@/context/ChatViewContext';
 import { ConversationList } from '@/components/chat/ConversationList';
-import { ChatBrowseList } from '@/components/chat/ChatBrowseList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { IcebreakerSuggestions } from '@/components/chat/IcebreakerSuggestions';
@@ -34,10 +33,7 @@ import { FloatingStatusBadge } from '@/components/match/FloatingStatusBadge';
 import { MatchRoadmapModal } from '@/components/match/MatchRoadmapModal';
 import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
-import { useChatBrowseUsers } from '@/hooks/useChatBrowseUsers';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
-import { buildChatBrowseResults, computeMaxBrowseItems } from '@/lib/chatUserSearch';
-import type { ChatBrowseUser } from '@/lib/chatUserSearch';
 import { notify } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
@@ -217,9 +213,6 @@ export default function MessagesPage() {
   const [isMobileView, setIsMobileView] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [browseMode, setBrowseMode] = useState(false);
-  const [startingUserId, setStartingUserId] = useState<string | null>(null);
-  const [maxBrowseItems, setMaxBrowseItems] = useState(10);
   const [variantFilter, setVariantFilter] = useState<'all' | 'regular' | 'anonymous'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -593,74 +586,18 @@ export default function MessagesPage() {
   // ── Filtered conversations ────────────────────────────────────────────────
   const filteredConversations = useMemo(() => {
      const q = searchQuery.trim().toLowerCase();
-     const result = conversations.filter((conv) => {
+     return conversations.filter((conv) => {
        const iBlockedThem = conv.blockStatus === 'blockedByMe' || conv.blockStatus === 'mutual';
        if (iBlockedThem) return false;
        if (variantFilter === 'regular' && conv.variant !== 'regular') return false;
        if (variantFilter === 'anonymous' && conv.variant === 'regular') return false;
        if (!q) return true;
-       return conv.participantName.toLowerCase().includes(q);
+       return (
+         conv.participantName.toLowerCase().includes(q) ||
+         (conv.lastMessage || '').toLowerCase().includes(q)
+       );
      });
-     return result;
   }, [conversations, searchQuery, variantFilter]);
-
-  const showBrowse = browseMode || searchQuery.trim().length > 0;
-  const { allies: browseAllies, profiles: browseProfiles, isLoading: loadingBrowse } = useChatBrowseUsers(
-    user?.id ?? null,
-    showBrowse && useBackend,
-  );
-
-  const existingParticipantIds = useMemo(
-    () => new Set(conversations.map((conv) => conv.participantId)),
-    [conversations],
-  );
-
-  const browseResults = useMemo(
-    () =>
-      buildChatBrowseResults({
-        query: searchQuery,
-        allies: browseAllies,
-        allProfiles: browseProfiles,
-        existingParticipantIds,
-        maxItems: maxBrowseItems,
-      }),
-    [searchQuery, browseAllies, browseProfiles, existingParticipantIds, maxBrowseItems],
-  );
-
-  const hasBrowseResults = browseResults.allies.length > 0 || browseResults.others.length > 0;
-
-  useEffect(() => {
-    const el = listContainerRef.current;
-    if (!el) return;
-
-    const updateMaxItems = () => {
-      setMaxBrowseItems(computeMaxBrowseItems(el.clientHeight));
-    };
-
-    updateMaxItems();
-    const observer = new ResizeObserver(updateMaxItems);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [showBrowse]);
-
-  const handleBrowseSelect = useCallback(async (browseUser: ChatBrowseUser) => {
-    if (!user || startingUserId) return;
-
-    setStartingUserId(browseUser.id);
-    try {
-      const conversationId = await chatService.getOrCreateConversation(browseUser.id);
-      const conv = await chatService.getConversation(conversationId, user.id);
-      setActiveConversation(conv);
-      setBrowseMode(false);
-      setSearchQuery('');
-      void refreshConvs(true);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      notify.error('Could not start conversation', message);
-    } finally {
-      setStartingUserId(null);
-    }
-  }, [user, startingUserId, refreshConvs]);
 
 
   const isParticipantOnline = activeConversation
@@ -683,6 +620,13 @@ export default function MessagesPage() {
           'border-r border-gray-100 dark:border-white/10',
           activeConversation && 'hidden md:flex',
         )}>
+          {/* ── Mobile Chats Header ── */}
+          <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md border-b border-[#E2DED7] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+            <h1 className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-white tracking-tight">
+              Chats
+            </h1>
+          </div>
+
           <div className="px-4 pt-4 pb-3 flex-shrink-0">
             <div className="relative">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -720,63 +664,13 @@ export default function MessagesPage() {
 
           <div
             ref={listContainerRef}
-            className={cn(
-              'flex-1 min-h-0',
-              showBrowse ? 'overflow-y-auto' : 'overflow-hidden flex flex-col',
-            )}
+            className="flex-1 min-h-0 overflow-hidden flex flex-col"
           >
-            {showBrowse ? (
-              <>
-                {loadingBrowse ? (
-                  <div className="p-6 text-center text-sm text-gray-400 font-jakarta">Loading people…</div>
-                ) : hasBrowseResults ? (
-                  <>
-                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-white dark:bg-[#0D131F] sticky top-0 z-10 border-b border-gray-50 dark:border-white/5">
-                      {searchQuery.trim() ? 'Start a chat' : 'Allies to message'}
-                    </p>
-                    <ChatBrowseList
-                      allies={browseResults.allies}
-                      others={browseResults.others}
-                      onSelect={handleBrowseSelect}
-                      startingUserId={startingUserId}
-                      onlineUserIds={onlineUserIds}
-                      showSections={Boolean(searchQuery.trim())}
-                      embedded
-                    />
-                  </>
-                ) : searchQuery.trim() ? (
-                  <div className="p-6 text-center">
-                    <p className="text-gray-500 text-sm">No people found.</p>
-                    <p className="text-gray-400 text-xs mt-1">Try a different name or connect on Discover.</p>
-                  </div>
-                ) : null}
-
-                {filteredConversations.length > 0 && (
-                  <>
-                    <p className="px-4 py-2 text-[10px] font-jakarta font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-white dark:bg-[#0D131F] sticky top-0 z-10 border-b border-gray-50 dark:border-white/5">
-                      {searchQuery.trim() ? 'Matching chats' : 'Your chats'}
-                    </p>
-                    <ConversationList
-                      conversations={filteredConversations}
-                      activeId={activeConversation?.id}
-                      activeIsStreakActiveToday={isStreakActiveToday}
-                      onSelect={setActiveConversation}
-                      onDelete={setConvToDelete}
-                      isLoading={false}
-                      onlineUserIds={onlineUserIds}
-                      currentUserId={user?.id ?? CURRENT_USER.id}
-                      embedded
-                    />
-                  </>
-                )}
-
-                {!loadingBrowse && !hasBrowseResults && filteredConversations.length === 0 && !searchQuery.trim() && (
-                  <div className="p-8 text-center">
-                    <p className="text-gray-500 text-sm">All your allies already have chats.</p>
-                    <p className="text-gray-400 text-xs mt-1">Search above to message someone new.</p>
-                  </div>
-                )}
-              </>
+            {searchQuery.trim() && filteredConversations.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-gray-500 text-sm">No matching chats found.</p>
+                <p className="text-gray-400 text-xs mt-1">Search is limited to your active chatmates.</p>
+              </div>
             ) : (
               <ConversationList
                 conversations={filteredConversations}
@@ -797,16 +691,25 @@ export default function MessagesPage() {
 
         {/* ── Chat Area ── */}
         <div className={cn(
-          'flex-1 bg-white dark:bg-[#090D16] flex flex-col overflow-hidden min-h-0',
+          'flex-1 relative flex flex-col overflow-hidden min-h-0 bg-[#EBF5EE] dark:bg-[#090D16]',
           (!activeConversation && !requestedConversationId) && 'hidden md:flex',
         )}>
+          {/* ── Conversation Theme Background (No vertical mirroring / zoomed responsive) ── */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+            <img
+              src="/images/chat-theme-bg.png"
+              alt=""
+              className="w-full h-full object-cover object-center scale-125 sm:scale-115 lg:scale-105 transition-transform duration-300 opacity-85 dark:opacity-15 dark:invert select-none pointer-events-none"
+            />
+          </div>
+
           {activeConversation ? (
             <>
-              {/* Chat Header */}
-              <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center gap-3 bg-white dark:bg-[#0D131F] flex-shrink-0">
+              {/* Chat Header with Gradient */}
+              <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/10 flex items-center gap-3 bg-gradient-to-b from-white via-white/95 to-white/80 dark:from-[#0D131F] dark:via-[#0D131F]/95 dark:to-[#0D131F]/80 backdrop-blur-md flex-shrink-0 z-20 shadow-2xs">
                 <button
                   onClick={() => setActiveConversation(null)}
-                  className="md:hidden p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
+                  className="md:hidden p-2 -ml-2 rounded-full text-gray-700 hover:text-[#1A6B3C] dark:text-gray-200 dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
                   <ArrowLeft size={20} />
                 </button>
@@ -897,9 +800,11 @@ export default function MessagesPage() {
                 style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
               >
               <div className="flex-1 min-h-0 relative flex flex-col">
-                {isAnonymousConversation && activeConversation.variant !== 'anonymous_ended' && (
+                {isAnonymousConversation && (
                   <FloatingStatusBadge
                     stage={activeConversation.matchInfo?.stage ?? 1}
+                    dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                    avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
                     onClick={() => setShowRoadmapModal(true)}
                   />
                 )}
@@ -983,12 +888,13 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              {/* Input */}
-              <div className="flex-shrink-0">
+              {/* Input (Floating) */}
+              <div className="flex-shrink-0 z-20 w-full max-w-4xl mx-auto px-3 md:px-6 pb-3 md:pb-4 pt-1">
                 <MessageInput
                   onSend={handleSendMessage}
                   onTextChange={(text) => notifyTyping(text.length > 0)}
                   disabled={loadingMessages || isBlocked || activeConversation.variant === 'anonymous_ended'}
+                  canUploadImages={activeConversation.variant === 'regular' || (activeConversation.matchInfo?.stage ?? 1) >= 3}
                   replyTo={replyTarget}
                   onCancelReply={() => setReplyTarget(null)}
                   currentUserId={user?.id ?? CURRENT_USER.id}

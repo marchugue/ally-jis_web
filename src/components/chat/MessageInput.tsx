@@ -15,6 +15,7 @@ interface MessageInputProps {
   onCancelReply?: () => void;
   currentUserId?: string;
   participantName?: string;
+  canUploadImages?: boolean;
   /** Fires on every keystroke with the current draft text. Used by the
    * anonymous match chat to drive a typing indicator — unused (and
    * safe to omit) for regular chat. */
@@ -37,6 +38,7 @@ export function MessageInput({
   onCancelReply,
   currentUserId,
   participantName,
+  canUploadImages = true,
   onTextChange,
 }: MessageInputProps) {
   const [text, setText] = useState('');
@@ -132,10 +134,10 @@ export function MessageInput({
   const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
   return (
-    <div className="p-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#0D131F]">
+    <div className="w-full bg-transparent border-none p-0">
       {children}
       {replyTo && currentUserId && participantName && (
-        <div className="mb-3 flex items-start gap-3 rounded-xl bg-[#1A6B3C]/5 dark:bg-white/5 border border-transparent dark:border-white/10 px-3 py-2.5">
+        <div className="mb-2.5 flex items-start gap-3 rounded-2xl bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border border-[#E2DED7]/90 dark:border-white/10 px-3.5 py-2.5 shadow-sm">
           <ReplyQuote
             variant="compose"
             label={getReplyComposeLabel(replyTo.senderId, currentUserId, participantName)}
@@ -144,7 +146,7 @@ export function MessageInput({
           />
           <button
             onClick={onCancelReply}
-            className="p-1 rounded-full text-gray-400 hover:bg-white dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex-shrink-0"
+            className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex-shrink-0"
             aria-label="Cancel reply"
           >
             <X size={14} />
@@ -153,7 +155,7 @@ export function MessageInput({
       )}
       {/* Image Preview Strip (up to 6) */}
       {imagePreviews.length > 0 && (
-        <div className="flex items-center gap-2 mb-3 overflow-x-auto py-1">
+        <div className="flex items-center gap-2 mb-2.5 overflow-x-auto py-1.5 px-1 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md rounded-2xl border border-[#E2DED7]/80 dark:border-white/10 shadow-sm">
           {imagePreviews.map((item, idx) => (
             <div key={idx} className="relative flex-shrink-0">
               {item.isVideo ? (
@@ -191,12 +193,22 @@ export function MessageInput({
           )}
         </div>
       )}
-      <div className="flex items-center gap-2">
+
+      {/* Floating Chat Input Pill (Matches mobile native) */}
+      <div className="flex items-center gap-1.5 md:gap-2">
+        {/* Plus / Media action button */}
         <button
+          type="button"
+          disabled={!canUploadImages}
           onClick={() => fileInputRef.current?.click()}
-          className="p-2.5 text-gray-400 hover:text-[#3B8C7E] dark:hover:text-emerald-400 hover:bg-[#3B8C7E]/5 dark:hover:bg-white/5 rounded-xl transition-all"
+          title={!canUploadImages ? 'Image sharing unlocks at Stage 3 of the Ally Roadmap' : 'Attach image or video'}
+          className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-xs border ${
+            !canUploadImages
+              ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60'
+              : 'bg-white/95 dark:bg-[#0D131F]/95 border-[#E2DED7] dark:border-white/10 text-[#1A6B3C] dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10 hover:border-[#1A6B3C]/50 active:scale-95'
+          }`}
         >
-          <ImageIcon size={20} />
+          <ImageIcon size={19} />
         </button>
         <input
           type="file"
@@ -207,62 +219,63 @@ export function MessageInput({
           onChange={handleImageChange}
         />
 
-        <div className="relative" ref={emojiPickerRef}>
-          <button
-            onClick={() => setShowEmojiPicker((prev) => !prev)}
-            aria-label="Add emoji"
-            aria-expanded={showEmojiPicker}
-            className={`p-2.5 rounded-xl transition-all ${
-              showEmojiPicker
-                ? 'text-[#1A6B3C] dark:text-emerald-400 bg-[#1A6B3C]/10 dark:bg-emerald-500/20'
-                : 'text-gray-400 hover:text-[#3B8C7E] dark:hover:text-emerald-400 hover:bg-[#3B8C7E]/5 dark:hover:bg-white/5'
-            }`}
-          >
-            <Smile size={20} />
-          </button>
+        {/* Input capsule container containing emoji, text, and send pill */}
+        <div className="flex-1 flex items-center bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md rounded-full border border-[#E2DED7] dark:border-white/10 shadow-sm pl-2 pr-1.5 py-1 md:py-1.5 gap-1 transition-all focus-within:ring-2 focus-within:ring-[#1A6B3C]/20 dark:focus-within:ring-emerald-500/20 focus-within:border-[#1A6B3C]/40">
+          <div className="relative flex-shrink-0" ref={emojiPickerRef}>
+            <button
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              aria-label="Add emoji"
+              aria-expanded={showEmojiPicker}
+              className={`p-1.5 md:p-2 rounded-full transition-colors ${
+                showEmojiPicker
+                  ? 'text-[#1A6B3C] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/20'
+                  : 'text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <Smile size={20} />
+            </button>
 
-          <AnimatePresence>
-            {showEmojiPicker && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="absolute bottom-full left-0 mb-2 z-50 rounded-[20px] overflow-hidden border border-black/[0.06] dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-2xl bg-white/80 dark:bg-[#111827]/95"
-              >
-                <Picker
-                  data={data}
-                  onEmojiSelect={handleEmojiSelect}
-                  theme={isDarkMode ? 'dark' : 'light'}
-                  previewPosition="none"
-                  skinTonePosition="search"
-                  maxFrequentRows={2}
-                  perLine={8}
-                  emojiButtonRadius="10px"
-                  emojiButtonSize={34}
-                  emojiSize={20}
-                  style={
-                    {
-                      '--rgb-background': isDarkMode ? '17, 24, 39' : '255, 255, 255',
-                      '--rgb-input': isDarkMode ? '31, 41, 55' : '243, 244, 246',
-                      '--rgb-color': isDarkMode ? '243, 244, 246' : '55, 65, 81',
-                      '--rgb-accent': '26, 107, 60',
-                      '--color-border': isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                      '--color-border-over': isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
-                      '--font-family':
-                        '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", sans-serif',
-                      '--font-size': '14px',
-                      '--border-radius': '20px',
-                      '--category-icon-size': '18px',
-                    } as React.CSSProperties
-                  }
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+            <AnimatePresence>
+              {showEmojiPicker && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="absolute bottom-full left-0 mb-3 z-50 rounded-[20px] overflow-hidden border border-black/[0.06] dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-2xl bg-white/90 dark:bg-[#111827]/95"
+                >
+                  <Picker
+                    data={data}
+                    onEmojiSelect={handleEmojiSelect}
+                    theme={isDarkMode ? 'dark' : 'light'}
+                    previewPosition="none"
+                    skinTonePosition="search"
+                    maxFrequentRows={2}
+                    perLine={8}
+                    emojiButtonRadius="10px"
+                    emojiButtonSize={34}
+                    emojiSize={20}
+                    style={
+                      {
+                        '--rgb-background': isDarkMode ? '17, 24, 39' : '255, 255, 255',
+                        '--rgb-input': isDarkMode ? '31, 41, 55' : '243, 244, 246',
+                        '--rgb-color': isDarkMode ? '243, 244, 246' : '55, 65, 81',
+                        '--rgb-accent': '26, 107, 60',
+                        '--color-border': isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                        '--color-border-over': isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                        '--font-family':
+                          '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", sans-serif',
+                        '--font-size': '14px',
+                        '--border-radius': '20px',
+                        '--category-icon-size': '18px',
+                      } as React.CSSProperties
+                    }
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-        <div className="flex-1 relative">
           <input
             type="text"
             ref={textInputRef}
@@ -273,19 +286,20 @@ export function MessageInput({
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={replyTo ? 'Write a reply…' : 'Write a message...'}
-            className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-2.5 px-4 text-sm font-jakarta text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-white/10 transition-all outline-none"
+            className="flex-1 min-w-0 bg-transparent border-none py-1.5 px-2 text-sm md:text-[15px] font-jakarta text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
             disabled={disabled}
           />
+
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={disabled || (!text.trim() && images.length === 0)}
+            aria-label="Send message"
+            className="flex-shrink-0 w-12 md:w-14 h-8 md:h-9 flex items-center justify-center rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#A7D0B8] dark:disabled:bg-white/10 disabled:text-white/70 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-xs active:scale-95 cursor-pointer"
+          >
+            <Send size={15} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={disabled || (!text.trim() && images.length === 0)}
-          aria-label="Send message"
-          className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#E2DED7] dark:disabled:bg-white/10 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
-        >
-          <Send size={18} />
-        </button>
       </div>
     </div>
   );
