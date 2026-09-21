@@ -23,6 +23,7 @@ import { apiClient, isApiConfigured } from '@/api/client';
 import type { PresetAvatarRow } from '@/api/client';
 import { profileService } from '@/lib/services/profileService';
 import { profileSchema, ProfileFormValues } from '@/lib/validations/profile';
+import { isImageUrl } from '@/components/ally/AvatarDisplay';
 import { useLookupOptions } from '@/hooks/useLookupOptions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { notify } from '@/components/ui/sonner';
@@ -129,6 +130,14 @@ export function EditProfileModal({
         matchGenderPreference: profile.matchGenderPreference ?? '',
       });
       setCustomAvatarPreview(null);
+      if (profile.avatar) {
+        const isPreset = presetAvatars.some((p) => p.url === profile.avatar);
+        if (!isPreset && isImageUrl(profile.avatar)) {
+          setAvatarTab('upload');
+        } else {
+          setAvatarTab('presets');
+        }
+      }
       setUsernameStatus('idle');
       setActiveTab('general');
       setOrgSearch('');
@@ -418,7 +427,7 @@ export function EditProfileModal({
 
                 {avatarTab === 'upload' && (
                   <div className="space-y-3">
-                    {customAvatarPreview || (formData.avatar && (formData.avatar.startsWith('http') || formData.avatar.startsWith('/') || formData.avatar.startsWith('data:'))) ? (
+                    {customAvatarPreview || (formData.avatar && isImageUrl(formData.avatar)) ? (
                       <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/10">
                         <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#1A6B3C] dark:border-emerald-500 shadow-xs flex-shrink-0 bg-white dark:bg-[#202020]">
                           <img src={customAvatarPreview ?? formData.avatar} alt="Avatar" className="w-full h-full object-cover" />

@@ -7,6 +7,7 @@ import {
   UserPlus, RefreshCw,
   Sparkles, MessageSquare,
   Newspaper, Layers, Heart, MessageCircle,
+  Menu, Settings, ArrowLeft,
 } from 'lucide-react';
 import { CURRENT_USER } from '@/data/mockData';
 import { Student } from '@/types/ally';
@@ -26,6 +27,7 @@ import type { FeedComment, FeedCommentWithReplies } from '@/types/feed';
 import { RelationshipButtons } from '@/components/profile/RelationshipButtons';
 import { RelationshipListModal } from '@/components/profile/RelationshipListModal';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 
@@ -133,6 +135,9 @@ export default function ProfilePage() {
 
   // Unified Edit Profile modal
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // Flat Right Slide-in Settings Drawer
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
 
   // ── viewing someone else's profile ──────────────────────────────────────
   const [relationship, setRelationship] = useState<ProfileRelationshipSummary | null>(null);
@@ -514,9 +519,42 @@ export default function ProfilePage() {
               />
             </div>
 
+            {/* Mobile Top Header Overlay (Hamburger Menu on Right & Back Button on Left) */}
+            <div className="md:hidden absolute top-3.5 left-3.5 right-3.5 z-20 flex items-center justify-between pointer-events-none">
+              {!isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="pointer-events-auto px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center gap-1.5 text-xs font-jakarta font-semibold transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={14} /> Back
+                </button>
+              ) : (
+                <div />
+              )}
+
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => setSettingsDrawerOpen(true)}
+                  className="pointer-events-auto w-10 h-10 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all cursor-pointer"
+                  aria-label="Open settings menu"
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+            </div>
+
             {/* Avatar overhanging cover */}
             <div className="absolute bottom-0 left-6 sm:left-8 translate-y-1/2 z-10">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-[#181818] border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center">
+              <div
+                onClick={isOwnProfile ? () => setEditModalOpen(true) : undefined}
+                className={cn(
+                  "w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-[#181818] border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center shadow-md",
+                  isOwnProfile && "cursor-pointer group hover:opacity-95 transition-all"
+                )}
+                title={isOwnProfile ? "Click to edit profile & avatar" : undefined}
+              >
                 {isConfirmedAlly ? (
                   <AvatarDisplay
                     src={profile.avatar}
@@ -576,13 +614,24 @@ export default function ProfilePage() {
                   />
                 ) : null
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
-                >
-                  <Pencil size={13} /> Edit profile
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    <Pencil size={13} /> Edit profile
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsDrawerOpen(true)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
+                    aria-label="Open settings"
+                  >
+                    <Settings size={15} />
+                    <span>Settings</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -919,6 +968,15 @@ export default function ProfilePage() {
           userId={viewedUserId}
           kind={listModal}
           title={listModal}
+        />
+      )}
+
+      {/* ── Slide-in Right Settings Drawer ── */}
+      {profile && (
+        <ProfileSettingsDrawer
+          open={settingsDrawerOpen}
+          onClose={() => setSettingsDrawerOpen(false)}
+          profile={profile}
         />
       )}
     </div>

@@ -34,15 +34,16 @@ export function AnonymousAvatar({ avatarKey, size = 48, className = '', photoUrl
     );
   }
 
-  const emoji = (avatarKey && AVATAR_EMOJI[avatarKey]) || DEFAULT_AVATAR_EMOJI;
+  const normalizedKey = avatarKey?.toLowerCase().trim();
+  const emoji = (normalizedKey && AVATAR_EMOJI[normalizedKey]) || DEFAULT_AVATAR_EMOJI;
   return (
     <div
       className={cn('flex items-center justify-center rounded-full shrink-0 select-none', className)}
       style={{ ...dimensionStyle, backgroundColor: `${bg}1A`, border: `2px solid ${bg}` }}
     >
       <span
-        className={cn('leading-none select-none', hasCustomSizeClass ? 'text-2xl md:text-xl' : '')}
-        style={hasCustomSizeClass ? undefined : { fontSize: size * 0.5, lineHeight: 1 }}
+        className="leading-none select-none"
+        style={{ fontSize: (size || 48) * 0.5, lineHeight: 1 }}
       >
         {emoji}
       </span>

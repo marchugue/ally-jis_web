@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { AVATAR_EMOJI } from '@/lib/matchOptions';
 
 type AvatarDisplayProps = {
   src?: string | null;
@@ -9,12 +10,21 @@ type AvatarDisplayProps = {
   textClassName?: string;
 };
 
-export const isEmojiAvatar = (value?: string | null) => {
+export const isImageUrl = (value?: string | null): boolean => {
   if (!value) return false;
-  if (value.startsWith('http')) return false;
-  if (value.startsWith('data:')) return false;
-  if (value.startsWith('/')) return false;
-  return true;
+  const v = value.trim();
+  if (v.startsWith('http://') || v.startsWith('https://')) return true;
+  if (v.startsWith('data:image/')) return true;
+  if (v.startsWith('blob:')) return true;
+  if (v.startsWith('/')) return true;
+  if (/\.(png|jpe?g|webp|gif|svg|avif)($|\?)/i.test(v)) return true;
+  if (v.includes('/')) return true;
+  return false;
+};
+
+export const isEmojiAvatar = (value?: string | null): boolean => {
+  if (!value) return false;
+  return !isImageUrl(value);
 };
 
 export function AvatarDisplay({ src, name, alt, className, textClassName }: AvatarDisplayProps) {
@@ -24,18 +34,33 @@ export function AvatarDisplay({ src, name, alt, className, textClassName }: Avat
     setImgError(false);
   }, [src]);
 
-  if (src && !imgError && isEmojiAvatar(src)) {
+  const cleanSrc = src?.trim() || null;
+
+  // Check if src is an animal key (e.g. 'fox', 'wolf', 'panda')
+  const animalEmoji = cleanSrc ? AVATAR_EMOJI[cleanSrc.toLowerCase()] : null;
+
+  if (animalEmoji) {
     return (
       <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 dark:bg-transparent text-[#1A6B3C] dark:text-white flex-shrink-0 overflow-hidden select-none', className)}>
-        <span className={cn('text-lg leading-none', textClassName)}>{src}</span>
+        <span className={cn('text-lg leading-none select-none', textClassName)}>{animalEmoji}</span>
       </div>
     );
   }
 
-  if (src && !imgError) {
+  // If it's an emoji string (not a URL/path)
+  if (cleanSrc && !imgError && isEmojiAvatar(cleanSrc)) {
+    return (
+      <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 dark:bg-transparent text-[#1A6B3C] dark:text-white flex-shrink-0 overflow-hidden select-none', className)}>
+        <span className={cn('text-lg leading-none select-none', textClassName)}>{cleanSrc}</span>
+      </div>
+    );
+  }
+
+  // If it's an image URL/path and hasn't failed to load
+  if (cleanSrc && !imgError && isImageUrl(cleanSrc)) {
     return (
       <img
-        src={src}
+        src={cleanSrc}
         alt={alt ?? name ?? 'User avatar'}
         onError={() => setImgError(true)}
         className={cn('object-cover flex-shrink-0', className)}
@@ -43,6 +68,7 @@ export function AvatarDisplay({ src, name, alt, className, textClassName }: Avat
     );
   }
 
+  // Fallback to name initial or default user icon
   const fallback = name?.trim().slice(0, 1).toUpperCase() || '👤';
 
   return (

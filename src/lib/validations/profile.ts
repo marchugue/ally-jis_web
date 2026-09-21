@@ -11,7 +11,7 @@ export const profileSchema = z.object({
   yearLevel: z.string().min(1, "Select your year level"),
   interests: z.array(z.string()).min(3, "Select at least 3 interests"),
   organizations: z.array(z.string()),
-  avatar: z.string().min(1, "Select an avatar"),
+  avatar: z.string().optional().or(z.literal('')),
   // Optional — collected for future matchmaking use (see /match), not
   // required anywhere onboarding or the profile edit form validates.
   zodiacSign: z.string().optional().nullable(),

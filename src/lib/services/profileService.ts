@@ -15,7 +15,7 @@ export const profileMapper = (row: ProfileRow): Student => {
     yearLevel: row.year_level ?? 'Unknown Year',
     department: row.department ?? 'Unknown Department',
     bio: row.bio ?? '',
-    avatar: row.avatar_url ?? CURRENT_USER.avatar,
+    avatar: row.avatar_url || '',
     interests: row.interests ?? [],
     organizations: row.organizations ?? [],
     isVerified,

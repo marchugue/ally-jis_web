@@ -1,49 +1,42 @@
-import { useEffect, useRef, useState, useLayoutEffect } from 'react';
-import { MoreHorizontal, Reply, Forward, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MoreHorizontal, Reply, Send, Copy, Trash2, RotateCcw, Flag, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { MOBILE_MESSAGE_ACTION_CONFIG, computeAnchoredPopupPosition } from '@/lib/chatActionConfig';
+import { QUICK_REACTIONS, isOnlyEmoji } from '@/lib/chatActionConfig';
 import { QuickReactionsBar } from '@/components/chat/QuickReactionsBar';
 import { EmojiPickerOverlay } from '@/components/chat/EmojiPickerOverlay';
+import type { Message } from '@/types/ally';
 
-interface MessageActionMenuProps {
+interface MobileReactionPopupProps {
   open: boolean;
+  msg: Message;
+  isMe: boolean;
   anchorRect?: DOMRect | null;
   onClose: () => void;
   onReact: (emoji: string) => void;
   onReply?: () => void;
   onForward?: () => void;
-  onDelete?: () => void;
+  onCopy?: () => void;
+  onDeleteForMe?: () => void;
+  onDeleteForEveryone?: () => void;
+  onReport?: () => void;
 }
 
 export function MobileReactionPopup({
   open,
+  msg,
+  isMe,
   anchorRect = null,
   onClose,
   onReact,
   onReply,
   onForward,
-  onDelete,
-}: MessageActionMenuProps) {
+  onCopy,
+  onDeleteForMe,
+  onDeleteForEveryone,
+  onReport,
+}: MobileReactionPopupProps) {
   const [showFullPicker, setShowFullPicker] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({ opacity: 0 });
-
-  useLayoutEffect(() => {
-    if (!open || !anchorRect || !containerRef.current) return;
-
-    const el = containerRef.current;
-    const { width, height } = el.getBoundingClientRect();
-    const { top, left } = computeAnchoredPopupPosition(anchorRect, width, height);
-
-    setPopupStyle({
-      position: 'fixed',
-      top,
-      left,
-      opacity: 1,
-      zIndex: MOBILE_MESSAGE_ACTION_CONFIG.zIndex.popup,
-    });
-  }, [open, anchorRect]);
 
   useEffect(() => {
     if (!open) {
@@ -59,54 +52,300 @@ export function MobileReactionPopup({
 
   if (!open) return null;
 
+  const SCREEN_WIDTH = typeof window !== 'undefined' ? window.innerWidth : 375;
+  const SCREEN_HEIGHT = typeof window !== 'undefined' ? window.innerHeight : 667;
+
+  // Parse media for preview (single image / video, NO stacked cards)
+  const rawImages = (msg as any).images || msg.imageUrl;
+  let parsedImages: string[] = [];
+  if (Array.isArray(rawImages)) {
+    parsedImages = rawImages.filter(Boolean);
+  } else if (typeof rawImages === 'string') {
+    const trimmed = rawImages.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr)) {
+          parsedImages = arr.filter(Boolean);
+        }
+      } catch {}
+    }
+    if (parsedImages.length === 0 && trimmed) {
+      parsedImages = [trimmed];
+    }
+  }
+
+  const primaryMedia = parsedImages[0] || '';
+  const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
+  const isEmojiOnly = Boolean(parsedImages.length === 0 && msg.content && isOnlyEmoji(msg.content));
+  const hasContent = Boolean(msg.content?.trim());
+
+  const bubbleWidth = anchorRect && anchorRect.width > 0
+    ? Math.min(anchorRect.width, SCREEN_WIDTH - 32)
+    : Math.min(260, SCREEN_WIDTH * 0.75);
+
+  const bubbleHeight = anchorRect && anchorRect.height > 0
+    ? Math.min(anchorRect.height, 280)
+    : (isEmojiOnly ? 50 : 60);
+
+  const REACTIONS_HEIGHT = 56;
+  const optionCount = hasContent ? 5 : 4;
+  const OPTIONS_HEIGHT = optionCount * 42 + 12; // ~180px - ~222px
+  const GAP = 12;
+  const PADDING = 16;
+
+  // Screen height clamp to prevent overflow on compact screens
+  const availableBubbleHeight = Math.max(50, SCREEN_HEIGHT - REACTIONS_HEIGHT - OPTIONS_HEIGHT - GAP * 3 - 32);
+  const effectiveBubbleHeight = Math.min(bubbleHeight, availableBubbleHeight);
+  const totalPopupHeight = REACTIONS_HEIGHT + GAP + effectiveBubbleHeight + GAP + OPTIONS_HEIGHT;
+  const fixedTopY = Math.max(16, Math.round((SCREEN_HEIGHT - totalPopupHeight) / 2) - 10);
+
+  const reactionsTop = fixedTopY;
+  const messageTop = fixedTopY + REACTIONS_HEIGHT + GAP;
+  const optionsTop = messageTop + effectiveBubbleHeight + GAP;
+
+  // Horizontal alignment matching mobile: right-aligned if sent by me, left-aligned if received
+  const clampedMessageX = isMe
+    ? SCREEN_WIDTH - bubbleWidth - PADDING
+    : PADDING;
+
+  const reactionsWidth = Math.min(QUICK_REACTIONS.length * 44 + 56, SCREEN_WIDTH - 24);
+  const reactionsLeft = isMe
+    ? SCREEN_WIDTH - reactionsWidth - PADDING
+    : PADDING;
+
+  const optionsWidth = 210;
+  const optionsLeft = isMe
+    ? SCREEN_WIDTH - optionsWidth - PADDING
+    : PADDING;
+
   return (
-    <>
+    <div className="fixed inset-0 z-[60] md:hidden select-none">
+      {/* ── 1. Full-screen backdrop (dismiss on tap) ── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 md:hidden"
+        transition={{ duration: 0.15 }}
         style={{
-          zIndex: MOBILE_MESSAGE_ACTION_CONFIG.zIndex.overlay,
-          backgroundColor: `rgba(0, 0, 0, ${MOBILE_MESSAGE_ACTION_CONFIG.overlayOpacity})`,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
         }}
+        className="absolute inset-0 cursor-pointer"
         onClick={onClose}
       />
 
+      {/* ── 2. Quick Reactions Bar on TOP ── */}
       <motion.div
-        ref={containerRef}
-        initial={{ opacity: 0, scale: 0.94, y: 8 }}
+        initial={{ opacity: 0, scale: 0.9, y: 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 8 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        style={popupStyle}
-        className="flex flex-col gap-2 md:hidden w-[min(100vw-24px,320px)]"
+        exit={{ opacity: 0, scale: 0.9, y: 6 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed',
+          left: reactionsLeft,
+          top: reactionsTop,
+          width: reactionsWidth,
+          height: REACTIONS_HEIGHT,
+          zIndex: 70,
+        }}
+        className="bg-white dark:bg-[#181818] rounded-full flex items-center justify-between px-2.5 shadow-[0_6px_20px_rgba(0,0,0,0.25)] border border-black/5 dark:border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        <QuickReactionsBar
-          variant="mobile"
-          onReact={onReact}
-          onOpenPicker={() => setShowFullPicker(true)}
-        />
-
-        <div className="flex flex-col bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl rounded-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.18)] overflow-hidden w-full">
-          <ActionRow icon={<Reply size={16} />} label="Reply" onClick={onReply} />
-          <ActionRow icon={<Forward size={16} />} label="Forward" onClick={onForward} />
-          <ActionRow icon={<Trash2 size={16} />} label="Delete" onClick={onDelete} destructive />
-        </div>
+        {QUICK_REACTIONS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => {
+              onReact(emoji);
+              onClose();
+            }}
+            className="text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:scale-125 active:scale-95 transition-transform cursor-pointer select-none"
+          >
+            {emoji}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setShowFullPicker(true)}
+          className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors cursor-pointer"
+          aria-label="More emojis"
+        >
+          <Plus size={18} />
+        </button>
       </motion.div>
 
+      {/* ── 3. Anchored Message Bubble (Lifted, Middle) ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed',
+          left: clampedMessageX,
+          top: messageTop,
+          width: bubbleWidth,
+          maxHeight: effectiveBubbleHeight,
+          zIndex: 70,
+        }}
+        className={cn(
+          'flex flex-col justify-center select-none overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]',
+          isEmojiOnly
+            ? 'bg-transparent shadow-none p-0'
+            : cn(
+                'rounded-[18px] px-3.5 py-2.5',
+                isMe
+                  ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-[#202020] text-gray-900 dark:text-white border border-black/5 dark:border-white/10'
+              )
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {primaryMedia && (
+          isVideoUrl ? (
+            <video
+              src={primaryMedia}
+              controls
+              playsInline
+              className="w-full max-h-[180px] rounded-[14px] object-cover mb-2"
+            />
+          ) : (
+            <img
+              src={primaryMedia}
+              alt=""
+              className="w-full max-h-[180px] rounded-[14px] object-cover mb-2"
+            />
+          )
+        )}
+        {Boolean(msg.content) && (
+          <p
+            className={cn(
+              isEmojiOnly
+                ? cn('text-4xl leading-tight py-1', isMe ? 'text-right' : 'text-left')
+                : 'text-sm font-jakarta leading-snug whitespace-pre-wrap break-words'
+            )}
+          >
+            {msg.content}
+          </p>
+        )}
+      </motion.div>
+
+      {/* ── 4. Options Menu (Shortcut Actions, Bottom) ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: -6 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: -6 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed',
+          left: optionsLeft,
+          top: optionsTop,
+          width: optionsWidth,
+          zIndex: 70,
+        }}
+        className="bg-white dark:bg-[#181818] rounded-[20px] py-1.5 px-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.2)] border border-black/5 dark:border-white/10 flex flex-col divide-y divide-gray-100 dark:divide-white/5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Reply */}
+        <button
+          type="button"
+          onClick={() => {
+            onReply?.();
+            onClose();
+          }}
+          className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-gray-900 dark:text-gray-100 hover:opacity-75 transition-opacity text-left cursor-pointer"
+        >
+          <Reply size={18} className="text-gray-700 dark:text-gray-300 flex-shrink-0" />
+          <span>Reply</span>
+        </button>
+
+        {/* Forward */}
+        <button
+          type="button"
+          onClick={() => {
+            onForward?.();
+            onClose();
+          }}
+          className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-gray-900 dark:text-gray-100 hover:opacity-75 transition-opacity text-left cursor-pointer"
+        >
+          <Send size={18} className="text-gray-700 dark:text-gray-300 flex-shrink-0" />
+          <span>Forward</span>
+        </button>
+
+        {/* Copy (shown if content exists) */}
+        {hasContent && (
+          <button
+            type="button"
+            onClick={() => {
+              onCopy?.();
+              onClose();
+            }}
+            className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-gray-900 dark:text-gray-100 hover:opacity-75 transition-opacity text-left cursor-pointer"
+          >
+            <Copy size={18} className="text-gray-700 dark:text-gray-300 flex-shrink-0" />
+            <span>Copy</span>
+          </button>
+        )}
+
+        {/* Delete for me */}
+        <button
+          type="button"
+          onClick={() => {
+            onDeleteForMe?.();
+            onClose();
+          }}
+          className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-gray-900 dark:text-gray-100 hover:opacity-75 transition-opacity text-left cursor-pointer"
+        >
+          <Trash2 size={18} className="text-gray-700 dark:text-gray-300 flex-shrink-0" />
+          <span>Delete for me</span>
+        </button>
+
+        {/* Delete for everyone (sender only) OR Report (partner) */}
+        {isMe ? (
+          <button
+            type="button"
+            onClick={() => {
+              onDeleteForEveryone?.();
+              onClose();
+            }}
+            className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-red-500 hover:opacity-75 transition-opacity text-left cursor-pointer"
+          >
+            <RotateCcw size={18} className="text-red-500 flex-shrink-0" />
+            <span>Delete for everyone</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              onReport?.();
+              onClose();
+            }}
+            className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-red-500 hover:opacity-75 transition-opacity text-left cursor-pointer"
+          >
+            <Flag size={18} className="text-red-500 flex-shrink-0" />
+            <span>Report</span>
+          </button>
+        )}
+      </motion.div>
+
+      {/* ── 5. Full Emoji Picker Modal ── */}
       <AnimatePresence>
         {showFullPicker && (
           <EmojiPickerOverlay
             open
             onClose={() => setShowFullPicker(false)}
-            onSelect={onReact}
-            className="fixed inset-0 md:hidden flex items-center justify-center bg-black/30 p-4"
+            onSelect={(emoji) => {
+              onReact(emoji);
+              setShowFullPicker(false);
+              onClose();
+            }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4"
           />
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
 
@@ -126,7 +365,7 @@ function ActionRow({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-4 py-2.5 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5',
+        'flex items-center gap-3 px-4 py-2.5 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5 cursor-pointer',
         destructive ? 'text-red-500' : 'text-gray-700 dark:text-gray-200',
       )}
     >

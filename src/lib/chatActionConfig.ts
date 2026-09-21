@@ -1,5 +1,13 @@
 export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 
+const EMOJI_ONLY_REGEX = /^[\s\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]+$/u;
+export function isOnlyEmoji(text?: string | null): boolean {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (!trimmed || /[a-zA-Z0-9]/.test(trimmed)) return false;
+  return EMOJI_ONLY_REGEX.test(trimmed);
+}
+
 /**
  * Mobile long-press popup + shared reaction bar settings.
  */
