@@ -12,6 +12,8 @@ import { ChatImageThumbnail } from '@/components/chat/ChatImageThumbnail';
 import { MessageImageViewer } from '@/components/chat/MessageImageViewer';
 import { MessageReactions } from '@/components/chat/MessageReactions';
 import { DeleteMessageModal, MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
+import { ReportModal } from '@/components/chat/ReportModal';
+import { toast } from 'sonner';
 import { getReplyBubbleLabel } from '@/lib/replyLabels';
 import { ConversationWelcomeHeader } from './ConversationWelcomeHeader';
 import { ChatSkeleton } from './ChatSkeleton';
@@ -164,7 +166,8 @@ interface MessageBubbleProps {
   onReact?: (message: Message, emoji: string) => void;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
-  onDelete?: (message: Message) => void;
+  onDelete?: (message: Message, mode?: MessageDeleteMode) => void;
+  onReport?: (message: Message) => void;
 }
 
 function formatMessageTime(dateStr?: string | null): string {
@@ -210,6 +213,7 @@ const MessageBubble = memo(function MessageBubble({
   onReply,
   onForward,
   onDelete,
+  onReport,
 }: MessageBubbleProps) {
   // ─── ALL hooks must be at the top — no early returns before this point ───
   const isSending = msg.status === 'sending';
@@ -302,12 +306,39 @@ const MessageBubble = memo(function MessageBubble({
     );
   }
 
+  const handleCopy = useCallback(async () => {
+    if (!msg.content) return;
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      toast.success('Copied to clipboard');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  }, [msg.content]);
+
+  const handleForward = useCallback(async () => {
+    const shareText = msg.content || primaryMedia;
+    if (typeof navigator !== 'undefined' && navigator.share && shareText) {
+      try {
+        await navigator.share({ text: shareText });
+        return;
+      } catch {
+        // Fallback to internal forward modal
+      }
+    }
+    onForward?.(msg);
+  }, [msg, primaryMedia, onForward]);
+
   const mobileLongPressHandlers = isMobile
     ? {
         onTouchStart: longPress.onTouchStart,
         onTouchMove: longPress.onTouchMove,
         onTouchEnd: longPress.onTouchEnd,
         onTouchCancel: longPress.onTouchCancel,
+        onContextMenu: (e: React.MouseEvent) => {
+          e.preventDefault();
+          openActionMenu();
+        },
       }
     : {};
 
@@ -598,6 +629,8 @@ const MessageBubble = memo(function MessageBubble({
         {actionMenuOpen && (
           <MobileReactionPopup
             open
+            msg={msg}
+            isMe={isMe}
             anchorRect={anchorRect}
             onClose={closePopup}
             onReact={handleReact}
@@ -606,11 +639,23 @@ const MessageBubble = memo(function MessageBubble({
               closePopup();
             }}
             onForward={() => {
-              onForward?.(msg);
+              handleForward();
               closePopup();
             }}
-            onDelete={() => {
-              onDelete?.(msg);
+            onCopy={() => {
+              handleCopy();
+              closePopup();
+            }}
+            onDeleteForMe={() => {
+              onDelete?.(msg, 'delete_for_me');
+              closePopup();
+            }}
+            onDeleteForEveryone={() => {
+              onDelete?.(msg, 'delete_for_everyone');
+              closePopup();
+            }}
+            onReport={() => {
+              onReport?.(msg);
               closePopup();
             }}
           />
@@ -663,6 +708,7 @@ export function ChatWindow({
   const prevScrollHeightRef = useRef<number>(0);
   const prevScrollTopRef = useRef<number>(0);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
   const [activeTimeMessageId, setActiveTimeMessageId] = useState<string | null>(null);
 
   const prevConvIdRef = useRef<string | null | undefined>(conversationId);
@@ -877,7 +923,14 @@ export function ChatWindow({
               onReact={onReact}
               onReply={onReply}
               onForward={onForward}
-              onDelete={(targetMsg) => setMessageToDelete(targetMsg)}
+              onDelete={(targetMsg, mode) => {
+                if (mode) {
+                  handleConfirmDelete(targetMsg, mode);
+                } else {
+                  setMessageToDelete(targetMsg);
+                }
+              }}
+              onReport={(targetMsg) => setReportingMessage(targetMsg)}
             />
           </Fragment>
         );
@@ -895,6 +948,16 @@ export function ChatWindow({
           isMe={messageToDelete.senderId === currentUserId}
           onClose={() => setMessageToDelete(null)}
           onConfirmDelete={handleConfirmDelete}
+        />
+      )}
+
+      {/* Report Modal from shortcut action */}
+      {reportingMessage && (
+        <ReportModal
+          participantName={participantName || 'User'}
+          participantId={reportingMessage.senderId}
+          conversationId={conversationId || undefined}
+          onClose={() => setReportingMessage(null)}
         />
       )}
     </div>

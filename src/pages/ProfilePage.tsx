@@ -7,7 +7,7 @@ import {
   UserPlus, RefreshCw,
   Sparkles, MessageSquare,
   Newspaper, Layers, Heart, MessageCircle,
-  Menu, Settings, ArrowLeft,
+  Menu, ArrowLeft,
 } from 'lucide-react';
 import { CURRENT_USER } from '@/data/mockData';
 import { Student } from '@/types/ally';
@@ -621,15 +621,6 @@ export default function ProfilePage() {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
                   >
                     <Pencil size={13} /> Edit profile
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSettingsDrawerOpen(true)}
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C]/40 hover:text-[#1A6B3C] dark:hover:text-emerald-400 hover:bg-[#1A6B3C]/5 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
-                    aria-label="Open settings"
-                  >
-                    <Settings size={15} />
-                    <span>Settings</span>
                   </button>
                 </div>
               )}

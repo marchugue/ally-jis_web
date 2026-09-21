@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MoreHorizontal, Reply, Send, Copy, Trash2, RotateCcw, Flag, Plus } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { MoreHorizontal, Reply, Send, Forward, Copy, Trash2, RotateCcw, Flag, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QUICK_REACTIONS, isOnlyEmoji } from '@/lib/chatActionConfig';
