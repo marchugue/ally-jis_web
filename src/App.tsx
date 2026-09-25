@@ -14,6 +14,7 @@ import MessagesPage from "@/pages/MessagesPage";
 import ProfilePage from "@/pages/ProfilePage";
 import RequestsPage from "@/pages/RequestsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import PostDetailPage from "@/pages/PostDetailPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import BlockedUsersPage from "@/pages/BlockedUserPage";
 import SettingsPage from "@/pages/SettingsPage";
@@ -242,7 +243,11 @@ function App() {
                 <PendingApprovalPage />
               </PageTransition>
             } />
-
+            <Route path="/post/:postId" element={
+              <PageTransition>
+                <PostDetailPage />
+              </PageTransition>
+            } />
 
           </Route>
 

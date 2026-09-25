@@ -691,17 +691,20 @@ export default function MessagesPage() {
 
         {/* ── Chat Area ── */}
         <div className={cn(
-          'flex-1 relative flex flex-col overflow-hidden min-h-0 bg-[#EBF5EE] dark:bg-[#090D16]',
+          'flex-1 relative flex flex-col overflow-hidden min-h-0',
+          activeConversation ? 'bg-[#F4F8F5] dark:bg-[#090D16]' : 'bg-[#F9F8F6] dark:bg-[#090D16]',
           (!activeConversation && !requestedConversationId) && 'hidden md:flex',
         )}>
-          {/* ── Conversation Theme Background (No vertical mirroring / zoomed responsive) ── */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-            <img
-              src="/images/chat-theme-bg.png"
-              alt=""
-              className="w-full h-full object-cover object-center scale-125 sm:scale-115 lg:scale-105 transition-transform duration-300 opacity-85 dark:opacity-15 dark:invert select-none pointer-events-none"
-            />
-          </div>
+          {/* ── Conversation Theme Background (Rendered only when active conversation) ── */}
+          {Boolean(activeConversation) && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+              <img
+                src="/images/chat-theme-bg.png"
+                alt=""
+                className="w-full h-full object-cover object-center scale-125 sm:scale-115 lg:scale-105 transition-transform duration-300 opacity-20 dark:opacity-10 dark:invert select-none pointer-events-none"
+              />
+            </div>
+          )}
 
           {activeConversation ? (
             <>
@@ -914,23 +917,26 @@ export default function MessagesPage() {
           ) : loadingConvs || Boolean(requestedConversationId) || (!isMobileView && conversations.length > 0) ? (
             <ConversationPaneSkeleton />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50 dark:bg-[#090D16]">
-              <div className="w-16 h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/10 flex items-center justify-center mb-4 text-[#1A6B3C] dark:text-emerald-400">
-                <MessagesSquare className="w-8 h-8" />
+            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-[#F9F8F6] dark:bg-[#090D16] relative z-10">
+              <div className="max-w-sm w-full bg-white dark:bg-[#111827] rounded-3xl p-8 sm:p-10 border border-gray-200/80 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-none flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/15 flex items-center justify-center mb-4 text-[#1A6B3C] dark:text-emerald-400">
+                  <MessagesSquare className="w-8 h-8" />
+                </div>
+                <h3 className="font-fraunces font-bold text-gray-900 dark:text-white text-xl tracking-tight">
+                  No conversation selected
+                </h3>
+                <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-xs leading-relaxed mt-2">
+                  Pick a conversation from the list or discover new allies on campus to start chatting.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/discover')}
+                  className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-jakarta font-bold bg-[#1A6B3C] text-white hover:bg-[#155730] active:scale-95 transition-all shadow-xs cursor-pointer"
+                >
+                  <UserPlus size={15} />
+                  <span>Discover Allies</span>
+                </button>
               </div>
-              <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-base">
-                No conversation selected
-              </h3>
-              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed mt-1">
-                Pick a conversation from the list or discover new allies on campus to start chatting.
-              </p>
-              <button
-                onClick={() => navigate('/discover')}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-jakarta font-semibold bg-[#1A6B3C] text-white hover:bg-[#145530] transition-colors shadow-xs cursor-pointer"
-              >
-                <UserPlus size={14} />
-                Discover Allies
-              </button>
             </div>
           )}
         </div>

@@ -20,6 +20,10 @@ export function markAllNotificationsRead() {
   return request<void>('/notifications/read-all', { method: 'PATCH' });
 }
 
+export function getNotificationRedirection(id: string) {
+  return request<import('../types').NotificationRedirectionResponse>(`/notifications/${id}/redirection`);
+}
+
 export function deleteAllNotifications(): Promise<void> {  // ← fixed typo + completed
   return request<void>('/notifications', { method: 'DELETE' });
 }

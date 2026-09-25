@@ -117,12 +117,34 @@ export type NotificationType =
   | 'comment_mention'
   | string;
 
+export interface NotificationRedirectionTree {
+  postId: string | null;
+  parentId: string | null;
+  childId: string | null;
+  highlightId: string | null;
+}
+
 export interface NotificationRedirection {
-  entityType: 'post' | 'comment' | 'conversation' | 'profile' | 'requests' | 'discover';
+  entityType: 'post' | 'comment' | 'reply' | 'conversation' | 'profile' | 'requests' | 'discover' | string;
   targetId: string;
   route: string;
   params?: Record<string, string>;
   webUrl?: string;
+  postId?: string | null;
+  parentId?: string | null;
+  childId?: string | null;
+  tree?: NotificationRedirectionTree;
+}
+
+export interface NotificationRedirectionResponse {
+  notificationId: string;
+  type: string;
+  entityType: string;
+  targetId: string;
+  webUrl: string;
+  route: string;
+  params: Record<string, string>;
+  tree: NotificationRedirectionTree;
 }
 
 export interface Notification {
@@ -138,8 +160,11 @@ export interface Notification {
   fromUserAvatar?: string;
   postId?: string;
   commentId?: string;
+  parentId?: string | null;
+  childId?: string | null;
   targetId?: string;
   redirection?: NotificationRedirection;
+  tree?: NotificationRedirectionTree;
 }
 
 export type OnboardingStep = 1 | 2 | 3 | 4;

@@ -209,12 +209,34 @@ export interface ConversationRow {
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
+export interface NotificationRedirectionTree {
+  postId: string | null;
+  parentId: string | null;
+  childId: string | null;
+  highlightId: string | null;
+}
+
 export interface NotificationRedirection {
-  entityType: 'post' | 'comment' | 'conversation' | 'profile' | 'requests' | 'discover';
+  entityType: 'post' | 'comment' | 'reply' | 'conversation' | 'profile' | 'requests' | 'discover' | string;
   targetId: string;
   route: string;
   params?: Record<string, string>;
   webUrl?: string;
+  postId?: string | null;
+  parentId?: string | null;
+  childId?: string | null;
+  tree?: NotificationRedirectionTree;
+}
+
+export interface NotificationRedirectionResponse {
+  notificationId: string;
+  type: string;
+  entityType: string;
+  targetId: string;
+  webUrl: string;
+  route: string;
+  params: Record<string, string>;
+  tree: NotificationRedirectionTree;
 }
 
 export interface NotificationRow {
@@ -228,8 +250,11 @@ export interface NotificationRow {
   target_id?: string | null;
   post_id?: string | null;
   comment_id?: string | null;
+  parent_id?: string | null;
+  child_id?: string | null;
   created_at: string;
   redirection?: NotificationRedirection | null;
+  tree?: NotificationRedirectionTree | null;
   from_user?: {
     id?: string;
     username?: string | null;

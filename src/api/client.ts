@@ -255,6 +255,7 @@ export const apiClient = {
   // ─── Notifications ───────────────────────────────────────────────────────
   listNotifications: notifications.listNotifications,
   listFriendRequestNotifications: notifications.listFriendRequestNotifications,
+  getNotificationRedirection: notifications.getNotificationRedirection,
   markNotificationRead: notifications.markNotificationRead,
   markAllNotificationsRead: notifications.markAllNotificationsRead,
   deleteAllNotifications: notifications.deleteAllNotifications,

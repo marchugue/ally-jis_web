@@ -398,16 +398,28 @@ export default function NotificationsPage() {
   const handleClick = async (notif: Notification) => {
     await markAsRead(notif.id);
 
-    if (notif.redirection?.webUrl) {
+    // 1. If backend already provided webUrl in redirection that doesn't loop back to notifications, navigate directly (no stack logic)
+    if (notif.redirection?.webUrl && !notif.redirection.webUrl.startsWith('/notifications')) {
       navigate(notif.redirection.webUrl);
       return;
+    }
+
+    // 2. Query accurate redirection and tree from backend endpoint
+    try {
+      const res = await apiClient.getNotificationRedirection(notif.id);
+      if (res?.webUrl && !res.webUrl.startsWith('/notifications')) {
+        navigate(res.webUrl);
+        return;
+      }
+    } catch {
+      // Fall through to direct fallback routing
     }
 
     if (notif.type === 'friend_request' || notif.type === 'connection_request') {
       if (handledRequests[notif.id] === 'accepted') {
         if (notif.fromUserId) {
           const { conversationId } = await apiClient.findConversationWithUser(notif.fromUserId).catch(() => ({ conversationId: null }));
-          navigate('/messages', { state: conversationId ? { conversationId } : undefined });
+          navigate(conversationId ? `/messages?conversationId=${conversationId}` : '/messages');
         } else {
           navigate('/messages');
         }
@@ -416,10 +428,10 @@ export default function NotificationsPage() {
       }
     } else if (notif.type === 'accepted' || notif.type === 'connection_accepted') {
       if (notif.targetId) {
-        navigate('/messages', { state: { conversationId: notif.targetId } });
+        navigate(`/messages?conversationId=${notif.targetId}`);
       } else if (notif.fromUserId) {
         const { conversationId } = await apiClient.findConversationWithUser(notif.fromUserId).catch(() => ({ conversationId: null }));
-        navigate('/messages', { state: conversationId ? { conversationId } : undefined });
+        navigate(conversationId ? `/messages?conversationId=${conversationId}` : '/messages');
       } else {
         navigate('/messages');
       }
@@ -433,29 +445,36 @@ export default function NotificationsPage() {
         navigate('/discover');
       }
     } else if (notif.type === 'anon_match' || notif.type === 'message' || notif.type === 'streak_reminder') {
-      navigate('/messages');
+      const convId = notif.targetId || (notif.redirection?.params as any)?.conversationId;
+      navigate(convId ? `/messages?conversationId=${convId}` : '/messages');
     } else if (notif.type === 'new_follower') {
       if (notif.fromUserId) navigate(`/profile/${notif.fromUserId}`);
-    } else if (notif.type === 'comment_reply') {
-      navigate('/dashboard', {
-        state: {
-          targetPostId: notif.postId,
-          openComments: true,
-          replyToCommentId: notif.commentId ?? null,
-        },
-      });
     } else if (
+      notif.type === 'comment_reply' ||
       notif.type === 'post_comment' ||
       notif.type === 'comment' ||
-      notif.type === 'comment_mention'
+      notif.type === 'comment_mention' ||
+      notif.type === 'comment_like'
     ) {
-      navigate('/dashboard', {
-        state: { targetPostId: notif.postId, openComments: true },
-      });
-    } else if (notif.type === 'post_like' || notif.type === 'like' || notif.type === 'comment_like') {
-      navigate('/dashboard', {
-        state: { targetPostId: notif.postId, openComments: false },
-      });
+      const pId = notif.postId || notif.targetId;
+      if (pId) {
+        const queryParams = new URLSearchParams();
+        const childId = notif.childId || notif.commentId;
+        const parentId = notif.parentId;
+        if (childId) queryParams.set('commentId', childId);
+        if (parentId) queryParams.set('parentId', parentId);
+        queryParams.set('type', notif.type);
+        navigate(`/post/${pId}?${queryParams.toString()}`);
+      } else {
+        navigate('/dashboard');
+      }
+    } else if (notif.type === 'post_like' || notif.type === 'like') {
+      const pId = notif.postId || notif.targetId;
+      if (pId) {
+        navigate(`/post/${pId}?type=${notif.type}`);
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -560,16 +579,10 @@ export default function NotificationsPage() {
         }}
         className={cn(
           'w-full text-left flex items-start sm:items-center gap-3.5 sm:gap-4 px-4 sm:px-5 py-3.5 transition-all duration-150',
-          'hover:bg-gray-50/90 dark:hover:bg-white/[0.04] active:bg-gray-100/70 dark:active:bg-white/[0.06]',
-          'border-b border-gray-100/80 dark:border-white/5 last:border-0 group cursor-pointer relative select-none',
-          isUnread
-            ? 'bg-[#1A6B3C]/[0.035] dark:bg-emerald-950/20'
-            : 'bg-transparent'
+          'bg-transparent hover:bg-gray-50/90 dark:hover:bg-white/[0.04] active:bg-gray-100/70 dark:active:bg-white/[0.06]',
+          'border-b border-gray-100/80 dark:border-white/5 last:border-0 group cursor-pointer relative select-none'
         )}
       >
-        {isUnread && (
-          <div className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#1A6B3C] dark:bg-emerald-400 rounded-r-full" />
-        )}
 
         <NotificationAvatarBadge notif={notif} />
 
@@ -861,9 +874,6 @@ export default function NotificationsPage() {
                     <div className="bg-gray-50/80 dark:bg-white/[0.03] px-4 sm:px-5 py-2 border-b border-gray-100/80 dark:border-white/5 flex items-center justify-between">
                       <span className="font-jakarta font-extrabold text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {section.label}
-                      </span>
-                      <span className="font-jakarta font-bold text-[10px] px-1.5 py-0.2 rounded-full bg-gray-200/70 dark:bg-white/10 text-gray-500 dark:text-gray-400">
-                        {section.items.length}
                       </span>
                     </div>
                     <div className="divide-y divide-gray-100/80 dark:divide-white/5">
