@@ -213,6 +213,8 @@ export default function PostDetailPage() {
   const commentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const inputRef = useRef<HTMLInputElement>(null);
   const scrolledRef = useRef(false);
+  const isReplyRequested = searchParams.get('reply') === 'true';
+  const autoRepliedRef = useRef(false);
 
   // Load current user profile
   useEffect(() => {
@@ -432,6 +434,33 @@ export default function PostDetailPage() {
     });
     inputRef.current?.focus();
   };
+
+  // Auto-activate reply mode when navigated from notification with reply=true
+  useEffect(() => {
+    if (isLoading || comments.length === 0 || autoRepliedRef.current) return;
+    if (!isReplyRequested) return;
+
+    autoRepliedRef.current = true;
+    const timer = setTimeout(() => {
+      if (targetCommentId) {
+        for (const c of comments) {
+          if (c.id === targetCommentId) {
+            handleReplyClick(c);
+            return;
+          }
+          for (const r of c.replies || []) {
+            if (r.id === targetCommentId) {
+              handleReplyClick(r, c.id);
+              return;
+            }
+          }
+        }
+      }
+      inputRef.current?.focus();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, comments, targetCommentId, isReplyRequested]);
 
   const handleDeletePost = async (deletedPostId: string) => {
     if (!useBackend) return;

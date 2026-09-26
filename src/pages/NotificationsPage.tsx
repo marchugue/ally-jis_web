@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -15,7 +15,12 @@ import {
   X,
   Filter,
   ChevronDown,
+  Reply,
+  Send,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -224,6 +229,18 @@ export function getAnonymousInfo(notif: Notification) {
   };
 }
 
+export function isReplyableNotification(type?: string): boolean {
+  if (!type) return false;
+  return (
+    type === 'comment' ||
+    type === 'post_comment' ||
+    type === 'comment_reply' ||
+    type === 'comment_mention' ||
+    type === 'anon_match' ||
+    type === 'message'
+  );
+}
+
 function getNotificationContent(notif: Notification) {
   const isMatchReq = notif.type === 'friend_request' || notif.type === 'connection_request';
   const anonInfo = getAnonymousInfo(notif);
@@ -379,6 +396,11 @@ export default function NotificationsPage() {
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({});
   const [handledRequests, setHandledRequests] = useState<Record<string, 'accepted' | 'declined'>>({});
   const [showMobileFilterDropdown, setShowMobileFilterDropdown] = useState(false);
+  const [replyingNotifId, setReplyingNotifId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [sentReplies, setSentReplies] = useState<Record<string, string>>({});
+  const replyInputRef = useRef<HTMLInputElement>(null);
 
   const categoryCounts = useMemo(() => {
     return {
@@ -395,12 +417,15 @@ export default function NotificationsPage() {
     };
   }, [notifications]);
 
-  const handleClick = async (notif: Notification) => {
+  const handleClick = async (notif: Notification, isReplyAction = false) => {
     await markAsRead(notif.id);
 
     // 1. If backend already provided webUrl in redirection that doesn't loop back to notifications, navigate directly (no stack logic)
     if (notif.redirection?.webUrl && !notif.redirection.webUrl.startsWith('/notifications')) {
-      navigate(notif.redirection.webUrl);
+      const url = isReplyAction
+        ? `${notif.redirection.webUrl}${notif.redirection.webUrl.includes('?') ? '&' : '?'}reply=true`
+        : notif.redirection.webUrl;
+      navigate(url);
       return;
     }
 
@@ -408,7 +433,10 @@ export default function NotificationsPage() {
     try {
       const res = await apiClient.getNotificationRedirection(notif.id);
       if (res?.webUrl && !res.webUrl.startsWith('/notifications')) {
-        navigate(res.webUrl);
+        const url = isReplyAction
+          ? `${res.webUrl}${res.webUrl.includes('?') ? '&' : '?'}reply=true`
+          : res.webUrl;
+        navigate(url);
         return;
       }
     } catch {
@@ -464,6 +492,7 @@ export default function NotificationsPage() {
         if (childId) queryParams.set('commentId', childId);
         if (parentId) queryParams.set('parentId', parentId);
         queryParams.set('type', notif.type);
+        if (isReplyAction) queryParams.set('reply', 'true');
         navigate(`/post/${pId}?${queryParams.toString()}`);
       } else {
         navigate('/dashboard');
@@ -476,6 +505,94 @@ export default function NotificationsPage() {
         navigate('/dashboard');
       }
     }
+  };
+
+  const handleReplyBtnClick = (notif: Notification, e: React.MouseEvent) => {
+    e.stopPropagation();
+    void markAsRead(notif.id);
+
+    if (replyingNotifId === notif.id) {
+      setReplyingNotifId(null);
+      setReplyDraft('');
+    } else {
+      setReplyingNotifId(notif.id);
+      const anonInfo = getAnonymousInfo(notif);
+      if (!anonInfo.isAnon && notif.fromUserName) {
+        setReplyDraft(`@${notif.fromUserName.replace(/\s+/g, '_')} `);
+      } else {
+        setReplyDraft('');
+      }
+      setTimeout(() => {
+        replyInputRef.current?.focus();
+      }, 60);
+    }
+  };
+
+  const handleSendInlineReply = async (notif: Notification) => {
+    const trimmed = replyDraft.trim();
+    if (!trimmed || isSendingReply) return;
+
+    setIsSendingReply(true);
+    try {
+      if (
+        notif.type === 'comment' ||
+        notif.type === 'post_comment' ||
+        notif.type === 'comment_reply' ||
+        notif.type === 'comment_mention'
+      ) {
+        const pId = notif.postId || notif.targetId || (notif.redirection?.params as any)?.postId;
+        if (!pId) {
+          toast.error('Could not locate the post to reply to.');
+          return;
+        }
+
+        const parentCommentId =
+          notif.parentId ||
+          notif.childId ||
+          notif.commentId ||
+          (notif.redirection?.params as any)?.parentId ||
+          (notif.redirection?.params as any)?.commentId ||
+          null;
+
+        await apiClient.createComment(pId, {
+          content: trimmed,
+          parentCommentId,
+        });
+
+        toast.success('Reply posted successfully!');
+        setSentReplies((prev) => ({ ...prev, [notif.id]: trimmed }));
+        setReplyingNotifId(null);
+        setReplyDraft('');
+      } else if (notif.type === 'message' || notif.type === 'anon_match') {
+        let convId = notif.targetId || (notif.redirection?.params as any)?.conversationId;
+        if (!convId && notif.fromUserId) {
+          const res = await apiClient.findConversationWithUser(notif.fromUserId).catch(() => ({ conversationId: null }));
+          convId = res?.conversationId;
+        }
+
+        if (!convId) {
+          toast.error('Could not find conversation. Opening messages...');
+          navigate('/messages');
+          return;
+        }
+
+        await apiClient.sendMessage(convId, { content: trimmed });
+        toast.success('Message sent!');
+        setSentReplies((prev) => ({ ...prev, [notif.id]: trimmed }));
+        setReplyingNotifId(null);
+        setReplyDraft('');
+      }
+    } catch (err: any) {
+      console.error('Failed to send inline reply:', err);
+      toast.error(err?.message || 'Failed to send reply. Tap notification to view in full.');
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
+  const handleOpenFull = (notif: Notification, e: React.MouseEvent) => {
+    e.stopPropagation();
+    void handleClick(notif, true);
   };
 
   const handleAcceptRequest = async (notif: Notification, e: React.MouseEvent) => {
@@ -564,6 +681,8 @@ export default function NotificationsPage() {
     const reqStatus = handledRequests[notif.id];
     const isBusy = busyIds[notif.id];
     const { authorName, actionText, description } = getNotificationContent(notif);
+    const isReplying = replyingNotifId === notif.id;
+    const canReply = isReplyableNotification(notif.type);
 
     return (
       <div
@@ -578,7 +697,7 @@ export default function NotificationsPage() {
           }
         }}
         className={cn(
-          'w-full text-left flex items-start sm:items-center gap-3.5 sm:gap-4 px-4 sm:px-5 py-3.5 transition-all duration-150',
+          'w-full text-left flex items-start gap-3.5 sm:gap-4 px-4 sm:px-5 py-3.5 transition-all duration-150',
           'bg-transparent hover:bg-gray-50/90 dark:hover:bg-white/[0.04] active:bg-gray-100/70 dark:active:bg-white/[0.06]',
           'border-b border-gray-100/80 dark:border-white/5 last:border-0 group cursor-pointer relative select-none'
         )}
@@ -644,6 +763,86 @@ export default function NotificationsPage() {
               </p>
             )
           )}
+
+          {/* Inline Quick Reply Box */}
+          {isReplying && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3 p-3 bg-white/95 dark:bg-[#151d2a] rounded-2xl border border-[#1A6B3C]/25 dark:border-emerald-500/30 shadow-xs space-y-2 select-text"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5">
+                  <Reply size={12} className="stroke-[2.5]" />
+                  <span>Replying to <strong className="font-bold underline decoration-dotted">{authorName}</strong></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenFull(notif, e)}
+                  className="text-[11px] text-gray-500 hover:text-[#1A6B3C] dark:text-gray-400 dark:hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Open full page"
+                >
+                  <span>Open in {notif.type.includes('comment') ? 'post' : 'messages'}</span>
+                  <ExternalLink size={11} />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  ref={replyInputRef}
+                  type="text"
+                  value={replyDraft}
+                  onChange={(e) => setReplyDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSendInlineReply(notif);
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setReplyingNotifId(null);
+                    }
+                  }}
+                  placeholder={`Write a reply to ${authorName}...`}
+                  disabled={isSendingReply}
+                  className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1.5 font-jakarta text-xs text-gray-900 dark:text-white outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-all placeholder:text-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSendInlineReply(notif)}
+                  disabled={!replyDraft.trim() || isSendingReply}
+                  className="px-3 py-1.5 rounded-xl bg-[#1A6B3C] hover:bg-[#155a33] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-xs flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  {isSendingReply ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Send size={12} />
+                  )}
+                  <span>{isSendingReply ? 'Sending...' : 'Send'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReplyingNotifId(null);
+                  }}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Cancel"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sent Reply Status Preview */}
+          {sentReplies[notif.id] && !isReplying && (
+            <div className="mt-2 text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5 bg-[#1A6B3C]/5 dark:bg-emerald-500/10 px-2.5 py-1 rounded-xl w-fit border border-[#1A6B3C]/10 dark:border-emerald-500/20">
+              <Check size={12} className="stroke-[2.5]" />
+              <span className="font-semibold">Replied:</span>
+              <span className="italic truncate max-w-xs text-gray-600 dark:text-gray-300">
+                "{sentReplies[notif.id]}"
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0 self-start pt-0.5">
@@ -651,10 +850,21 @@ export default function NotificationsPage() {
             {formatNotificationTime(notif.timestamp || (notif as any).created_at)}
           </span>
           <div className="flex items-center gap-1.5">
-            {(notif.type === 'message' || notif.type === 'anon_match') && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 group-hover:bg-[#1A6B3C]/20 transition-colors">
-                Reply
-              </span>
+            {canReply && (
+              <button
+                type="button"
+                onClick={(e) => handleReplyBtnClick(notif, e)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold font-jakarta transition-all active:scale-95 cursor-pointer shadow-xs',
+                  isReplying
+                    ? 'bg-[#1A6B3C] text-white dark:bg-emerald-600'
+                    : 'bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/20 text-[#1A6B3C] dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30'
+                )}
+                title={isReplying ? 'Close reply' : 'Reply to notification'}
+              >
+                <Reply size={11} className="stroke-[2.5]" />
+                <span>{isReplying ? 'Close' : 'Reply'}</span>
+              </button>
             )}
             {isUnread && (
               <div className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 shadow-xs ring-2 ring-[#1A6B3C]/20" />

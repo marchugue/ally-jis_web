@@ -1,6 +1,6 @@
 // src/api/routes/auth.ts
 
-import { request, getStoredToken, setStoredToken, ApiError } from '../http';
+import { request, getStoredToken, setStoredToken, getApiBaseUrl, ApiError } from '../http';
 import type { AuthSession, RegisterPayload, EmailStatus, OtpStatus, RegisterResponse } from '../types';
 
 export async function login(email: string, password: string): Promise<AuthSession> {
@@ -48,11 +48,30 @@ export type ResetPasswordResult = {
   mobileRedirectUrl?: string;
 };
 
-export async function resetPassword(token: string, password: string): Promise<ResetPasswordResult> {
+export async function verifyPasswordResetOtp(
+  email: string,
+  code: string
+): Promise<{ valid: boolean; trackingToken: string }> {
+  return request<{ valid: boolean; trackingToken: string }>('/auth/password-reset/verify-otp', {
+    method: 'POST',
+    auth: false,
+    body: { email, code },
+  });
+}
+
+export async function resetPassword(
+  params: { token?: string; code?: string; email?: string; password: string } | string,
+  maybePassword?: string
+): Promise<ResetPasswordResult> {
+  const body =
+    typeof params === 'string'
+      ? { token: params, password: maybePassword }
+      : params;
+
   return request<ResetPasswordResult>('/auth/reset-password', {
     method: 'POST',
     auth: false,
-    body: { token, password },
+    body,
   });
 }
 
@@ -213,10 +232,57 @@ export async function uploadStudentId(
  * restart fresh with the same or a different username/email.
  * The backend refuses the request if the OTP was already verified.
  */
-export async function cancelRegistration(userId: string): Promise<void> {
-  await request<void>('/auth/register/cancel', {
-    method: 'DELETE',
-    auth: false,
-    body: { userId },
-  });
+export async function cancelRegistration(
+  userIdOrPayload: string | { userId?: string; email?: string }
+): Promise<void> {
+  const payload = typeof userIdOrPayload === 'string' ? { userId: userIdOrPayload } : userIdOrPayload;
+  try {
+    await request<void>('/auth/register/cancel', {
+      method: 'DELETE',
+      auth: false,
+      body: payload,
+    });
+  } catch (err) {
+    // Also try POST if DELETE is blocked
+    try {
+      await request<void>('/auth/register/cancel', {
+        method: 'POST',
+        auth: false,
+        body: payload,
+      });
+    } catch {
+      // Ignore
+    }
+  }
+}
+
+/**
+ * Fallback cancellation for page unload / close using navigator.sendBeacon or keepalive fetch.
+ */
+export function sendBeaconCancelRegistration(
+  userIdOrPayload: string | { userId?: string; email?: string }
+): void {
+  const payload = typeof userIdOrPayload === 'string' ? { userId: userIdOrPayload } : userIdOrPayload;
+  const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
+  const url = `${baseUrl}/auth/register/cancel`;
+  const jsonStr = JSON.stringify(payload);
+
+  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+    try {
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const success = navigator.sendBeacon(url, blob);
+      if (success) return;
+    } catch {
+      // Fallback to fetch keepalive
+    }
+  }
+
+  if (typeof fetch !== 'undefined') {
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: jsonStr,
+      keepalive: true,
+    }).catch(() => {});
+  }
 }

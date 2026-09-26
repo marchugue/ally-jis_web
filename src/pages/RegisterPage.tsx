@@ -29,6 +29,13 @@ import {
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
 import type { PresetAvatarRow } from '@/api/types';
+import {
+  getWebRegisterCache,
+  saveWebRegisterCache,
+  clearWebRegisterCache,
+  fileToDataUrl,
+  dataUrlToFile,
+} from '@/lib/registerCache';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { profileService } from '@/lib/services/profileService';
 import { useLookupOptions } from '@/hooks/useLookupOptions';
@@ -180,6 +187,9 @@ export default function RegisterPage() {
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
+  const pendingUserIdRef = useRef<string | null>(null);
+  const isOtpVerifiedRef = useRef<boolean>(false);
+  const formEmailRef = useRef<string>('');
 
   // Form Data
   const [form, setForm] = useState({
@@ -300,20 +310,161 @@ export default function RegisterPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step, idSubStep, showOtpView]);
 
-  // Handle clean file previews
-  const handleFrontFileChange = (file: File) => {
+  // Keep tracking refs in sync with state
+  useEffect(() => {
+    pendingUserIdRef.current = registeredUserId;
+  }, [registeredUserId]);
+
+  useEffect(() => {
+    formEmailRef.current = form.email.trim().toLowerCase();
+  }, [form.email]);
+
+  // ── Verification & Form Cache Restoration ──────────────────────────────────
+  // Restores registration progress, pending verification states, and ID previews
+  // so refreshing or leaving the page does NOT cancel or lose progress.
+  useEffect(() => {
+    // If arriving with URL query overrides, let URL take precedence
+    if (hasInitialStep || searchParams.has('emailType')) return;
+
+    const cached = getWebRegisterCache();
+    if (!cached) return;
+
+    if (cached.showOtpView && cached.registeredUserId) {
+      // Validate with server if verification is still pending
+      apiClient.getOtpStatus(cached.registeredUserId)
+        .then((status) => {
+          if (status.verified) {
+            // Already verified: proceed to Step 2
+            setPhase('form');
+            setStep(cached.step > 1 ? cached.step : 2);
+            setShowOtpView(false);
+            if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+          } else if (status.exists) {
+            // Pending verification is active: restore OTP view seamlessly
+            setPhase(cached.phase || 'form');
+            setEmailType(cached.emailType || 'chmsu');
+            setStep(cached.step || 1);
+            setIdSubStep(cached.idSubStep || 'none');
+            setRegisteredUserId(cached.registeredUserId);
+            setShowOtpView(true);
+            if (cached.otpDigits && Array.isArray(cached.otpDigits)) {
+              setOtpDigits(cached.otpDigits);
+            }
+            if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+            if (cached.frontPreviewDataUrl) {
+              setFrontPreview(cached.frontPreviewDataUrl);
+              const restoredFront = dataUrlToFile(cached.frontPreviewDataUrl, 'student-id-front.jpg');
+              if (restoredFront) setFrontFile(restoredFront);
+            }
+            if (cached.backPreviewDataUrl) {
+              setBackPreview(cached.backPreviewDataUrl);
+              const restoredBack = dataUrlToFile(cached.backPreviewDataUrl, 'student-id-back.jpg');
+              if (restoredBack) setBackFile(restoredBack);
+            }
+            if (cached.frontRotation) setFrontRotation(cached.frontRotation);
+            if (cached.backRotation) setBackRotation(cached.backRotation);
+          } else {
+            // Expired on server, but preserve form data so user doesn't lose their input
+            setPhase(cached.phase || 'form');
+            setEmailType(cached.emailType || 'chmsu');
+            setStep(1);
+            setShowOtpView(false);
+            if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+          }
+        })
+        .catch(() => {
+          // Network issue: restore cached state anyway
+          setPhase(cached.phase || 'form');
+          setEmailType(cached.emailType || 'chmsu');
+          setStep(cached.step || 1);
+          setIdSubStep(cached.idSubStep || 'none');
+          setRegisteredUserId(cached.registeredUserId);
+          setShowOtpView(true);
+          if (cached.otpDigits) setOtpDigits(cached.otpDigits);
+          if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+        });
+    } else {
+      // Restore non-OTP progress (Step 1-4 form values, files, etc.)
+      if (cached.phase) setPhase(cached.phase);
+      if (cached.emailType) setEmailType(cached.emailType);
+      if (cached.step && cached.step >= 1) setStep(cached.step);
+      if (cached.idSubStep) setIdSubStep(cached.idSubStep);
+      if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+      if (cached.frontPreviewDataUrl) {
+        setFrontPreview(cached.frontPreviewDataUrl);
+        const restoredFront = dataUrlToFile(cached.frontPreviewDataUrl, 'student-id-front.jpg');
+        if (restoredFront) setFrontFile(restoredFront);
+      }
+      if (cached.backPreviewDataUrl) {
+        setBackPreview(cached.backPreviewDataUrl);
+        const restoredBack = dataUrlToFile(cached.backPreviewDataUrl, 'student-id-back.jpg');
+        if (restoredBack) setBackFile(restoredBack);
+      }
+      if (cached.frontRotation) setFrontRotation(cached.frontRotation);
+      if (cached.backRotation) setBackRotation(cached.backRotation);
+      if (cached.avatarTab) setAvatarTab(cached.avatarTab);
+      if (cached.agreedToTerms !== undefined) setAgreedToTerms(cached.agreedToTerms);
+      if (cached.agreedToPrivacy !== undefined) setAgreedToPrivacy(cached.agreedToPrivacy);
+    }
+  }, []);
+
+  // Persist form and verification progress to cache
+  useEffect(() => {
+    if (isDone) return;
+    saveWebRegisterCache({
+      phase,
+      emailType,
+      step,
+      idSubStep,
+      registeredUserId,
+      showOtpView,
+      otpDigits,
+      form,
+      frontRotation,
+      backRotation,
+      avatarTab,
+      agreedToTerms,
+      agreedToPrivacy,
+    });
+  }, [
+    phase,
+    emailType,
+    step,
+    idSubStep,
+    registeredUserId,
+    showOtpView,
+    otpDigits,
+    form,
+    frontRotation,
+    backRotation,
+    avatarTab,
+    agreedToTerms,
+    agreedToPrivacy,
+    isDone,
+  ]);
+
+  // Handle clean file previews with cache persistence
+  const handleFrontFileChange = async (file: File) => {
     setFrontFile(file);
     setFrontRotation(0);
     const url = URL.createObjectURL(file);
     setFrontPreview(url);
     setErrors((prev) => ({ ...prev, frontId: '' }));
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      saveWebRegisterCache({ frontPreviewDataUrl: dataUrl, frontRotation: 0 });
+    } catch {}
   };
 
-  const handleBackFileChange = (file: File) => {
+  const handleBackFileChange = async (file: File) => {
     setBackFile(file);
     setBackRotation(0);
     const url = URL.createObjectURL(file);
     setBackPreview(url);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      saveWebRegisterCache({ backPreviewDataUrl: dataUrl, backRotation: 0 });
+    } catch {}
   };
 
   // ── Validation Helpers ────────────────────────────────────────────────────
@@ -437,6 +588,9 @@ export default function RegisterPage() {
         organizations: [],
       });
       setRegisteredUserId(result.userId);
+      pendingUserIdRef.current = result.userId;
+      isOtpVerifiedRef.current = false;
+      formEmailRef.current = form.email.trim().toLowerCase();
       setShowOtpView(true);
       notify.success('Verification code sent!', `Check your inbox at ${form.email}`);
     } catch (err: any) {
@@ -468,6 +622,9 @@ export default function RegisterPage() {
 
       const userId = result.userId;
       setRegisteredUserId(userId);
+      pendingUserIdRef.current = userId;
+      isOtpVerifiedRef.current = false;
+      formEmailRef.current = form.email.trim().toLowerCase();
 
       // 2. Upload front ID with rotation applied
       try {
@@ -505,8 +662,11 @@ export default function RegisterPage() {
     setOtpError('');
     try {
       const authSession = await apiClient.verifyOtp(registeredUserId, code);
+      isOtpVerifiedRef.current = true;
+      pendingUserIdRef.current = null;
       completeLogin(authSession, true);
       setShowOtpView(false);
+      saveWebRegisterCache({ showOtpView: false, step: 2 });
       notify.success('Email confirmed!', "Your email is verified. Let's finish your academic profile.");
       setStep(2);
     } catch (err: any) {
@@ -540,21 +700,27 @@ export default function RegisterPage() {
     }
   };
 
-  const handleCancelRegistration = async () => {
-    const prevUserId = registeredUserId;
+  const handleCancelRegistration = async (explicitCancel?: boolean | React.MouseEvent) => {
+    const isExplicit = explicitCancel === true;
+    const prevUserId = registeredUserId || pendingUserIdRef.current;
+    const prevEmail = form.email || formEmailRef.current;
+    pendingUserIdRef.current = null;
+    isOtpVerifiedRef.current = false;
     setShowOtpView(false);
     setOtpDigits(['', '', '', '', '', '']);
     setOtpError('');
-    setRegisteredUserId(null);
+    saveWebRegisterCache({ showOtpView: false, otpDigits: ['', '', '', '', '', ''] });
 
-    if (prevUserId && isApiConfigured) {
+    if (isExplicit && prevUserId && isApiConfigured) {
+      clearWebRegisterCache();
       try {
-        await apiClient.cancelRegistration(prevUserId);
+        await apiClient.cancelRegistration({ userId: prevUserId, email: prevEmail });
       } catch (err: any) {
         console.warn('cancelRegistration warning:', err?.message);
       }
     }
   };
+
 
   // ── Final Profile Submission (Step 4) ─────────────────────────────────────
   const handleCompleteRegistration = async () => {
@@ -605,6 +771,7 @@ export default function RegisterPage() {
       }
 
       setIsDone(true);
+      clearWebRegisterCache();
     } catch (err: any) {
       notify.error('Profile save error', err?.message || 'Could not save profile.');
     } finally {
@@ -633,7 +800,8 @@ export default function RegisterPage() {
     }
 
     if (step === 1 && showOtpView) {
-      handleCancelRegistration();
+      setShowOtpView(false);
+      saveWebRegisterCache({ showOtpView: false });
       return;
     }
 
@@ -824,7 +992,7 @@ export default function RegisterPage() {
                 transition={{ duration: 0.5, delay: 0.15 }}
                 className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 sm:mt-3 max-w-md leading-relaxed text-center mx-auto"
               >
-                Choose an email type to verify your CHMSU Alijis student identity and get started with Ally-jis.
+                Choose an email type to verify your student identity.
               </motion.p>
             </div>
 
@@ -869,12 +1037,8 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-
-                    <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
-                      @chmsu.edu.ph
-                    </p>
-                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
-                      Instant 6-digit verification code sent directly to your institutional student inbox. No ID upload required.
+                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                      Instant verification code sent to your student inbox. No ID upload needed.
                     </p>
                   </div>
                 </button>
@@ -912,12 +1076,8 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-
-                    <p className="font-mono text-xs text-[#1A6B3C] dark:text-emerald-400 font-semibold mt-0.5">
-                      Gmail, Yahoo, Outlook, etc.
-                    </p>
-                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
-                      For students awaiting institutional account activation. Requires a photo upload of your Student ID or COR.
+                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                      For students awaiting school email. Requires Student ID or COR verification.
                     </p>
                   </div>
                 </button>

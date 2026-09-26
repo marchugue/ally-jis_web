@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { MoreHorizontal, Reply, Send, Forward, Copy, Trash2, RotateCcw, Flag, Plus } from 'lucide-react';
+import { MoreHorizontal, Reply, Send, Forward, Copy, Trash2, Flag, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QUICK_REACTIONS, isOnlyEmoji } from '@/lib/chatActionConfig';
+import { getFluentEmojiUrl } from '@/lib/fluentEmoji';
 import { QuickReactionsBar } from '@/components/chat/QuickReactionsBar';
 import { EmojiPickerOverlay } from '@/components/chat/EmojiPickerOverlay';
 import type { Message } from '@/types/ally';
@@ -89,8 +90,8 @@ export function MobileReactionPopup({
     : (isEmojiOnly ? 50 : 60);
 
   const REACTIONS_HEIGHT = 56;
-  const optionCount = hasContent ? 5 : 4;
-  const OPTIONS_HEIGHT = optionCount * 42 + 12; // ~180px - ~222px
+  const optionCount = 2 + (hasContent ? 1 : 0) + 1 + (isMe ? 1 : 0) + (!isMe ? 1 : 0);
+  const OPTIONS_HEIGHT = optionCount * 42 + 12; // ~180px - ~264px
   const GAP = 12;
   const PADDING = 16;
 
@@ -129,8 +130,8 @@ export function MobileReactionPopup({
         transition={{ duration: 0.15 }}
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          backdropFilter: 'blur(80px)',
+          WebkitBackdropFilter: 'blur(80px)',
         }}
         className="absolute inset-0 cursor-pointer"
         onClick={onClose}
@@ -153,19 +154,36 @@ export function MobileReactionPopup({
         className="bg-white dark:bg-[#181818] rounded-full flex items-center justify-between px-2.5 shadow-[0_6px_20px_rgba(0,0,0,0.25)] border border-black/5 dark:border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        {QUICK_REACTIONS.map((emoji) => (
-          <button
-            key={emoji}
-            type="button"
-            onClick={() => {
-              onReact(emoji);
-              onClose();
-            }}
-            className="text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:scale-125 active:scale-95 transition-transform cursor-pointer select-none"
-          >
-            {emoji}
-          </button>
-        ))}
+        {QUICK_REACTIONS.map((emoji) => {
+          const animatedUrl = getFluentEmojiUrl(emoji, { animated: true });
+          return (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => {
+                onReact(emoji);
+                onClose();
+              }}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:scale-125 active:scale-95 transition-transform cursor-pointer select-none"
+              aria-label={`React with ${emoji}`}
+            >
+              {animatedUrl ? (
+                <img
+                  src={animatedUrl}
+                  alt={emoji}
+                  className="w-8 h-8 pointer-events-none object-contain drop-shadow-xs select-none"
+                  width={32}
+                  height={32}
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
+                />
+              ) : (
+                <span className="text-2xl">{emoji}</span>
+              )}
+            </button>
+          );
+        })}
         <button
           type="button"
           onClick={() => setShowFullPicker(true)}
@@ -302,8 +320,8 @@ export function MobileReactionPopup({
           <span>Delete for me</span>
         </button>
 
-        {/* Delete for everyone (sender only) OR Report (partner) */}
-        {isMe ? (
+        {/* Delete for everyone (available only for messages sent by me) */}
+        {isMe && (
           <button
             type="button"
             onClick={() => {
@@ -312,10 +330,13 @@ export function MobileReactionPopup({
             }}
             className="flex items-center gap-3.5 py-2.5 text-sm font-jakarta font-medium text-red-500 hover:opacity-75 transition-opacity text-left cursor-pointer"
           >
-            <RotateCcw size={18} className="text-red-500 flex-shrink-0" />
+            <Trash2 size={18} className="text-red-500 flex-shrink-0" />
             <span>Delete for everyone</span>
           </button>
-        ) : (
+        )}
+
+        {/* Report (for received messages from partner) */}
+        {!isMe && (
           <button
             type="button"
             onClick={() => {
@@ -365,28 +386,38 @@ function ActionRow({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-4 py-2.5 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5 cursor-pointer',
-        destructive ? 'text-red-500' : 'text-gray-700 dark:text-gray-200',
+        'flex items-center gap-3 px-4 py-2 text-sm font-jakarta text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5 cursor-pointer w-full',
+        destructive ? 'text-red-500 hover:text-red-600' : 'text-gray-700 dark:text-gray-200',
       )}
     >
-      {icon}
-      {label}
+      <span className={cn('flex-shrink-0', destructive ? 'text-red-500' : 'text-gray-500 dark:text-gray-400')}>{icon}</span>
+      <span>{label}</span>
     </button>
   );
 }
 
 export function DesktopHoverActions({
   side,
+  isMe,
+  hasContent = false,
   onQuickReact,
   onReply,
   onForward,
-  onDelete,
+  onCopy,
+  onDeleteForMe,
+  onDeleteForEveryone,
+  onReport,
 }: {
   side: 'left' | 'right';
+  isMe: boolean;
+  hasContent?: boolean;
   onQuickReact: (emoji: string) => void;
   onReply?: () => void;
   onForward?: () => void;
-  onDelete?: () => void;
+  onCopy?: () => void;
+  onDeleteForMe?: () => void;
+  onDeleteForEveryone?: () => void;
+  onReport?: () => void;
 }) {
   const [showReactions, setShowReactions] = useState(false);
   const [showFullPicker, setShowFullPicker] = useState(false);
@@ -481,13 +512,70 @@ export function DesktopHoverActions({
               exit={{ opacity: 0, scale: 0.95, y: 4 }}
               transition={{ duration: 0.12 }}
               className={cn(
-                'absolute bottom-full mb-2 flex flex-col bg-white dark:bg-[#111827] rounded-xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.14)] overflow-hidden min-w-[160px] z-50',
+                'absolute bottom-full mb-2 flex flex-col bg-white dark:bg-[#111827] rounded-xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.14)] overflow-hidden min-w-[170px] z-50 py-1 divide-y divide-gray-100 dark:divide-white/5',
                 side === 'right' ? 'right-0' : 'left-0',
               )}
             >
-              <ActionRow icon={<Reply size={15} />} label="Reply" onClick={onReply} />
-              <ActionRow icon={<Forward size={15} />} label="Forward" onClick={onForward} />
-              <ActionRow icon={<Trash2 size={15} />} label="Delete" onClick={onDelete} destructive />
+              <div className="flex flex-col py-0.5">
+                <ActionRow
+                  icon={<Reply size={15} />}
+                  label="Reply"
+                  onClick={() => {
+                    onReply?.();
+                    setShowMenu(false);
+                  }}
+                />
+                <ActionRow
+                  icon={<Forward size={15} />}
+                  label="Forward"
+                  onClick={() => {
+                    onForward?.();
+                    setShowMenu(false);
+                  }}
+                />
+                {hasContent && (
+                  <ActionRow
+                    icon={<Copy size={15} />}
+                    label="Copy"
+                    onClick={() => {
+                      onCopy?.();
+                      setShowMenu(false);
+                    }}
+                  />
+                )}
+              </div>
+              <div className="flex flex-col py-0.5">
+                <ActionRow
+                  icon={<Trash2 size={15} />}
+                  label="Delete for me"
+                  onClick={() => {
+                    onDeleteForMe?.();
+                    setShowMenu(false);
+                  }}
+                />
+                {isMe && (
+                  <ActionRow
+                    icon={<Trash2 size={15} className="text-red-500" />}
+                    label="Delete for everyone"
+                    onClick={() => {
+                      onDeleteForEveryone?.();
+                      setShowMenu(false);
+                    }}
+                    destructive
+                  />
+                )}
+                {!isMe && (
+                  <ActionRow
+                    icon={<Flag size={15} className="text-red-500" />}
+                    label="Report"
+                    onClick={() => {
+                      onReport?.();
+                      setShowMenu(false);
+                    }}
+                    destructive
+                  />
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

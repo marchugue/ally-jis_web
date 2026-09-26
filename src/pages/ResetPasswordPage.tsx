@@ -56,7 +56,8 @@ export default function ResetPasswordPage() {
 
     setFormLoading(true);
     try {
-      const result = await apiClient.resetPassword(resetToken, password);
+      const emailParam = searchParams.get('email') || undefined;
+      const result = await apiClient.resetPassword({ token: resetToken, email: emailParam, password });
       if (result.source === 'mobile' && result.mobileRedirectUrl) {
         window.location.href = result.mobileRedirectUrl;
         return;

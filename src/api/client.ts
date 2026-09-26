@@ -131,6 +131,7 @@ export const apiClient = {
   register: auth.register,
   logout: auth.logout,
   forgotPassword: auth.forgotPassword,
+  verifyPasswordResetOtp: auth.verifyPasswordResetOtp,
   resetPassword: auth.resetPassword,
   changePassword: auth.changePassword,
   deleteAccount: auth.deleteAccount,
@@ -146,6 +147,7 @@ export const apiClient = {
   getOtpStatus: auth.getOtpStatus,
   uploadStudentId: auth.uploadStudentId,
   cancelRegistration: auth.cancelRegistration,
+  sendBeaconCancelRegistration: auth.sendBeaconCancelRegistration,
 
   // ─── Profiles ───────────────────────────────────────────────────────────
   getMyProfile: profiles.getMyProfile,

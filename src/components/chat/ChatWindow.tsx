@@ -262,15 +262,39 @@ const MessageBubble = memo(function MessageBubble({
 
   const longPress = useLongPress({ onLongPress: handleLongPress });
   const closePopup = useCallback(() => setActionMenuOpen(false), []);
+  const handleCopy = useCallback(async () => {
+    if (!msg.content) return;
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      toast.success('Copied to clipboard');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  }, [msg.content]);
+
+  const handleForward = useCallback(async () => {
+    const shareText = msg.content || primaryMedia;
+    if (typeof navigator !== 'undefined' && navigator.share && shareText) {
+      try {
+        await navigator.share({ text: shareText });
+        return;
+      } catch {
+        // Fallback to internal forward modal
+      }
+    }
+    onForward?.(msg);
+  }, [msg, primaryMedia, onForward]);
+
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Hidden for current user — render nothing, but only AFTER hooks.
+  // Hidden for current user — render nothing, but only AFTER all hooks.
   if (msg.deletedForMe) {
     return null;
   }
 
   // Deleted for everyone — render tombstone placeholder.
-  if (msg.isDeleted) {
+  const isMsgDeleted = Boolean(msg.isDeleted || (msg as any).is_deleted);
+  if (isMsgDeleted) {
     return (
       <div
         className={cn(
@@ -305,29 +329,6 @@ const MessageBubble = memo(function MessageBubble({
       </div>
     );
   }
-
-  const handleCopy = useCallback(async () => {
-    if (!msg.content) return;
-    try {
-      await navigator.clipboard.writeText(msg.content);
-      toast.success('Copied to clipboard');
-    } catch {
-      toast.error('Failed to copy');
-    }
-  }, [msg.content]);
-
-  const handleForward = useCallback(async () => {
-    const shareText = msg.content || primaryMedia;
-    if (typeof navigator !== 'undefined' && navigator.share && shareText) {
-      try {
-        await navigator.share({ text: shareText });
-        return;
-      } catch {
-        // Fallback to internal forward modal
-      }
-    }
-    onForward?.(msg);
-  }, [msg, primaryMedia, onForward]);
 
   const mobileLongPressHandlers = isMobile
     ? {
@@ -563,16 +564,21 @@ const MessageBubble = memo(function MessageBubble({
   const hoverActions = (
     <DesktopHoverActions
       side={isMe ? 'right' : 'left'}
+      isMe={isMe}
+      hasContent={Boolean(msg.content?.trim())}
       onQuickReact={(emoji) => onReact?.(msg, emoji)}
       onReply={() => onReply?.(msg)}
-      onForward={() => onForward?.(msg)}
-      onDelete={() => onDelete?.(msg)}
+      onForward={handleForward}
+      onCopy={handleCopy}
+      onDeleteForMe={() => onDelete?.(msg, 'delete_for_me')}
+      onDeleteForEveryone={() => onDelete?.(msg, 'delete_for_everyone')}
+      onReport={() => onReport?.(msg)}
     />
   );
 
   const itemMarginClass = getItemMarginClass(groupPosition);
 
-  const showSenderName = (groupPosition === 'first' || groupPosition === 'single') && !msg.isDeleted;
+  const showSenderName = (groupPosition === 'first' || groupPosition === 'single') && !isMsgDeleted;
   const senderDisplayName = isMe ? 'Me' : (participantName || 'User');
 
   return (
@@ -848,7 +854,7 @@ export function ChatWindow({
     onDelete?.(msg, mode);
   };
 
-  if (isLoading) {
+  if (isLoading && uniqueMessages.length === 0) {
     return <ChatSkeleton />;
   }
 

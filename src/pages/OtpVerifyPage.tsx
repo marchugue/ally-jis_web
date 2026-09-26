@@ -35,6 +35,10 @@ export default function OtpVerifyPage() {
   const [cooldown, setCooldown] = useState(0);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isVerifiedRef = useRef<boolean>(false);
+
+  // We do not cancel registration on unmount/unload so users can switch tabs,
+  // check email, or reload without losing their pending verification.
 
   // Fetch initial OTP status on mount
   useEffect(() => {
@@ -42,13 +46,13 @@ export default function OtpVerifyPage() {
     apiClient.getOtpStatus(userId).then((status) => {
       setResendCount(status.resendCount);
       setResendLimit(status.resendLimit);
-      // If already verified, fetch the session to check pending_student_verification
-      // so we route correctly (pending-approval vs dashboard) on page refresh.
       if (status.verified) {
-        navigate('/dashboard', { replace: true }); // ProtectedRoute will redirect to /pending-approval if needed
+        isVerifiedRef.current = true;
+        navigate('/dashboard', { replace: true });
       }
     }).catch(() => {});
   }, [userId, navigate]);
+
 
   // Focus first input on mount
   useEffect(() => {
@@ -125,6 +129,7 @@ export default function OtpVerifyPage() {
     setError('');
     try {
       const session = await apiClient.verifyOtp(userId, code);
+      isVerifiedRef.current = true;
       const userNeedsOnboarding = !session.user?.user_metadata?.onboarding_complete;
       const isPending =
         session.user?.user_metadata?.pending_student_verification === true &&
@@ -151,6 +156,10 @@ export default function OtpVerifyPage() {
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleBack = () => {
+    navigate('/login');
   };
 
   const handleResend = async () => {
@@ -204,12 +213,13 @@ export default function OtpVerifyPage() {
       >
         {/* Back link */}
         <button
-          onClick={() => navigate('/login')}
+          onClick={handleBack}
           className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to login
         </button>
+
 
         {/* Card */}
         <div className="bg-white dark:bg-[#111827] rounded-3xl shadow-sm border border-[#F0EDE8] dark:border-white/10 overflow-hidden">

@@ -86,9 +86,28 @@ function mergeMessages(prev: Message[], next: Message[]): Message[] {
       return incoming;
     }
 
-    if (!reactionsEqual(existing.reactions, incoming.reactions)) {
+    const isDeletedChanged =
+      Boolean(existing.isDeleted || (existing as any).is_deleted) !==
+      Boolean(incoming.isDeleted || (incoming as any).is_deleted);
+    const contentChanged = existing.content !== incoming.content;
+    const reactionsChanged = !reactionsEqual(existing.reactions, incoming.reactions);
+
+    if (isDeletedChanged || contentChanged || reactionsChanged) {
       anyChanged = true;
-      return { ...existing, reactions: incoming.reactions };
+      const isNowDeleted = Boolean(
+        incoming.isDeleted ||
+        (incoming as any).is_deleted ||
+        existing.isDeleted ||
+        (existing as any).is_deleted
+      );
+      return {
+        ...existing,
+        ...incoming,
+        isDeleted: isNowDeleted,
+        content: isNowDeleted ? 'This message was deleted' : incoming.content,
+        imageUrl: isNowDeleted ? null : incoming.imageUrl,
+        reactions: incoming.reactions,
+      };
     }
 
     return existing;
@@ -368,11 +387,30 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
         typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_IDLE_MS);
       }
     };
+    const onMessageDeleted = (payload: { conversationId: string; messageId: string; mode?: string }) => {
+      if (payload.conversationId !== conversationId) return;
+      setMessages((prev) => {
+        const updated = prev.map((m) => {
+          if (m.id !== payload.messageId) return m;
+          return {
+            ...m,
+            isDeleted: true,
+            content: 'This message was deleted',
+            imageUrl: null,
+            reactions: [],
+          };
+        });
+        setCachedMessages(conversationId, updated, hasMore, nextCursor, userId);
+        return updated;
+      });
+    };
+
     // Reconnect (e.g. after a dropped connection) can miss events —
     // reconcile once rather than polling continuously in the steady state.
     const onConnect = () => void loadMessages(true);
 
     socket.on('conversation:message_new', onMessageNew);
+    socket.on('conversation:message_deleted', onMessageDeleted);
     socket.on('conversation:typing', onTyping);
     socket.on('connect', onConnect);
 
@@ -385,6 +423,7 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
 
     return () => {
       socket.off('conversation:message_new', onMessageNew);
+      socket.off('conversation:message_deleted', onMessageDeleted);
       socket.off('conversation:typing', onTyping);
       socket.off('connect', onConnect);
       if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
@@ -602,13 +641,19 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
   const deleteMessage = useCallback((messageId: string, mode: 'delete_for_me' | 'delete_for_everyone' = 'delete_for_me') => {
     // Optimistic update — apply immediately so the UI feels instant.
     setMessages((prev) => {
+      let updated: Message[];
       if (mode === 'delete_for_me') {
-        return prev.filter((m) => m.id !== messageId);
+        updated = prev.filter((m) => m.id !== messageId);
+      } else {
+        updated = prev.map((m) => {
+          if (m.id !== messageId) return m;
+          return { ...m, isDeleted: true, content: 'This message was deleted', imageUrl: null, reactions: [] };
+        });
       }
-      return prev.map((m) => {
-        if (m.id !== messageId) return m;
-        return { ...m, isDeleted: true, content: 'This message was deleted', imageUrl: null, reactions: [] };
-      });
+      if (conversationId) {
+        setCachedMessages(conversationId, updated, hasMore, nextCursor, userId);
+      }
+      return updated;
     });
 
     // Persist to backend in the background (only for real, non-temp messages).
@@ -619,7 +664,7 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
         });
       });
     }
-  }, [conversationId]);
+  }, [conversationId, hasMore, nextCursor, userId]);
 
   return {
     messages,

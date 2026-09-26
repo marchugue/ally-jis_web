@@ -6,6 +6,41 @@
 const ANIMATED_BASE = 'https://cdn.jsdelivr.net/gh/Tarikul-Islam-Anik/Animated-Fluent-Emojis@master/Emojis';
 const STATIC_3D_BASE = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets';
 
+const BASE = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL)
+  ? import.meta.env.BASE_URL.replace(/\/$/, '')
+  : '';
+
+/**
+ * Local offline/bundled animated emojis stored in public/emojis/reactions/
+ * for zero-latency, instantaneous loading on the frontend.
+ */
+export const LOCAL_REACTION_ANIMATED_MAP: Record<string, string> = {
+  '👍': `${BASE}/emojis/reactions/thumbsup.png`,
+  '👎': `${BASE}/emojis/reactions/thumbsdown.png`,
+  '❤️': `${BASE}/emojis/reactions/heart.png`,
+  '😂': `${BASE}/emojis/reactions/joy.png`,
+  '😮': `${BASE}/emojis/reactions/wow.png`,
+  '😢': `${BASE}/emojis/reactions/cry.png`,
+  '😡': `${BASE}/emojis/reactions/angry.png`,
+  '🙏': `${BASE}/emojis/reactions/pray.png`,
+  '👏': `${BASE}/emojis/reactions/clap.png`,
+  '🔥': `${BASE}/emojis/reactions/fire.png`,
+  '🎉': `${BASE}/emojis/reactions/party.png`,
+
+  // Key aliases
+  thumbsup: `${BASE}/emojis/reactions/thumbsup.png`,
+  thumbsdown: `${BASE}/emojis/reactions/thumbsdown.png`,
+  heart: `${BASE}/emojis/reactions/heart.png`,
+  joy: `${BASE}/emojis/reactions/joy.png`,
+  wow: `${BASE}/emojis/reactions/wow.png`,
+  cry: `${BASE}/emojis/reactions/cry.png`,
+  angry: `${BASE}/emojis/reactions/angry.png`,
+  pray: `${BASE}/emojis/reactions/pray.png`,
+  clap: `${BASE}/emojis/reactions/clap.png`,
+  fire: `${BASE}/emojis/reactions/fire.png`,
+  party: `${BASE}/emojis/reactions/party.png`,
+};
+
 /**
  * Animated Microsoft Fluent 3D Emojis (60fps APNG with alpha transparency)
  * Used for Quick Reactions bars and interactive reaction animations.
@@ -247,8 +282,13 @@ export function getFluentEmojiUrl(
   if (!emoji) return null;
 
   if (options?.animated) {
-    if (ANIMATED_FLUENT_EMOJI_MAP[emoji]) return ANIMATED_FLUENT_EMOJI_MAP[emoji];
+    // 1. Prioritize local frontend assets stored in public/emojis/reactions/ for zero-latency loading
+    if (LOCAL_REACTION_ANIMATED_MAP[emoji]) return LOCAL_REACTION_ANIMATED_MAP[emoji];
     const stripped = emoji.replace(/[\uFE0E\uFE0F]/g, '');
+    if (LOCAL_REACTION_ANIMATED_MAP[stripped]) return LOCAL_REACTION_ANIMATED_MAP[stripped];
+
+    // 2. Fallback to CDN for other animated emojis
+    if (ANIMATED_FLUENT_EMOJI_MAP[emoji]) return ANIMATED_FLUENT_EMOJI_MAP[emoji];
     if (ANIMATED_FLUENT_EMOJI_MAP[stripped]) return ANIMATED_FLUENT_EMOJI_MAP[stripped];
   }
 
@@ -267,4 +307,15 @@ export function getFluentEmojiUrl(
  */
 export function getAnimatedFluentEmojiUrl(emoji: string): string | null {
   return getFluentEmojiUrl(emoji, { animated: true });
+}
+
+/**
+ * Specifically returns the high-speed local animated emoji URL for quick reactions.
+ */
+export function getQuickReactionAnimatedUrl(emoji: string): string | null {
+  return (
+    LOCAL_REACTION_ANIMATED_MAP[emoji] ||
+    LOCAL_REACTION_ANIMATED_MAP[emoji.replace(/[\uFE0E\uFE0F]/g, '')] ||
+    getFluentEmojiUrl(emoji, { animated: true })
+  );
 }
