@@ -854,8 +854,8 @@ export default function MessagesPage() {
 
               {/* Messages + input — shift up with mobile keyboard */}
               <div
-                className="flex-1 min-h-0 flex flex-col overflow-hidden"
-                style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
+                className="flex-1 min-h-0 flex flex-col"
+                style={keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined}
               >
               <div className="flex-1 min-h-0 relative flex flex-col">
                 {isAnonymousConversation && (
