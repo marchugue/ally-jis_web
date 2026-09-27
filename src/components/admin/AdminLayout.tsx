@@ -5,8 +5,9 @@ import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-do
 import {
   LayoutDashboard, Users, Flag, ShieldCheck,
   ScrollText, Bell, Search, Settings, Sun, Moon, ChevronRight, LogOut, UserCog, ImageIcon,
-  Menu, Sparkles, Command
+  Menu, Sparkles, Command, AlertTriangle, ExternalLink
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMe } from '@/hooks/useAdminMe';
 import { useAdminTheme } from './AdminThemeProvider';
@@ -47,15 +48,40 @@ export function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [maintenanceOn, setMaintenanceOn] = useState(false);
+  const [maintenanceNotice, setMaintenanceNotice] = useState('');
+  const [disablingMaintenance, setDisablingMaintenance] = useState(false);
 
   const currentItem = NAV_ITEMS.find((item) => item.path === location.pathname);
 
-  // Fetch pending count for nav badge indicator
+  // Fetch pending count for nav badge indicator and check maintenance status
   useEffect(() => {
     apiClient.adminListPendingVerifications()
       .then((items) => setPendingCount(items.length))
       .catch(() => setPendingCount(0));
+
+    apiClient.getMaintenanceStatus()
+      .then((res) => {
+        if (res.ok) {
+          setMaintenanceOn(Boolean(res.maintenance));
+          setMaintenanceNotice(res.message || '');
+        }
+      })
+      .catch(() => {});
   }, [location.pathname]);
+
+  const handleDisableMaintenance = async () => {
+    setDisablingMaintenance(true);
+    try {
+      await apiClient.adminUpdateSettings({ maintenance_mode: false });
+      setMaintenanceOn(false);
+      toast.success('Maintenance mode disabled. Students can access the platform.');
+    } catch (err: any) {
+      toast.error('Could not disable maintenance mode', { description: err?.message });
+    } finally {
+      setDisablingMaintenance(false);
+    }
+  };
 
   // Global ⌘K / Ctrl+K keyboard shortcut for admin search
   useEffect(() => {
@@ -249,6 +275,45 @@ export function AdminLayout() {
             </DropdownMenu>
           </div>
         </header>
+
+        {/* Maintenance Active Global Notice Banner */}
+        {maintenanceOn && (
+          <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border-b border-amber-500/30 px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs z-20">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+              <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="font-bold">Maintenance Mode Active:</span>
+              <span className="text-amber-800/80 dark:text-amber-300/80 max-w-md truncate">
+                Student access is blocked ({maintenanceNotice || 'Undergoing maintenance'}).
+              </span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <Link
+                to="/maintenance?preview=true"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-semibold transition-all active:scale-95"
+              >
+                <ExternalLink size={12} /> Preview Screen
+              </Link>
+              <Link
+                to="/admin/settings"
+                className="px-2.5 py-1 rounded-lg bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-semibold transition-all active:scale-95 border border-amber-500/20"
+              >
+                Configure
+              </Link>
+              {hasPermission('manage_settings') && (
+                <button
+                  onClick={handleDisableMaintenance}
+                  disabled={disablingMaintenance}
+                  className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {disablingMaintenance ? 'Turning off…' : 'Turn Off'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Page Outlet */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">

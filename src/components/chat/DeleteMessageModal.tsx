@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Message } from '@/types/ally';
@@ -28,11 +29,13 @@ export function DeleteMessageModal({
     onConfirmDelete(message, selectedMode);
   };
 
-  return (
-    <div className="fixed inset-0 z-[85] flex items-center justify-center p-4 sm:p-6">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 animate-in fade-in duration-150"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
         onClick={onClose}
       />
 
@@ -201,6 +204,7 @@ export function DeleteMessageModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

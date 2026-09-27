@@ -6,6 +6,11 @@ import { AVATAR_EMOJI, DEFAULT_AVATAR_EMOJI } from '@/lib/matchOptions';
 export interface FloatingStatusBadgeProps {
   stage?: number;
   dayStreak?: number;
+  matchPoints?: number;
+  stagePoints?: number;
+  pointsPerStage?: number;
+  profileUnlockTarget?: number;
+  effectiveMultiplier?: number;
   avatarKey?: string | null;
   onClick: () => void;
   className?: string;
@@ -15,104 +20,73 @@ export interface FloatingStatusBadgeProps {
 export interface StageProgression {
   currentStage: number;
   targetStage: number;
-  currentStreak: number;
+  dayStreak: number;
   targetStreak: number;
-  stageStartStreak: number;
+  matchPoints: number;
+  profileUnlockTarget: number;
   progressPercent: number;
   isMaxStage: boolean;
+  isProfileUnlocked: boolean;
   stageLabel: string;
   targetLabel: string;
 }
 
-export function calculateStageProgression(stage: number = 1, dayStreak: number = 0): StageProgression {
-  const streakCalculatedStage =
-    dayStreak >= 10 ? 4 : dayStreak >= 7 ? 3 : dayStreak >= 3 ? 2 : 1;
-  const currentStage = Math.max(1, Math.min(4, Math.max(stage, streakCalculatedStage)));
+export function calculateStageProgression(
+  stage: number = 1,
+  matchPoints: number = 0,
+  dayStreak: number = 0,
+  profileUnlockTarget: number = 500,
+): StageProgression {
+  const currentStage = Math.max(1, Math.min(4, stage));
+  const isProfileUnlocked = matchPoints >= profileUnlockTarget;
+  const progressPercent = Math.max(0, Math.min(100, Math.round((matchPoints / profileUnlockTarget) * 100)));
 
-  if (currentStage === 1) {
-    const targetStreak = 3;
-    const progressPercent = Math.max(0, Math.min(100, Math.round((dayStreak / targetStreak) * 100)));
-    return {
-      currentStage: 1,
-      targetStage: 2,
-      currentStreak: dayStreak,
-      targetStreak,
-      stageStartStreak: 0,
-      progressPercent,
-      isMaxStage: false,
-      stageLabel: 'Lv.1',
-      targetLabel: 'Lv.2',
-    };
-  }
-
-  if (currentStage === 2) {
-    const stageStartStreak = 3;
-    const targetStreak = 7;
-    const range = targetStreak - stageStartStreak; // 4
-    const progressPercent = Math.max(0, Math.min(100, Math.round(((dayStreak - stageStartStreak) / range) * 100)));
-    return {
-      currentStage: 2,
-      targetStage: 3,
-      currentStreak: dayStreak,
-      targetStreak,
-      stageStartStreak,
-      progressPercent,
-      isMaxStage: false,
-      stageLabel: 'Lv.2',
-      targetLabel: 'Lv.3',
-    };
-  }
-
-  if (currentStage === 3) {
-    const stageStartStreak = 7;
-    const targetStreak = 10;
-    const range = targetStreak - stageStartStreak; // 3
-    const progressPercent = Math.max(0, Math.min(100, Math.round(((dayStreak - stageStartStreak) / range) * 100)));
-    return {
-      currentStage: 3,
-      targetStage: 4,
-      currentStreak: dayStreak,
-      targetStreak,
-      stageStartStreak,
-      progressPercent,
-      isMaxStage: false,
-      stageLabel: 'Lv.3',
-      targetLabel: 'Lv.4',
-    };
-  }
+  let targetStreak = 3;
+  if (currentStage === 2) targetStreak = 7;
+  else if (currentStage === 3) targetStreak = 10;
+  else if (currentStage >= 4) targetStreak = 10;
 
   return {
-    currentStage: 4,
-    targetStage: 4,
-    currentStreak: dayStreak,
-    targetStreak: 10,
-    stageStartStreak: 10,
-    progressPercent: 100,
-    isMaxStage: true,
-    stageLabel: 'Lv.4',
-    targetLabel: 'MAX',
+    currentStage,
+    targetStage: currentStage >= 4 ? 4 : currentStage + 1,
+    dayStreak,
+    targetStreak,
+    matchPoints,
+    profileUnlockTarget,
+    progressPercent,
+    isMaxStage: currentStage >= 4,
+    isProfileUnlocked,
+    stageLabel: `S${currentStage}`,
+    targetLabel: currentStage >= 4 ? 'MAX' : `S${currentStage + 1}`,
   };
 }
 
 export const FloatingStatusBadge: React.FC<FloatingStatusBadgeProps> = ({
   stage = 1,
   dayStreak = 0,
+  matchPoints = 0,
+  stagePoints = 0,
+  pointsPerStage = 500,
+  profileUnlockTarget = 500,
+  effectiveMultiplier = 1,
   avatarKey,
   onClick,
   className,
-  emojiSize = 63, // 1.5x scale (from 42px)
+  emojiSize = 63,
 }) => {
   const [imgError, setImgError] = useState(false);
-  const progression = calculateStageProgression(stage, dayStreak);
+  const currentPoints = matchPoints > 0 ? matchPoints : stagePoints;
+  const targetPoints = profileUnlockTarget > 0 ? profileUnlockTarget : pointsPerStage;
+  const progression = calculateStageProgression(stage, currentPoints, dayStreak, targetPoints);
   
   // Prefer local downloaded asset in public/emojis/animals/, fallback to CDN
   const localUrl = avatarKey ? `/emojis/animals/${avatarKey.toLowerCase().trim()}.png` : `/emojis/animals/default.png`;
   const animatedUrl = imgError ? getAnonymousAnimalAnimatedUrl(avatarKey) : localUrl;
   const fallbackEmoji = (avatarKey && AVATAR_EMOJI[avatarKey]) || DEFAULT_AVATAR_EMOJI;
 
-  const tooltipText = progression.isMaxStage
-    ? `Stage 4: Campus Allies Unlocked! (100%) • Click to view Roadmap`
-    : `Stage ${progression.currentStage} • Progress to ${progression.targetLabel}: ${progression.progressPercent}% (${progression.currentStreak}/${progression.targetStreak}d) • Click to view Roadmap`;
+  const tooltipText = progression.isProfileUnlocked
+    ? `Profile Unlocked! • Stage ${progression.currentStage} (${dayStreak}d streak) • Click to view Roadmap`
+    : `Stage ${progression.currentStage} (${dayStreak}d streak • ${effectiveMultiplier}× multiplier) • ${progression.matchPoints}/${progression.profileUnlockTarget} pts to Profile Unlock (${progression.progressPercent}%) • Click to view Roadmap`;
 
   return (
     <button

@@ -173,6 +173,12 @@ export type RequestOptions = Omit<RequestInit, 'body'> & {
  */
 export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized';
 
+/**
+ * Dispatched on any request that returns 503 with maintenance active.
+ * MaintenanceContext listens for this event to display the maintenance UI.
+ */
+export const MAINTENANCE_MODE_EVENT = 'api:maintenance-mode';
+
 let refreshPromise: Promise<string | null> | null = null;
 
 export async function doSilentRefresh(): Promise<string | null> {
@@ -343,6 +349,20 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
     }
 
+    // If 503 occurred and indicates maintenance mode, notify listeners
+    if (response.status === 503 && typeof payload === 'object' && payload !== null && (payload as any).maintenance) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(MAINTENANCE_MODE_EVENT, {
+            detail: {
+              active: true,
+              message: String((payload as any).message || message),
+            },
+          })
+        );
+      }
+    }
+
     const resBody = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : undefined;
     throw new ApiError(message, response.status, resBody);
   }
@@ -352,4 +372,20 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   return payload as T;
+}
+
+export async function getMaintenanceStatus(): Promise<{ ok: boolean; maintenance: boolean; message: string }> {
+  const currentBaseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${currentBaseUrl}/health/status`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      return { ok: false, maintenance: false, message: 'Status check failed' };
+    }
+    return await res.json();
+  } catch {
+    return { ok: false, maintenance: false, message: 'Status check failed' };
+  }
 }

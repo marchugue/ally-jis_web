@@ -40,6 +40,8 @@ import { CookieConsentCard, useCookieConsent } from "@/components/CookieConsentC
 import { MainLayout } from "@/components/MainLayout";
 import { DashboardRoleGate } from "@/components/DashboardRoleGate";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
+import MaintenancePage from "@/pages/MaintenancePage";
+import { MaintenanceGate } from "@/components/MaintenanceGate";
 import { BACKEND_SWITCHED_EVENT } from "@/api/http";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -113,8 +115,9 @@ function App() {
     }>
       <Toaster />
       <CookieConsentCard />
-      <AnimatePresence mode="wait" initial={false}>
-        <Routes location={location}>
+      <MaintenanceGate>
+        <AnimatePresence mode="wait" initial={false}>
+          <Routes location={location}>
           <Route path="/" element={<WelcomeRoute />} />
           <Route path="/welcome" element={<Navigate to="/" replace />} />
           <Route path="/login" element={
@@ -183,6 +186,11 @@ function App() {
           <Route path="/download" element={
             <PageTransition>
               <DownloadPage />
+            </PageTransition>
+          } />
+          <Route path="/maintenance" element={
+            <PageTransition>
+              <MaintenancePage />
             </PageTransition>
           } />
 
@@ -270,6 +278,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
+      </MaintenanceGate>
     </Suspense>
   );
 }

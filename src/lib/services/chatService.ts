@@ -111,6 +111,8 @@ export const mapConversationRow = (
       ? {
           matchId: row.matchInfo.matchId,
           stage: row.matchInfo.stage,
+          stagePoints: row.matchInfo.stagePoints ?? 0,
+          matchPoints: row.matchInfo.matchPoints ?? 0,
           dayStreak: row.matchInfo.dayStreak,
           streakActiveToday: Boolean(row.matchInfo.streakActiveToday ?? row.streakActiveToday),
           streakRestoreDeadline: row.matchInfo.streakRestoreDeadline ?? row.streakRestoreDeadline ?? null,

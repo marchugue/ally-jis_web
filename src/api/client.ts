@@ -19,6 +19,8 @@ export {
   resetToConfiguredBackend,
   probeLocalBackend,
   PRODUCTION_API_URL,
+  MAINTENANCE_MODE_EVENT,
+  getMaintenanceStatus,
 } from './http';
 
 export type {
@@ -123,6 +125,7 @@ import * as match from './routes/match';
 import * as follow from './routes/follow';
 import * as admin from './routes/admin';
 import type { ListUsersQuery, ListReportsQuery } from './routes/admin';
+import { getMaintenanceStatus } from './http';
 export type { ListUsersQuery, ListReportsQuery };
 
 export const apiClient = {
@@ -259,6 +262,7 @@ export const apiClient = {
   listFriendRequestNotifications: notifications.listFriendRequestNotifications,
   getNotificationRedirection: notifications.getNotificationRedirection,
   markNotificationRead: notifications.markNotificationRead,
+  markTargetNotificationsRead: notifications.markTargetNotificationsRead,
   markAllNotificationsRead: notifications.markAllNotificationsRead,
   deleteAllNotifications: notifications.deleteAllNotifications,
 
@@ -304,4 +308,7 @@ export const apiClient = {
   endMatch: match.endMatch,
   getMatchReveal: match.getMatchReveal,
   getMatchTimeline: match.getMatchTimeline,
+
+  // ─── System / Maintenance ────────────────────────────────────────────────
+  getMaintenanceStatus,
 };

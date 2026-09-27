@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { PresenceProvider } from "@/context/PresenceContext";
 import { NotificationsProvider } from "@/context/NotificationsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { MaintenanceProvider } from "@/context/MaintenanceContext";
 
 const basename = import.meta.env.BASE_URL;
 
@@ -14,13 +15,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter basename={basename}>
       <ThemeProvider>
-        <AuthProvider>
-          <PresenceProvider>
-            <NotificationsProvider>
-              <App />
-            </NotificationsProvider>
-          </PresenceProvider>
-        </AuthProvider>
+        <MaintenanceProvider>
+          <AuthProvider>
+            <PresenceProvider>
+              <NotificationsProvider>
+                <App />
+              </NotificationsProvider>
+            </PresenceProvider>
+          </AuthProvider>
+        </MaintenanceProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,

@@ -79,6 +79,8 @@ export interface Conversation {
   matchInfo: {
     matchId: string;
     stage: number;
+    stagePoints?: number;
+    matchPoints?: number;
     dayStreak: number;
     streakActiveToday?: boolean;
     streakRestoreDeadline?: string | null;
@@ -147,6 +149,13 @@ export interface NotificationRedirectionResponse {
   tree: NotificationRedirectionTree;
 }
 
+export type NotificationCategory =
+  | 'messages'
+  | 'connections'
+  | 'ally'
+  | 'safety'
+  | 'activity';
+
 export interface Notification {
   id: string;
   type: NotificationType;
@@ -163,9 +172,13 @@ export interface Notification {
   parentId?: string | null;
   childId?: string | null;
   targetId?: string;
+  groupKey?: string | null;
+  category?: NotificationCategory;
+  unreadCount?: number;
   redirection?: NotificationRedirection;
   tree?: NotificationRedirectionTree;
 }
+
 
 export type OnboardingStep = 1 | 2 | 3 | 4;
 

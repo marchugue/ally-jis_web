@@ -316,19 +316,74 @@ export default function MessagesPage() {
       });
     };
 
+    const onPointsUpdated = (payload: {
+      matchId?: string;
+      stagePoints?: number;
+      matchPoints?: number;
+      stage?: number;
+    }) => {
+      setActiveConversation((prev) => {
+        if (!prev) return prev;
+        if (!payload.matchId || prev.matchInfo?.matchId !== payload.matchId) return prev;
+        return {
+          ...prev,
+          matchInfo: prev.matchInfo
+            ? {
+                ...prev.matchInfo,
+                stagePoints: payload.stagePoints ?? prev.matchInfo.stagePoints,
+                matchPoints: payload.matchPoints ?? prev.matchInfo.matchPoints,
+                stage: payload.stage ?? prev.matchInfo.stage,
+              }
+            : prev.matchInfo,
+        };
+      });
+      void reveal.refetch();
+    };
+
+    const onStageUpdated = (payload: {
+      matchId?: string;
+      conversationId?: string;
+      stage?: number;
+      stageName?: string;
+    }) => {
+      void refreshConvs(true);
+      setActiveConversation((prev) => {
+        if (!prev) return prev;
+        const isMatch =
+          (payload.conversationId && prev.id === payload.conversationId) ||
+          (payload.matchId && prev.matchInfo?.matchId === payload.matchId);
+        if (!isMatch) return prev;
+        return {
+          ...prev,
+          matchInfo: prev.matchInfo
+            ? {
+                ...prev.matchInfo,
+                stage: payload.stage ?? prev.matchInfo.stage,
+                stagePoints: 0,
+              }
+            : prev.matchInfo,
+        };
+      });
+      void reveal.refetch();
+    };
+
     socket.on('matchmaking:match_confirmed', onMatchConfirmed);
     socket.on('matchmaking:match_ended', onMatchEnded);
     socket.on('matchmaking:chat_expired', onMatchEnded);
     socket.on('conversation:streak_updated', onStreakUpdated);
     socket.on('matchmaking:streak_update', onStreakUpdated);
+    socket.on('match:points_updated', onPointsUpdated);
+    socket.on('matchmaking:stage_updated', onStageUpdated);
     return () => {
       socket.off('matchmaking:match_confirmed', onMatchConfirmed);
       socket.off('matchmaking:match_ended', onMatchEnded);
       socket.off('matchmaking:chat_expired', onMatchEnded);
       socket.off('conversation:streak_updated', onStreakUpdated);
       socket.off('matchmaking:streak_update', onStreakUpdated);
+      socket.off('match:points_updated', onPointsUpdated);
+      socket.off('matchmaking:stage_updated', onStageUpdated);
     };
-  }, [activeConversation?.id, refreshConvs]);
+  }, [activeConversation?.id, refreshConvs, reveal.refetch]);
 
   // Midnight streak expiry is handled server-side (streakReminder.service.ts).
   // The backend emits 'conversation:streak_updated' with status:'inactive' + dayStreak:0
@@ -807,6 +862,9 @@ export default function MessagesPage() {
                   <FloatingStatusBadge
                     stage={activeConversation.matchInfo?.stage ?? 1}
                     dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                    stagePoints={reveal.reveal?.stagePoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                    pointsPerStage={500}
+                    effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
                     avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
                     onClick={() => setShowRoadmapModal(true)}
                   />
@@ -995,6 +1053,10 @@ export default function MessagesPage() {
           onOpenChange={setShowRoadmapModal}
           stage={activeConversation.matchInfo?.stage ?? 1}
           dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+          stagePoints={reveal.reveal?.stagePoints ?? 0}
+          matchPoints={reveal.reveal?.matchPoints ?? 0}
+          effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? 1}
+          dailyTasks={reveal.reveal?.dailyTasks ?? []}
           partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
           matchId={activeConversation.matchInfo?.matchId}
         />

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MoreHorizontal, Reply, Send, Forward, Copy, Trash2, Flag, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -120,8 +121,10 @@ export function MobileReactionPopup({
     ? SCREEN_WIDTH - optionsWidth - PADDING
     : PADDING;
 
-  return (
-    <div className="fixed inset-0 z-[60] md:hidden select-none">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] select-none">
       {/* ── 1. Full-screen backdrop (dismiss on tap) ── */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -366,7 +369,8 @@ export function MobileReactionPopup({
           />
         )}
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -422,19 +426,70 @@ export function DesktopHoverActions({
   const [showReactions, setShowReactions] = useState(false);
   const [showFullPicker, setShowFullPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+    opensUp: boolean;
+  } | null>(null);
+
+  const [reactionsPosition, setReactionsPosition] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+    opensUp: boolean;
+  } | null>(null);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const reactButtonRef = useRef<HTMLButtonElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
+  const reactionsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!showReactions && !showMenu && !showFullPicker) return;
+
     const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        menuDropdownRef.current?.contains(target) ||
+        moreButtonRef.current?.contains(target) ||
+        reactionsDropdownRef.current?.contains(target) ||
+        reactButtonRef.current?.contains(target) ||
+        wrapperRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setShowReactions(false);
+      setShowMenu(false);
+      setShowFullPicker(false);
+    };
+
+    const handleScrollOrResize = () => {
+      setShowReactions(false);
+      setShowMenu(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setShowReactions(false);
         setShowMenu(false);
         setShowFullPicker(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [showReactions, showMenu, showFullPicker]);
 
   const handleReact = (emoji: string) => {
@@ -443,142 +498,209 @@ export function DesktopHoverActions({
     setShowFullPicker(false);
   };
 
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!showMenu && moreButtonRef.current) {
+      const rect = moreButtonRef.current.getBoundingClientRect();
+      const opensUp = rect.top > 240;
+      const top = opensUp ? rect.top - 8 : rect.bottom + 8;
+      if (side === 'right') {
+        setMenuPosition({
+          top,
+          right: Math.max(12, window.innerWidth - rect.right),
+          opensUp,
+        });
+      } else {
+        setMenuPosition({
+          top,
+          left: Math.max(12, rect.left),
+          opensUp,
+        });
+      }
+      setShowMenu(true);
+      setShowReactions(false);
+      setShowFullPicker(false);
+    } else {
+      setShowMenu(false);
+    }
+  };
+
+  const toggleReactions = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!showReactions && reactButtonRef.current) {
+      const rect = reactButtonRef.current.getBoundingClientRect();
+      const opensUp = rect.top > 80;
+      const top = opensUp ? rect.top - 8 : rect.bottom + 8;
+      if (side === 'right') {
+        setReactionsPosition({
+          top,
+          right: Math.max(12, window.innerWidth - rect.right),
+          opensUp,
+        });
+      } else {
+        setReactionsPosition({
+          top,
+          left: Math.max(12, rect.left),
+          opensUp,
+        });
+      }
+      setShowReactions(true);
+      setShowMenu(false);
+      setShowFullPicker(false);
+    } else {
+      setShowReactions(false);
+    }
+  };
+
   return (
     <div
       ref={wrapperRef}
       className={cn(
         'relative hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0',
+        (showMenu || showReactions) && '!opacity-100 !pointer-events-auto',
         side === 'right' ? 'ml-1' : 'mr-1',
       )}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="relative">
         <button
+          ref={reactButtonRef}
           type="button"
-          onClick={() => {
-            setShowReactions((prev) => !prev);
-            setShowMenu(false);
-            setShowFullPicker(false);
-          }}
+          onClick={toggleReactions}
           aria-label="React"
-          className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          className={cn(
+            'w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer',
+            showReactions && 'bg-gray-200 dark:bg-white/20 text-gray-700 dark:text-gray-100',
+          )}
         >
           <span className="text-base leading-none">😊</span>
         </button>
 
-        <AnimatePresence>
-          {showReactions && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 4 }}
-              transition={{ duration: 0.12 }}
-              className={cn(
-                'absolute bottom-full mb-2 z-50',
-                side === 'right' ? 'right-0' : 'left-0',
-              )}
-            >
-              <QuickReactionsBar
-                variant="desktop"
-                onReact={handleReact}
-                onOpenPicker={() => {
-                  setShowFullPicker(true);
-                  setShowReactions(false);
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showReactions && reactionsPosition && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            ref={reactionsDropdownRef}
+            initial={{ opacity: 0, scale: 0.9, y: reactionsPosition.opensUp ? 4 : -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: reactionsPosition.opensUp ? 4 : -4 }}
+            transition={{ duration: 0.12 }}
+            style={{
+              position: 'fixed',
+              top: reactionsPosition.top,
+              left: reactionsPosition.left,
+              right: reactionsPosition.right,
+              transform: reactionsPosition.opensUp ? 'translateY(-100%)' : 'none',
+              zIndex: 99999,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QuickReactionsBar
+              variant="desktop"
+              onReact={handleReact}
+              onOpenPicker={() => {
+                setShowFullPicker(true);
+                setShowReactions(false);
+              }}
+            />
+          </motion.div>,
+          document.body
+        )}
       </div>
 
       <div className="relative">
         <button
+          ref={moreButtonRef}
           type="button"
-          onClick={() => {
-            setShowMenu((prev) => !prev);
-            setShowReactions(false);
-            setShowFullPicker(false);
-          }}
+          onClick={toggleMenu}
           aria-label="More actions"
-          className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          className={cn(
+            'w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer',
+            showMenu && 'bg-gray-200 dark:bg-white/20 text-gray-700 dark:text-gray-100',
+          )}
         >
           <MoreHorizontal size={16} />
         </button>
 
-        <AnimatePresence>
-          {showMenu && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 4 }}
-              transition={{ duration: 0.12 }}
-              className={cn(
-                'absolute bottom-full mb-2 flex flex-col bg-white dark:bg-[#111827] rounded-xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.14)] overflow-hidden min-w-[170px] z-50 py-1 divide-y divide-gray-100 dark:divide-white/5',
-                side === 'right' ? 'right-0' : 'left-0',
+        {showMenu && menuPosition && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            ref={menuDropdownRef}
+            initial={{ opacity: 0, scale: 0.95, y: menuPosition.opensUp ? 4 : -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: menuPosition.opensUp ? 4 : -4 }}
+            transition={{ duration: 0.12 }}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top,
+              left: menuPosition.left,
+              right: menuPosition.right,
+              transform: menuPosition.opensUp ? 'translateY(-100%)' : 'none',
+              zIndex: 99999,
+            }}
+            className="flex flex-col bg-white dark:bg-[#111827] rounded-2xl border border-black/[0.08] dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.22)] overflow-hidden min-w-[180px] py-1 divide-y divide-gray-100 dark:divide-white/5 select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col py-0.5">
+              <ActionRow
+                icon={<Reply size={15} />}
+                label="Reply"
+                onClick={() => {
+                  onReply?.();
+                  setShowMenu(false);
+                }}
+              />
+              <ActionRow
+                icon={<Forward size={15} />}
+                label="Forward"
+                onClick={() => {
+                  onForward?.();
+                  setShowMenu(false);
+                }}
+              />
+              {hasContent && (
+                <ActionRow
+                  icon={<Copy size={15} />}
+                  label="Copy"
+                  onClick={() => {
+                    onCopy?.();
+                    setShowMenu(false);
+                  }}
+                />
               )}
-            >
-              <div className="flex flex-col py-0.5">
+            </div>
+            <div className="flex flex-col py-0.5">
+              <ActionRow
+                icon={<Trash2 size={15} />}
+                label="Delete for me"
+                onClick={() => {
+                  onDeleteForMe?.();
+                  setShowMenu(false);
+                }}
+              />
+              {isMe && (
                 <ActionRow
-                  icon={<Reply size={15} />}
-                  label="Reply"
+                  icon={<Trash2 size={15} className="text-red-500" />}
+                  label="Delete for everyone"
                   onClick={() => {
-                    onReply?.();
+                    onDeleteForEveryone?.();
                     setShowMenu(false);
                   }}
+                  destructive
                 />
+              )}
+              {!isMe && (
                 <ActionRow
-                  icon={<Forward size={15} />}
-                  label="Forward"
+                  icon={<Flag size={15} className="text-red-500" />}
+                  label="Report"
                   onClick={() => {
-                    onForward?.();
+                    onReport?.();
                     setShowMenu(false);
                   }}
+                  destructive
                 />
-                {hasContent && (
-                  <ActionRow
-                    icon={<Copy size={15} />}
-                    label="Copy"
-                    onClick={() => {
-                      onCopy?.();
-                      setShowMenu(false);
-                    }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-col py-0.5">
-                <ActionRow
-                  icon={<Trash2 size={15} />}
-                  label="Delete for me"
-                  onClick={() => {
-                    onDeleteForMe?.();
-                    setShowMenu(false);
-                  }}
-                />
-                {isMe && (
-                  <ActionRow
-                    icon={<Trash2 size={15} className="text-red-500" />}
-                    label="Delete for everyone"
-                    onClick={() => {
-                      onDeleteForEveryone?.();
-                      setShowMenu(false);
-                    }}
-                    destructive
-                  />
-                )}
-                {!isMe && (
-                  <ActionRow
-                    icon={<Flag size={15} className="text-red-500" />}
-                    label="Report"
-                    onClick={() => {
-                      onReport?.();
-                      setShowMenu(false);
-                    }}
-                    destructive
-                  />
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              )}
+            </div>
+          </motion.div>,
+          document.body
+        )}
       </div>
 
       <AnimatePresence>

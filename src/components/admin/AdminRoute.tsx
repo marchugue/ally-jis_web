@@ -1,9 +1,10 @@
 // src/components/admin/AdminRoute.tsx
 
-import { Navigate, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAdminMe } from '@/hooks/useAdminMe';
 import { AdminThemeProvider } from './AdminThemeProvider';
+import { AdminAccessDenied } from './AdminAccessDenied';
 
 export function AdminRoute() {
   const { role, loading, forbidden } = useAdminMe();
@@ -17,7 +18,7 @@ export function AdminRoute() {
   }
 
   if (forbidden || !role) {
-    return <Navigate to="/dashboard" replace />;
+    return <AdminAccessDenied />;
   }
 
   return (

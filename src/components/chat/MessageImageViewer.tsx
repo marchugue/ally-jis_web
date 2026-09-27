@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Forward, Reply, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Forward, Reply, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Message } from '@/types/ally';
 import { cn } from '@/lib/utils';
 
@@ -97,24 +98,24 @@ export function MessageImageViewer({
     }
   }, [currentIndex]);
 
-  if (!currentImage) return null;
+  if (!currentImage || typeof document === 'undefined') return null;
 
   const canAct =
     !message.id.startsWith('temp-') &&
     message.status !== 'sending' &&
     message.status !== 'failed';
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[90] flex flex-col bg-black/90 backdrop-blur-md select-none"
+      className="fixed inset-0 z-[99999] flex flex-col bg-black/95 backdrop-blur-md select-none overflow-hidden"
       onClick={onClose}
     >
       {/* Top bar */}
       <div
-        className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 flex-shrink-0"
+        className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -138,20 +139,36 @@ export function MessageImageViewer({
           )}
         </div>
 
-        <div className="w-[72px] sm:w-[88px]" aria-hidden />
+        <div className="flex items-center justify-end w-[72px] sm:w-[88px]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center w-9 h-9 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Main Image with Prev/Next buttons & horizontal drag/swipe */}
       <div
         className="relative flex-1 min-h-0 flex items-center justify-center px-4 sm:px-12 pb-4"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       >
         {/* Previous Button (UI Arrow Symbol) */}
         {images.length > 1 && (
           <button
             type="button"
             disabled={currentIndex === 0}
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentIndex((prev) => Math.max(0, prev - 1));
+            }}
             className={cn(
               'absolute left-4 sm:left-8 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all shadow-xl backdrop-blur-sm',
               currentIndex === 0
@@ -180,6 +197,7 @@ export function MessageImageViewer({
               setCurrentIndex((prev) => prev + 1);
             }
           }}
+          onClick={(e) => e.stopPropagation()}
           className="max-w-full max-h-full w-auto h-auto flex items-center justify-center cursor-grab active:cursor-grabbing"
         >
           <img
@@ -195,7 +213,10 @@ export function MessageImageViewer({
           <button
             type="button"
             disabled={currentIndex === images.length - 1}
-            onClick={() => setCurrentIndex((prev) => Math.min(images.length - 1, prev + 1))}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentIndex((prev) => Math.min(images.length - 1, prev + 1));
+            }}
             className={cn(
               'absolute right-4 sm:right-8 z-20 w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all shadow-xl backdrop-blur-sm',
               currentIndex === images.length - 1
@@ -249,7 +270,7 @@ export function MessageImageViewer({
           className={cn(
             'flex items-center gap-2 rounded-full px-5 py-3 font-jakarta text-sm font-semibold transition-colors',
             canAct
-              ? 'bg-white/15 text-white hover:bg-white/25'
+              ? 'bg-white/15 text-white hover:bg-white/25 cursor-pointer'
               : 'bg-white/5 text-white/40 cursor-not-allowed',
           )}
         >
@@ -266,7 +287,7 @@ export function MessageImageViewer({
           className={cn(
             'flex items-center gap-2 rounded-full px-5 py-3 font-jakarta text-sm font-semibold transition-colors',
             canAct
-              ? 'bg-white/15 text-white hover:bg-white/25'
+              ? 'bg-white/15 text-white hover:bg-white/25 cursor-pointer'
               : 'bg-white/5 text-white/40 cursor-not-allowed',
           )}
         >
@@ -274,6 +295,7 @@ export function MessageImageViewer({
           Forward
         </button>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }

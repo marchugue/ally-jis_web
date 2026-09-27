@@ -330,18 +330,20 @@ const MessageBubble = memo(function MessageBubble({
     );
   }
 
-  const mobileLongPressHandlers = isMobile
-    ? {
-        onTouchStart: longPress.onTouchStart,
-        onTouchMove: longPress.onTouchMove,
-        onTouchEnd: longPress.onTouchEnd,
-        onTouchCancel: longPress.onTouchCancel,
-        onContextMenu: (e: React.MouseEvent) => {
-          e.preventDefault();
-          openActionMenu();
-        },
-      }
-    : {};
+  const mobileLongPressHandlers = {
+    onTouchStart: longPress.onTouchStart,
+    onTouchMove: longPress.onTouchMove,
+    onTouchEnd: longPress.onTouchEnd,
+    onTouchCancel: longPress.onTouchCancel,
+    onMouseDown: longPress.onMouseDown,
+    onMouseMove: longPress.onMouseMove,
+    onMouseUp: longPress.onMouseUp,
+    onMouseLeave: longPress.onMouseLeave,
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault();
+      openActionMenu();
+    },
+  };
 
   const handleReact = (emoji: string) => {
     onReact?.(msg, emoji);
@@ -376,7 +378,12 @@ const MessageBubble = memo(function MessageBubble({
       <div
         ref={bubbleRef}
         {...mobileLongPressHandlers}
-        onClick={() => {
+        onClick={(e) => {
+          if (longPress.didLongPress()) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
           if (!isImageOnly && !isEmojiOnly) {
             onToggleTime?.();
           }

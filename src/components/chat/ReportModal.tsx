@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronDown, ChevronLeft, Flag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMUNITY_STANDARDS, ReportViolation } from '@/data/CommunityStandards';
@@ -44,11 +45,13 @@ export function ReportModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 animate-in fade-in duration-150"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
         onClick={onClose}
       />
 
@@ -147,7 +150,8 @@ export function ReportModal({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

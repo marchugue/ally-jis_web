@@ -1,7 +1,8 @@
 // src/pages/admin/AdminSettingsPage.tsx
 
 import { useEffect, useState } from 'react';
-import { Loader2, Save, AlertTriangle, Settings, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, Save, AlertTriangle, Settings, Mail, Eye, ExternalLink } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import type { SystemSettings } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
@@ -9,6 +10,25 @@ import { Switch } from '@/components/ui/switch';
 import EmailStudioPage from '@/pages/EmailStudioPage';
 
 type SettingsTab = 'system' | 'email';
+
+const MAINTENANCE_PRESETS = [
+  {
+    label: 'Scheduled Maintenance',
+    text: 'Ally-jis is undergoing scheduled maintenance to upgrade services and optimize system performance. We will be back shortly!',
+  },
+  {
+    label: 'Database Optimization',
+    text: 'We are currently performing essential database optimizations and upgrades. All features will resume soon.',
+  },
+  {
+    label: 'New Semester Setup',
+    text: 'Ally-jis is being updated with new student directories and academic term schedules. Thank you for your patience!',
+  },
+  {
+    label: 'Quick Hotfix',
+    text: 'Our technical team is applying an urgent performance and security patch. Normal service will return within minutes.',
+  },
+];
 
 function SectionCard({ title, wired, children }: { title: string; wired: boolean; children: React.ReactNode }) {
   return (
@@ -86,6 +106,29 @@ function SystemSettingsPanel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectionCard title="Maintenance Mode" wired>
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  value('maintenance_mode') ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'
+                }`}
+              />
+              <span className="text-xs font-bold text-gray-700 dark:text-white/80">
+                {value('maintenance_mode') ? 'Status: ACTIVE (Students Blocked)' : 'Status: OFF (Platform Live)'}
+              </span>
+            </div>
+            <Link
+              to="/maintenance?preview=true"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-xs font-semibold text-gray-700 dark:text-white transition-all active:scale-95"
+            >
+              <Eye size={13} />
+              <span>Preview UI</span>
+              <ExternalLink size={11} className="opacity-60" />
+            </Link>
+          </div>
+
           <ToggleRow
             label="Enable maintenance mode"
             description="Blocks all non-admin API access with the message below. Takes effect within ~10 seconds."
@@ -99,11 +142,32 @@ function SystemSettingsPanel() {
             </div>
           )}
           <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wide block mb-1">Message shown to users</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wide">
+                Message shown to users
+              </label>
+              <span className="text-[11px] text-gray-400 dark:text-white/40">Select preset or type custom</span>
+            </div>
+
+            {/* Quick preset message buttons */}
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              {MAINTENANCE_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => set('maintenance_message', preset.text)}
+                  className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-[#1A6B3C]/10 dark:hover:bg-emerald-500/10 hover:text-[#1A6B3C] dark:hover:text-emerald-400 text-[11px] font-medium text-gray-600 dark:text-white/60 transition-all border border-transparent hover:border-[#1A6B3C]/20"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
             <textarea
               value={(value('maintenance_message') as string) ?? ''}
               onChange={(e) => set('maintenance_message', e.target.value)}
               rows={3}
+              placeholder="e.g. Ally-jis is undergoing maintenance. Please check back shortly."
               className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 dark:bg-white/5 text-gray-900 dark:text-white text-sm outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-all"
             />
           </div>

@@ -178,6 +178,8 @@ export type ConversationVariant = 'regular' | 'anonymous' | 'anonymous_ended';
 export interface ConversationMatchInfo {
   matchId: string;
   stage: number;
+  stagePoints?: number;
+  matchPoints?: number;
   dayStreak: number;
   streakActiveToday?: boolean;
   streakRestoreDeadline?: string | null;
@@ -248,12 +250,16 @@ export interface NotificationRow {
   is_read: boolean;
   from_user_id?: string | null;
   target_id?: string | null;
+  group_key?: string | null;
+  category?: string | null;
+  unread_count?: number;
   post_id?: string | null;
   comment_id?: string | null;
   parent_id?: string | null;
   child_id?: string | null;
   created_at: string;
   redirection?: NotificationRedirection | null;
+
   tree?: NotificationRedirectionTree | null;
   from_user?: {
     id?: string;
@@ -534,7 +540,7 @@ export type Permission =
   | 'manage_admins';
 
 export interface AdminMeResponse {
-  role: AdminRole;
+  role: AdminRole | null;
   permissions: Permission[];
 }
 
@@ -818,31 +824,54 @@ export interface ConversationInsights {
 }
 
 export interface RevealPartnerView {
+  // Stage 2+ (non-identifying)
   ageRange?: string | null;
   zodiacSign?: string | null;
   personalityType?: string | null;
   musicTaste?: string[];
   movieInterests?: string[];
   studyCategory?: string | null;
-  blurredAvatarUrl?: string | null;
-  firstNameLetter?: string | null;
+  // Stage 3+
   favoriteHobby?: string | null;
-  fullName?: string | null;
-  username?: string | null;
-  bio?: string | null;
-  avatarUrl?: string | null;
-  userId?: string | null;
+  // Stage 4: feed unlock only — no identity fields exposed here
+}
+
+export interface DailyTaskStatus {
+  taskId: string;
+  label: string;
+  description: string;
+  basePoints: number;
+  myCompleted: boolean;
+  partnerCompleted: boolean;
+  myPointsAwarded: number;
+}
+
+export interface StageTask {
+  id: string;
+  label: string;
+  description: string;
+  basePoints: number;
+  unlockedAtStage: number;
 }
 
 export interface RevealData {
   stage: number;
   stageName: string;
   dayStreak: number;
+  // Points progression
+  matchPoints: number;
+  stagePoints: number;
+  pointsToNextStage: number;
+  effectiveMultiplier: number;
+  // Partner info
   compatibilityScore: number | null;
   sharedInterests: string[];
   sharedCategories: string[];
   conversationInsights: ConversationInsights | null;
   icebreakers: string[];
+  // Daily tasks
+  dailyTasks: DailyTaskStatus[];
+  activeTasks: StageTask[];
   partner: RevealPartnerView;
 }
 
@@ -853,6 +882,8 @@ export interface TimelinePostView {
   likesCount: number;
   commentsCount: number;
   createdAt: string;
+  /** True when the author identity is not yet revealed (anonymous post). */
+  isAnonymous?: boolean;
 }
 
 export interface TimelineData {

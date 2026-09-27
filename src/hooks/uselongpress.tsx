@@ -8,14 +8,16 @@ interface LongPressOptions {
 export type LongPressPoint = { x: number; y: number };
 
 /**
- * Detects a touch-and-hold gesture. Fires onLongPress with the touch's
- * screen coordinates once held for `delay` ms. Any movement or early
- * release cancels it, so a normal scroll/tap never triggers it.
+ * Detects a press-and-hold (touch or mouse) gesture.
+ * Fires onLongPress with screen coordinates once held for `delay` ms.
+ * Any movement or early release cancels it, so a normal scroll/click never triggers it.
  */
-export function useLongPress({ onLongPress, delay = 400 }: LongPressOptions) {
+export function useLongPress({ onLongPress, delay = 350 }: LongPressOptions) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const firedRef = useRef(false);
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
 
   const clear = useCallback(() => {
     if (timerRef.current) {
@@ -24,46 +26,96 @@ export function useLongPress({ onLongPress, delay = 400 }: LongPressOptions) {
     }
   }, []);
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
-      startPointRef.current = { x: touch.clientX, y: touch.clientY };
+  const startHold = useCallback(
+    (x: number, y: number) => {
+      startPointRef.current = { x, y };
       firedRef.current = false;
+      clear();
 
       timerRef.current = setTimeout(() => {
         if (startPointRef.current) {
           firedRef.current = true;
-          onLongPress(startPointRef.current);
+          try {
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+              navigator.vibrate(40);
+            }
+          } catch {}
+          onLongPressRef.current(startPointRef.current);
         }
       }, delay);
     },
-    [delay, onLongPress]
+    [clear, delay]
+  );
+
+  const moveHold = useCallback(
+    (x: number, y: number) => {
+      const start = startPointRef.current;
+      if (!start) return;
+      const dx = Math.abs(x - start.x);
+      const dy = Math.abs(y - start.y);
+      if (dx > 10 || dy > 10) {
+        clear();
+      }
+    },
+    [clear]
+  );
+
+  const endHold = useCallback(() => {
+    clear();
+  }, [clear]);
+
+  // Touch event handlers (mobile)
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      startHold(touch.clientX, touch.clientY);
+    },
+    [startHold]
   );
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
-      const start = startPointRef.current;
-      if (!touch || !start) return;
-      // Any meaningful finger movement cancels the hold — this is a scroll,
-      // not a long-press.
-      const dx = Math.abs(touch.clientX - start.x);
-      const dy = Math.abs(touch.clientY - start.y);
-      if (dx > 10 || dy > 10) clear();
+      if (!touch) return;
+      moveHold(touch.clientX, touch.clientY);
     },
-    [clear]
+    [moveHold]
   );
 
-  const handleTouchEnd = useCallback(() => {
-    clear();
-  }, [clear]);
+  // Mouse event handlers (desktop / browser emulation)
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return; // Only primary button
+      startHold(e.clientX, e.clientY);
+    },
+    [startHold]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      moveHold(e.clientX, e.clientY);
+    },
+    [moveHold]
+  );
 
   return {
     onTouchStart: handleTouchStart,
     onTouchMove: handleTouchMove,
-    onTouchEnd: handleTouchEnd,
-    onTouchCancel: handleTouchEnd,
-    didLongPress: () => firedRef.current,
+    onTouchEnd: endHold,
+    onTouchCancel: endHold,
+    onMouseDown: handleMouseDown,
+    onMouseMove: handleMouseMove,
+    onMouseUp: endHold,
+    onMouseLeave: endHold,
+    didLongPress: () => {
+      const did = firedRef.current;
+      if (did) {
+        setTimeout(() => {
+          firedRef.current = false;
+        }, 120);
+      }
+      return did;
+    },
   };
 }

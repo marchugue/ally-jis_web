@@ -28,11 +28,14 @@ export function useAdminMe(): UseAdminMeResult {
       .then((res) => {
         if (cancelled) return;
         setRole(res.role);
-        setPermissions(res.permissions);
+        setPermissions(res.permissions || []);
+        setForbidden(!res.role);
       })
       .catch((err) => {
         if (cancelled) return;
-        if (err instanceof ApiError && err.status === 403) setForbidden(true);
+        setRole(null);
+        setPermissions([]);
+        setForbidden(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -24,6 +24,7 @@ export const PROTECTED_ROUTES = [
   '/blocked-users',
   '/settings',
   '/pending-approval',
+  '/maintenance',
 ];
 
 export function isProtectedRoute(pathname: string): boolean {

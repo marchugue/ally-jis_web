@@ -190,12 +190,12 @@ export default function FeedPostCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div
-          className={`flex items-center gap-3 min-w-0 ${onAuthorClick && !isOwn && post.author_id ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
-          onClick={() => { if (onAuthorClick && !isOwn && post.author_id) onAuthorClick(post.author_id); }}
+          className={`flex items-center gap-3 min-w-0 ${onAuthorClick && !isOwn && post.author_id && author?.avatar_url ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
+          onClick={() => { if (onAuthorClick && !isOwn && post.author_id && author?.avatar_url) onAuthorClick(post.author_id); }}
         >
-          {isAlly ? (
+          {isAlly && author?.avatar_url ? (
             <AvatarDisplay
-              src={author?.avatar_url}
+              src={author.avatar_url}
               name={displayName}
               className="w-10 h-10 rounded-full object-cover flex-shrink-0"
             />
@@ -210,7 +210,7 @@ export default function FeedPostCard({
             <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">{displayName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">
-                {isAlly && author?.username ? `@${author.username} · ` : ''}{timeAgo}
+                {isAlly && author?.username && author?.avatar_url ? `@${author.username} · ` : ''}{timeAgo}
               </span>
               <span className="text-gray-200 dark:text-gray-700">·</span>
               {post.audience === 'public' ? (
@@ -223,7 +223,7 @@ export default function FeedPostCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {!isOwn && isAlly && post.author_id && (
+          {!isOwn && isAlly && author?.avatar_url && post.author_id && (
             <button
               type="button"
               onClick={handleToggleFollow}

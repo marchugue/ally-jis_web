@@ -1,12 +1,41 @@
 import { apiClient, NotificationRow } from '@/api/client';
-import { Notification } from '@/types/ally';
-
-const EXCLUDED_TYPES: Notification['type'][] = ['message'];
+import { Notification, NotificationCategory } from '@/types/ally';
 
 /** Strip the legacy <!--meta:{...}--> prefix written by older feed.service versions. */
 function stripMetaPrefix(desc: string | undefined | null): string {
   if (!desc) return '';
   return desc.replace(/^<!--meta:\{[^}]*\}-->/i, '').trim();
+}
+
+function deriveCategory(type: string): NotificationCategory {
+  if (type === 'message' || type === 'anon_match') return 'messages';
+  if (
+    type === 'friend_request' ||
+    type === 'connection_request' ||
+    type === 'accepted' ||
+    type === 'connection_accepted' ||
+    type === 'new_follower'
+  ) {
+    return 'connections';
+  }
+  if (
+    type === 'match' ||
+    type.includes('ally') ||
+    type.includes('stage') ||
+    type.includes('revealed') ||
+    type.includes('unlocked')
+  ) {
+    return 'ally';
+  }
+  if (
+    type === 'safety' ||
+    type === 'emergency' ||
+    type === 'admin_warning' ||
+    type.includes('report')
+  ) {
+    return 'safety';
+  }
+  return 'activity';
 }
 
 export const mapNotification = (row: NotificationRow): Notification => {
@@ -18,6 +47,9 @@ export const mapNotification = (row: NotificationRow): Notification => {
   let parentId = row.parent_id ?? row.redirection?.parentId ?? undefined;
   let childId = row.child_id ?? row.redirection?.childId ?? undefined;
   let targetId = row.target_id ?? undefined;
+  let groupKey = (row as any).group_key ?? undefined;
+  let category = (row as any).category as NotificationCategory | undefined;
+  let unreadCount = typeof (row as any).unread_count === 'number' ? (row as any).unread_count : 1;
 
   const metaMatch = description.match(/<!--meta:(\{.*?\})-->/);
   if (metaMatch && metaMatch[1]) {
@@ -28,9 +60,33 @@ export const mapNotification = (row: NotificationRow): Notification => {
       if (meta.parentId && !parentId) parentId = meta.parentId;
       if (meta.childId && !childId) childId = meta.childId;
       if (meta.targetId && !targetId) targetId = meta.targetId;
+      if (meta.groupKey) groupKey = meta.groupKey;
+      if (meta.category) category = meta.category;
+      if (typeof meta.unreadCount === 'number') unreadCount = meta.unreadCount;
       description = description.replace(/<!--meta:\{.*?\}-->/, '').trim();
     } catch {
       // Fallback gracefully
+    }
+  }
+
+  if (!category) {
+    category = deriveCategory(row.type);
+  }
+
+  if (!groupKey) {
+    if (row.type === 'message' || row.type === 'anon_match') {
+      groupKey = `conversation:${targetId || postId || row.id}`;
+    } else if (
+      row.type === 'friend_request' ||
+      row.type === 'connection_request' ||
+      row.type === 'accepted' ||
+      row.type === 'connection_accepted'
+    ) {
+      groupKey = `connection:${row.from_user_id || targetId || row.id}`;
+    } else if (row.type === 'streak_reminder') {
+      groupKey = `reminder:streak:${targetId || row.id}`;
+    } else if (row.type === 'match') {
+      groupKey = `ally:${targetId || row.id}`;
     }
   }
 
@@ -63,17 +119,18 @@ export const mapNotification = (row: NotificationRow): Notification => {
     parentId,
     childId,
     targetId,
+    groupKey,
+    category,
+    unreadCount,
     redirection,
     tree: row.tree ?? redirection?.tree ?? undefined,
   };
 };
 
 export const notificationService = {
-  async list(limit = 20) {
-    const data = await apiClient.listNotifications(limit);
-    return (data ?? [])
-      .map(mapNotification)
-      .filter((n) => !EXCLUDED_TYPES.includes(n.type));
+  async list(limit = 20, category?: string): Promise<Notification[]> {
+    const data = await apiClient.listNotifications(limit, category);
+    return (data ?? []).map(mapNotification);
   },
 
   async listFriendRequests() {
@@ -85,10 +142,15 @@ export const notificationService = {
     await apiClient.markNotificationRead(notificationId);
   },
 
+  async markTargetAsRead(targetId: string) {
+    await apiClient.markTargetNotificationsRead(targetId);
+  },
+
   async markAllAsRead() {
     await apiClient.markAllNotificationsRead();
   },
+
   async clearAll() {
-    await apiClient.deleteAllNotifications(); // use whatever your apiClient method is called
+    await apiClient.deleteAllNotifications();
   },
 };

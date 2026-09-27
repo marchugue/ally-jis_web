@@ -31,8 +31,9 @@ import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import type { Notification } from '@/types/ally';
 
-type FilterCategory = 'all' | 'unread' | 'requests' | 'matches';
+type FilterCategory = 'all' | 'unread' | 'messages' | 'connections' | 'ally' | 'safety' | 'activity';
 type DateGroupKey = 'today' | 'earlier' | 'last_month' | 'last_year';
+
 
 function getDateGroup(dateInput?: string | Date | number): DateGroupKey {
   if (!dateInput) return 'earlier';
@@ -115,6 +116,12 @@ function extractSubtext(notif: Notification): string {
 
 function getActionText(notif: Notification): string {
   switch (notif.type) {
+    case 'message':
+    case 'anon_match':
+      if (notif.unreadCount && notif.unreadCount > 1) {
+        return `(${notif.unreadCount} new messages)`;
+      }
+      return 'sent you a message';
     case 'post_comment':
     case 'comment':
       return 'commented on your post';
@@ -135,14 +142,17 @@ function getActionText(notif: Notification): string {
       return 'accepted your connection request';
     case 'match':
       return 'matched with you!';
-    case 'anon_match':
-      return 'messaged you';
     case 'streak_reminder':
       return '🔥';
+    case 'admin_warning':
+    case 'safety':
+    case 'emergency':
+      return '⚠️ Account & Safety Alert';
     default:
       return notif.title || 'interacted with your post';
   }
 }
+
 
 const ANIMAL_KEYS = [
   'fox', 'wolf', 'whale', 'owl', 'panda', 'otter', 'falcon', 'koala', 'lynx', 'dolphin', 'raven', 'badger'
@@ -235,9 +245,7 @@ export function isReplyableNotification(type?: string): boolean {
     type === 'comment' ||
     type === 'post_comment' ||
     type === 'comment_reply' ||
-    type === 'comment_mention' ||
-    type === 'anon_match' ||
-    type === 'message'
+    type === 'comment_mention'
   );
 }
 
@@ -282,7 +290,7 @@ function getNotificationContent(notif: Notification) {
           description = 'You matched! Tap to view and start chatting';
           break;
         case 'anon_match':
-          description = 'New anonymous match message. Tap to reply';
+          description = 'New anonymous match message. Tap to view conversation';
           break;
         case 'post_like':
         case 'like':
@@ -308,6 +316,17 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
   let badgeBg = 'bg-gray-600';
 
   switch (notif.type) {
+    case 'message':
+      badgeIcon = <MessageCircle size={10} className="text-white" />;
+      badgeBg = 'bg-[#2563EB]';
+      break;
+
+    case 'admin_warning':
+    case 'safety':
+    case 'emergency':
+      badgeIcon = <span className="text-[9px] leading-none text-white font-bold">⚠️</span>;
+      badgeBg = 'bg-[#DC2626]';
+      break;
     case 'comment':
     case 'post_comment':
     case 'comment_reply':
@@ -344,6 +363,7 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
       badgeBg = 'bg-[#EB5600]';
       break;
   }
+
 
   if (notif.type === 'streak_reminder') {
     return (
@@ -401,21 +421,63 @@ export default function NotificationsPage() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [sentReplies, setSentReplies] = useState<Record<string, string>>({});
   const replyInputRef = useRef<HTMLInputElement>(null);
+  const [browserPerm, setBrowserPerm] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'denied';
+  });
+
+  const handleEnableBrowserNotifications = async () => {
+    const { requestBrowserNotificationPermission } = await import('@/lib/browserNotifications');
+    const perm = await requestBrowserNotificationPermission();
+    setBrowserPerm(perm);
+    if (perm === 'granted') {
+      toast.success('Browser notifications enabled!');
+    } else {
+      toast.error('Browser notification permission was not granted.');
+    }
+  };
 
   const categoryCounts = useMemo(() => {
     return {
-      all: notifications.filter((n) => n.type !== 'message').length,
-      unread: notifications.filter((n) => n.type !== 'message' && !n.isRead).length,
-      requests: notifications.filter(
+      all: notifications.length,
+      unread: notifications.filter((n) => !n.isRead).length,
+      messages: notifications.filter(
+        (n) => n.category === 'messages' || n.type === 'message' || n.type === 'anon_match'
+      ).length,
+      connections: notifications.filter(
         (n) =>
+          n.category === 'connections' ||
           n.type === 'friend_request' ||
           n.type === 'connection_request' ||
           n.type === 'accepted' ||
-          n.type === 'connection_accepted'
+          n.type === 'connection_accepted' ||
+          n.type === 'new_follower'
       ).length,
-      matches: notifications.filter((n) => n.type === 'match' || n.type === 'anon_match').length,
+      ally: notifications.filter(
+        (n) =>
+          n.category === 'ally' ||
+          n.type === 'match' ||
+          n.type.includes('ally') ||
+          n.type.includes('stage')
+      ).length,
+      safety: notifications.filter(
+        (n) =>
+          n.category === 'safety' ||
+          n.type === 'admin_warning' ||
+          n.type === 'safety' ||
+          n.type === 'emergency'
+      ).length,
+      activity: notifications.filter(
+        (n) =>
+          n.category === 'activity' ||
+          (!['messages', 'connections', 'ally', 'safety'].includes(n.category || '') &&
+           !['message', 'anon_match', 'friend_request', 'connection_request', 'accepted', 'connection_accepted', 'new_follower', 'match', 'admin_warning'].includes(n.type))
+      ).length,
     };
   }, [notifications]);
+
 
   const handleClick = async (notif: Notification, isReplyAction = false) => {
     await markAsRead(notif.id);
@@ -635,23 +697,48 @@ export default function NotificationsPage() {
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((n) => {
-      if (n.type === 'message') return false;
       const isUnread = !n.isRead;
       if (activeFilter === 'unread') return isUnread;
-      if (activeFilter === 'requests') {
+      if (activeFilter === 'messages') {
+        return n.category === 'messages' || n.type === 'message' || n.type === 'anon_match';
+      }
+      if (activeFilter === 'connections') {
         return (
+          n.category === 'connections' ||
           n.type === 'friend_request' ||
           n.type === 'connection_request' ||
           n.type === 'accepted' ||
-          n.type === 'connection_accepted'
+          n.type === 'connection_accepted' ||
+          n.type === 'new_follower'
         );
       }
-      if (activeFilter === 'matches') {
-        return n.type === 'match' || n.type === 'anon_match';
+      if (activeFilter === 'ally') {
+        return (
+          n.category === 'ally' ||
+          n.type === 'match' ||
+          n.type.includes('ally') ||
+          n.type.includes('stage')
+        );
+      }
+      if (activeFilter === 'safety') {
+        return (
+          n.category === 'safety' ||
+          n.type === 'admin_warning' ||
+          n.type === 'safety' ||
+          n.type === 'emergency'
+        );
+      }
+      if (activeFilter === 'activity') {
+        return (
+          n.category === 'activity' ||
+          (!['messages', 'connections', 'ally', 'safety'].includes(n.category || '') &&
+           !['message', 'anon_match', 'friend_request', 'connection_request', 'accepted', 'connection_accepted', 'new_follower', 'match', 'admin_warning'].includes(n.type))
+        );
       }
       return true;
     });
   }, [notifications, activeFilter]);
+
 
   const notificationSections = useMemo(() => {
     const today: Notification[] = [];
@@ -893,6 +980,19 @@ export default function NotificationsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {browserPerm !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
+                <button
+                  type="button"
+                  onClick={handleEnableBrowserNotifications}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 font-jakarta font-semibold text-xs transition-colors cursor-pointer"
+                  title="Enable browser notifications for messages and alerts"
+                >
+                  <Bell size={13} />
+                  <span className="hidden sm:inline">Enable Browser Alerts</span>
+                  <span className="sm:hidden">Alerts</span>
+                </button>
+              )}
+
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -924,8 +1024,11 @@ export default function NotificationsPage() {
               {[
                 { id: 'all', label: 'All', count: categoryCounts.all },
                 { id: 'unread', label: 'Unread', count: categoryCounts.unread },
-                { id: 'requests', label: 'Requests', count: categoryCounts.requests },
-                { id: 'matches', label: 'Matches', count: categoryCounts.matches },
+                { id: 'messages', label: 'Messages', count: categoryCounts.messages },
+                { id: 'connections', label: 'Connections', count: categoryCounts.connections },
+                { id: 'ally', label: 'Ally', count: categoryCounts.ally },
+                { id: 'safety', label: 'Safety', count: categoryCounts.safety },
+                { id: 'activity', label: 'Activity', count: categoryCounts.activity },
               ].map((tab) => {
                 const isActive = activeFilter === tab.id;
                 return (
@@ -934,7 +1037,7 @@ export default function NotificationsPage() {
                     type="button"
                     onClick={() => setActiveFilter(tab.id as FilterCategory)}
                     className={cn(
-                      'px-4 py-1.5 rounded-2xl font-jakarta text-xs transition-all cursor-pointer select-none flex items-center gap-1.5',
+                      'px-3.5 py-1.5 rounded-2xl font-jakarta text-xs transition-all cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap',
                       isActive
                         ? 'bg-[#1A6B3C] text-white font-extrabold shadow-xs'
                         : 'bg-white dark:bg-[#181818] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 font-semibold border border-gray-200/80 dark:border-white/10'
@@ -964,14 +1067,8 @@ export default function NotificationsPage() {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-[#181818] border border-gray-200 dark:border-white/10 shadow-xs text-xs font-jakarta font-bold text-gray-800 dark:text-white cursor-pointer active:scale-95 transition-all"
               >
                 <Filter size={13} className="text-[#1A6B3C] dark:text-emerald-400" />
-                <span>
-                  {activeFilter === 'all'
-                    ? 'All'
-                    : activeFilter === 'unread'
-                    ? 'Unread'
-                    : activeFilter === 'requests'
-                    ? 'Requests'
-                    : 'Matches'}
+                <span className="capitalize">
+                  {activeFilter}
                 </span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400 font-bold">
                   {categoryCounts[activeFilter]}
@@ -995,8 +1092,11 @@ export default function NotificationsPage() {
                     {[
                       { id: 'all', label: 'All', count: categoryCounts.all },
                       { id: 'unread', label: 'Unread', count: categoryCounts.unread },
-                      { id: 'requests', label: 'Requests', count: categoryCounts.requests },
-                      { id: 'matches', label: 'Matches', count: categoryCounts.matches },
+                      { id: 'messages', label: 'Messages', count: categoryCounts.messages },
+                      { id: 'connections', label: 'Connections', count: categoryCounts.connections },
+                      { id: 'ally', label: 'Ally', count: categoryCounts.ally },
+                      { id: 'safety', label: 'Safety', count: categoryCounts.safety },
+                      { id: 'activity', label: 'Activity', count: categoryCounts.activity },
                     ].map((item) => {
                       const isSelected = activeFilter === item.id;
                       return (
@@ -1039,6 +1139,7 @@ export default function NotificationsPage() {
                 </>
               )}
             </div>
+
 
             {/* "view all match request" Green Link */}
             <button
