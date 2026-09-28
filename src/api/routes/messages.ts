@@ -25,7 +25,7 @@ export function listMessages(conversationId: string, options?: ListMessagesOptio
 
 export function sendMessage(
   conversationId: string,
-  payload: { content: string | null; imageUrl?: string | null; replyToMessageId?: string | null }
+  payload: { content: string | null; imageUrl?: string | null; replyToMessageId?: string | null; clientMessageId?: string | null }
 ) {
   return request<MessageRow>(`/conversations/${conversationId}/messages`, {
     method: 'POST',

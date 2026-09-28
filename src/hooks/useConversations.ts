@@ -276,8 +276,8 @@ export function useConversations(userId: string | null) {
     };
   }, [userId, loadConversations]);
 
-  // ── Real-time streak updates ─────────────────────────────────────────────
-  // Listen for 'conversation:streak_updated' and 'matchmaking:streak_update'
+  // ── Authoritative real-time streak updates ────────────────────────────────
+  // Listen for 'conversation:streak_updated' (single authoritative event from backend)
   // so the badge reflects a new streak day and active status instantly.
   useEffect(() => {
     if (!userId) return;
@@ -287,9 +287,10 @@ export function useConversations(userId: string | null) {
     const onStreakUpdated = (payload: {
       conversationId?: string;
       matchId?: string;
+      currentStreak?: number;
       dayStreak?: number;
-      streak?: number;
       streakActiveToday?: boolean;
+      streakStatus?: string;
       status?: string;
     }) => {
       setConversations((prev) =>
@@ -298,9 +299,12 @@ export function useConversations(userId: string | null) {
             (payload.conversationId && c.id === payload.conversationId) ||
             (payload.matchId && c.matchInfo?.matchId === payload.matchId);
           if (!isMatch) return c;
-          const isInactive = payload.status === 'inactive' || payload.dayStreak === 0 || payload.streak === 0;
-          const streak = isInactive ? 0 : (payload.dayStreak ?? payload.streak ?? c.dayStreak);
-          const activeToday = isInactive ? false : (payload.streakActiveToday ?? true);
+          const isInactive =
+            payload.status === 'inactive' ||
+            payload.streakStatus === 'inactive' ||
+            payload.streakStatus === 'expired';
+          const streak = isInactive ? 0 : (payload.currentStreak ?? payload.dayStreak ?? c.dayStreak ?? 0);
+          const activeToday = isInactive ? false : (payload.streakActiveToday ?? false);
           return {
             ...c,
             dayStreak: streak,
@@ -318,10 +322,8 @@ export function useConversations(userId: string | null) {
     };
 
     socket.on('conversation:streak_updated', onStreakUpdated);
-    socket.on('matchmaking:streak_update', onStreakUpdated);
     return () => {
       socket.off('conversation:streak_updated', onStreakUpdated);
-      socket.off('matchmaking:streak_update', onStreakUpdated);
     };
   }, [userId]);
 

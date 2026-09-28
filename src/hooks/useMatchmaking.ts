@@ -98,7 +98,7 @@ export function useMatchmaking(): UseMatchmakingResult {
 
       // Streak from the most-recent active match
       const newest = matches[0];
-      if (newest) setStreak(newest.streak_count);
+      if (newest) setStreak(newest.day_streak || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load matchmaking status');
     } finally {
@@ -123,7 +123,11 @@ export function useMatchmaking(): UseMatchmakingResult {
       if (payload?.identity) setIdentity(payload.identity);
       void refreshStatus();
     };
-    const onStreakUpdate = (payload: { streak: number }) => setStreak(payload.streak);
+    const onStreakUpdated = (payload: { conversationId?: string; matchId?: string; currentStreak?: number; dayStreak?: number }) => {
+      if (payload.currentStreak !== undefined || payload.dayStreak !== undefined) {
+        setStreak(payload.currentStreak ?? payload.dayStreak ?? 0);
+      }
+    };
     const onStageUpdated = (payload: { stage: number; dayStreak: number; matchId?: string }) => {
       setActiveMatches((prev) =>
         prev.map((m) =>
@@ -155,7 +159,7 @@ export function useMatchmaking(): UseMatchmakingResult {
     socket.on('matchmaking:room_ready', onRoomReady);
     socket.on('matchmaking:partner_accepted', onLifecycleEvent);
     socket.on('matchmaking:match_confirmed', onLifecycleEvent);
-    socket.on('matchmaking:streak_update', onStreakUpdate);
+    socket.on('conversation:streak_updated', onStreakUpdated);
     socket.on('matchmaking:stage_updated', onStageUpdated);
     socket.on('matchmaking:partner_declined', onPartnerDeclined);
     socket.on('matchmaking:match_timed_out', onMatchTimedOut);
@@ -167,7 +171,7 @@ export function useMatchmaking(): UseMatchmakingResult {
       socket.off('matchmaking:room_ready', onRoomReady);
       socket.off('matchmaking:partner_accepted', onLifecycleEvent);
       socket.off('matchmaking:match_confirmed', onLifecycleEvent);
-      socket.off('matchmaking:streak_update', onStreakUpdate);
+      socket.off('conversation:streak_updated', onStreakUpdated);
       socket.off('matchmaking:stage_updated', onStageUpdated);
       socket.off('matchmaking:partner_declined', onPartnerDeclined);
       socket.off('matchmaking:match_timed_out', onMatchTimedOut);

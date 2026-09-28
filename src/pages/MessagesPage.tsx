@@ -30,7 +30,10 @@ import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { MatchTimerBadge, ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { FloatingStatusBadge } from '@/components/match/FloatingStatusBadge';
-import { MatchRoadmapModal } from '@/components/match/MatchRoadmapModal';
+import { RoadmapCanvas } from '@/components/roadmap/RoadmapCanvas';
+import { RoadmapInfoPanel } from '@/components/roadmap/RoadmapInfoPanel';
+import { MobileRoadmapView } from '@/components/roadmap/MobileRoadmapView';
+import { TOTAL_POINTS_FOR_PROFILE_UNLOCK } from '@/constants/roadmap';
 import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
@@ -45,7 +48,7 @@ export default function MessagesPage() {
   const { setChatFocused } = useChatView();
 
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [showRoadmapModal, setShowRoadmapModal] = useState(false);
+  const [isRoadmapActive, setIsRoadmapActive] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student>(CURRENT_USER);
   const {
     conversations,
@@ -278,10 +281,13 @@ export default function MessagesPage() {
     const onStreakUpdated = (payload: {
       conversationId?: string;
       matchId?: string;
+      currentStreak?: number;
       dayStreak?: number;
-      streak?: number;
       streakActiveToday?: boolean;
+      streakStatus?: string;
       status?: string;
+      lastQualifyingDate?: string | null;
+      expiresAt?: string | null;
       streakRestoreDeadline?: string | null;
     }) => {
       void refreshConvs(true);
@@ -293,8 +299,11 @@ export default function MessagesPage() {
         if (!isMatch) return prev;
         // 'inactive' = streak lapsed. 'restored' = streak brought back.
         // Do NOT treat dayStreak===0 alone as inactive (valid on a day-1 restore).
-        const isInactive = payload.status === 'inactive';
-        const streak = isInactive ? 0 : (payload.dayStreak ?? payload.streak ?? prev.dayStreak);
+        const isInactive =
+          payload.status === 'inactive' ||
+          payload.streakStatus === 'inactive' ||
+          payload.streakStatus === 'expired';
+        const streak = isInactive ? 0 : (payload.currentStreak ?? payload.dayStreak ?? prev.dayStreak);
         const activeToday = isInactive ? false : (payload.streakActiveToday ?? prev.streakActiveToday ?? false);
         const deadline = payload.streakRestoreDeadline !== undefined
           ? payload.streakRestoreDeadline
@@ -371,7 +380,6 @@ export default function MessagesPage() {
     socket.on('matchmaking:match_ended', onMatchEnded);
     socket.on('matchmaking:chat_expired', onMatchEnded);
     socket.on('conversation:streak_updated', onStreakUpdated);
-    socket.on('matchmaking:streak_update', onStreakUpdated);
     socket.on('match:points_updated', onPointsUpdated);
     socket.on('matchmaking:stage_updated', onStageUpdated);
     return () => {
@@ -379,7 +387,6 @@ export default function MessagesPage() {
       socket.off('matchmaking:match_ended', onMatchEnded);
       socket.off('matchmaking:chat_expired', onMatchEnded);
       socket.off('conversation:streak_updated', onStreakUpdated);
-      socket.off('matchmaking:streak_update', onStreakUpdated);
       socket.off('match:points_updated', onPointsUpdated);
       socket.off('matchmaking:stage_updated', onStageUpdated);
     };
@@ -634,6 +641,7 @@ export default function MessagesPage() {
   // ── Info panel ────────────────────────────────────────────────────────────
   useEffect(() => {
     setShowInfoPanel(false);
+    setIsRoadmapActive(false);
     setReplyTarget(null);
     setForwardMessage(null);
   }, [activeConversation?.id]);
@@ -762,9 +770,25 @@ export default function MessagesPage() {
           )}
 
           {activeConversation ? (
+            isRoadmapActive && !isMobileView ? (
+              <RoadmapCanvas
+                stage={activeConversation.matchInfo?.stage ?? 1}
+                dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                goalPoints={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
+                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+                partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
+                extraRightPadding={showInfoPanel && !isMobileView}
+                onBackToChat={() => setIsRoadmapActive(false)}
+              />
+            ) : (
             <>
               {/* Chat Header with Gradient */}
-              <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/10 flex items-center gap-3 bg-gradient-to-b from-white via-white/95 to-white/80 dark:from-[#0D131F] dark:via-[#0D131F]/95 dark:to-[#0D131F]/80 backdrop-blur-md flex-shrink-0 z-20 shadow-2xs">
+              <div
+                className={cn(
+                  'px-4 py-3 border-b border-black/[0.06] dark:border-white/10 flex items-center gap-3 bg-gradient-to-b from-white via-white/95 to-white/80 dark:from-[#0D131F] dark:via-[#0D131F]/95 dark:to-[#0D131F]/80 backdrop-blur-md flex-shrink-0 z-20 shadow-2xs transition-all'
+                )}
+              >
                 <button
                   onClick={() => setActiveConversation(null)}
                   className="md:hidden p-2 -ml-2 rounded-full text-gray-700 hover:text-[#1A6B3C] dark:text-gray-200 dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
@@ -799,7 +823,10 @@ export default function MessagesPage() {
                       isStreakActiveToday={isStreakActiveToday}
                       onClick={
                         isAnonymousConversation && activeConversation.variant !== 'anonymous_ended'
-                          ? () => setShowRoadmapModal(true)
+                          ? () => {
+                              setIsRoadmapActive(true);
+                              if (!isMobileView) setShowInfoPanel(true);
+                            }
                           : undefined
                       }
                     />
@@ -854,7 +881,10 @@ export default function MessagesPage() {
 
               {/* Messages + input — shift up with mobile keyboard */}
               <div
-                className="flex-1 min-h-0 flex flex-col"
+                className={cn(
+                  'flex-1 min-h-0 flex flex-col transition-all',
+                  showInfoPanel && !isMobileView && 'pr-7 lg:pr-8'
+                )}
                 style={keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined}
               >
               <div className="flex-1 min-h-0 relative flex flex-col">
@@ -862,11 +892,16 @@ export default function MessagesPage() {
                   <FloatingStatusBadge
                     stage={activeConversation.matchInfo?.stage ?? 1}
                     dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                    matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
                     stagePoints={reveal.reveal?.stagePoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
-                    pointsPerStage={500}
+                    pointsPerStage={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
+                    profileUnlockTarget={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
                     effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
                     avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
-                    onClick={() => setShowRoadmapModal(true)}
+                    onClick={() => {
+                      setIsRoadmapActive(true);
+                      if (!isMobileView) setShowInfoPanel(true);
+                    }}
                   />
                 )}
                 <ChatWindow
@@ -972,6 +1007,7 @@ export default function MessagesPage() {
               </div>
               </div>
             </>
+            )
           ) : loadingConvs || Boolean(requestedConversationId) || (!isMobileView && conversations.length > 0) ? (
             <ConversationPaneSkeleton />
           ) : (
@@ -1001,25 +1037,51 @@ export default function MessagesPage() {
 
         {/* ── Info Panel (desktop) ── */}
         {activeConversation && showInfoPanel && (
-          <ConversationInfoPanel
-            conversation={activeConversation}
-            isOnline={isParticipantOnline}
-            isStreakActiveToday={isStreakActiveToday}
-            icebreakersEnabled={icebreakersEnabled}
-            icebreakersLoading={icebreakersLoading}
-            onIcebreakersToggle={handleIcebreakersToggle}
-            blockStatus={activeConversation.blockStatus}
-            onBlockChange={handleBlockChange}
-            onDelete={handleDeleteConversation}
-            onEndMatch={handleEndMatch}
-            sharedInterests={
-              isAnonymousConversation
-                ? (reveal.reveal?.sharedInterests ?? activeConversation.sharedInterests ?? [])
-                : (activeConversation.sharedInterests ?? [])
-            }
-            variant="desktop"
-            onClose={() => setShowInfoPanel(false)}
-          />
+          isRoadmapActive ? (
+            <div
+              className={cn(
+                'hidden md:flex w-[370px] h-full bg-white dark:bg-[#0D131F] flex-col overflow-hidden flex-shrink-0',
+                'rounded-tl-[28px] rounded-bl-[28px] rounded-tr-none rounded-br-none',
+                'border-l border-black/[0.08] dark:border-white/10',
+                'z-20',
+                'shadow-[-10px_0px_24px_rgba(0,0,0,0.08)] dark:shadow-[-10px_0px_24px_rgba(0,0,0,0.35)]',
+                'animate-in slide-in-from-right-4 duration-200'
+              )}
+            >
+              <RoadmapInfoPanel
+                stage={activeConversation.matchInfo?.stage ?? 1}
+                dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+                dailyTasks={reveal.reveal?.dailyTasks ?? []}
+                partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
+                onClose={() => {
+                  setIsRoadmapActive(false);
+                  setShowInfoPanel(false);
+                }}
+              />
+            </div>
+          ) : (
+            <ConversationInfoPanel
+              conversation={activeConversation}
+              isOnline={isParticipantOnline}
+              isStreakActiveToday={isStreakActiveToday}
+              icebreakersEnabled={icebreakersEnabled}
+              icebreakersLoading={icebreakersLoading}
+              onIcebreakersToggle={handleIcebreakersToggle}
+              blockStatus={activeConversation.blockStatus}
+              onBlockChange={handleBlockChange}
+              onDelete={handleDeleteConversation}
+              onEndMatch={handleEndMatch}
+              sharedInterests={
+                isAnonymousConversation
+                  ? (reveal.reveal?.sharedInterests ?? activeConversation.sharedInterests ?? [])
+                  : (activeConversation.sharedInterests ?? [])
+              }
+              variant="desktop"
+              onClose={() => setShowInfoPanel(false)}
+            />
+          )
         )}
       </div>
 
@@ -1046,19 +1108,17 @@ export default function MessagesPage() {
         />
       )}
 
-      {/* ── Roadmap Progression Modal (anonymous conversations) ── */}
-      {isAnonymousConversation && (
-        <MatchRoadmapModal
-          open={showRoadmapModal}
-          onOpenChange={setShowRoadmapModal}
+      {/* ── Mobile Roadmap View (anonymous conversations) ── */}
+      {isMobileView && isRoadmapActive && activeConversation && isAnonymousConversation && (
+        <MobileRoadmapView
           stage={activeConversation.matchInfo?.stage ?? 1}
           dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
-          stagePoints={reveal.reveal?.stagePoints ?? 0}
-          matchPoints={reveal.reveal?.matchPoints ?? 0}
-          effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? 1}
+          matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+          goalPoints={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
+          effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
           dailyTasks={reveal.reveal?.dailyTasks ?? []}
           partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
-          matchId={activeConversation.matchInfo?.matchId}
+          onBack={() => setIsRoadmapActive(false)}
         />
       )}
       {forwardMessage && activeConversation && (

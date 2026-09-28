@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, Trash2 } from 'lucide-react';
+import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, Trash2, X } from 'lucide-react';
 import { Conversation, BlockStatus } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -86,7 +86,31 @@ export function ConversationInfoPanel({
   }
 
   return (
-    <div className="hidden md:flex w-[320px] bg-white dark:bg-[#0D131F] border-l border-gray-100 dark:border-white/10 flex-col overflow-y-auto flex-shrink-0">
+    <div
+      className={cn(
+        'hidden md:flex w-[370px] h-full bg-white dark:bg-[#0D131F] flex-col overflow-y-auto flex-shrink-0',
+        'rounded-tl-[28px] rounded-bl-[28px] rounded-tr-none rounded-br-none',
+        'border-l border-black/[0.08] dark:border-white/10',
+        'z-20',
+        'shadow-[-10px_0px_24px_rgba(0,0,0,0.08)] dark:shadow-[-10px_0px_24px_rgba(0,0,0,0.35)]',
+        'animate-in slide-in-from-right-4 duration-200 custom-scrollbar'
+      )}
+    >
+      {/* Desktop Header with close button */}
+      <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between gap-3 flex-shrink-0 bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md sticky top-0 z-10 rounded-tl-[28px]">
+        <h3 className="font-jakarta font-bold text-sm text-gray-900 dark:text-white leading-tight">
+          Conversation Info
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          aria-label="Close conversation info"
+          title="Close info panel"
+        >
+          <X size={16} className="stroke-[2.5]" />
+        </button>
+      </div>
       <ConversationInfoContent
         conversation={conversation}
         isOnline={isOnline}
