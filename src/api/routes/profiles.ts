@@ -1,7 +1,24 @@
 // src/api/profiles.ts
 
 import { request } from '../http';
-import type { ProfileRelationshipSummary, ProfileRow, UpdateProfilePayload } from '../types';
+import type {
+  ProfileRelationshipSummary,
+  ProfileRow,
+  UpdateProfilePayload,
+  UserPreferences,
+  UpdateUserPreferencesPayload,
+} from '../types';
+
+export function getMyPreferences() {
+  return request<UserPreferences>('/profiles/me/preferences');
+}
+
+export function updateMyPreferences(updates: UpdateUserPreferencesPayload) {
+  return request<UserPreferences>('/profiles/me/preferences', {
+    method: 'PATCH',
+    body: updates,
+  });
+}
 
 export function getMyProfile() {
   return request<ProfileRow>('/profiles/me');

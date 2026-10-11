@@ -29,6 +29,8 @@ export type {
   RegisterPayload,
   ProfileRow,
   UpdateProfilePayload,
+  UserPreferences,
+  UpdateUserPreferencesPayload,
   LookupDepartment,
   LookupCourse,
   LookupOrganization,
@@ -108,6 +110,11 @@ export type {
   OtpStatus,
   RegisterResponse,
   PendingVerificationItem,
+  ActivityBucket,
+  ActivityLogRow,
+  ActivityGroup,
+  FormattedActivityResponse,
+  ListActivityLogsParams,
 } from './types';
 
 import * as auth from './routes/auth';
@@ -123,6 +130,7 @@ import * as presence from './routes/presence';
 import * as moderation from './routes/moderation';
 import * as match from './routes/match';
 import * as follow from './routes/follow';
+import * as activityLogs from './routes/activityLogs';
 import * as admin from './routes/admin';
 import type { ListUsersQuery, ListReportsQuery } from './routes/admin';
 import { getMaintenanceStatus } from './http';
@@ -161,6 +169,8 @@ export const apiClient = {
   updateProfile: profiles.updateProfile,
   deleteProfile: profiles.deleteProfile,
   checkUsername: profiles.checkUsername,
+  getMyPreferences: profiles.getMyPreferences,
+  updateMyPreferences: profiles.updateMyPreferences,
 
   // ─── Lookups ─────────────────────────────────────────────────────────────
   getLookups: lookups.getLookups,
@@ -308,6 +318,11 @@ export const apiClient = {
   endMatch: match.endMatch,
   getMatchReveal: match.getMatchReveal,
   getMatchTimeline: match.getMatchTimeline,
+
+  // ─── Activity Log (Facebook-Style) ───────────────────────────────────────
+  listActivityLogs: activityLogs.listActivityLogs,
+  deleteActivityLog: activityLogs.deleteActivityLog,
+  clearActivityLogs: activityLogs.clearActivityLogs,
 
   // ─── System / Maintenance ────────────────────────────────────────────────
   getMaintenanceStatus,

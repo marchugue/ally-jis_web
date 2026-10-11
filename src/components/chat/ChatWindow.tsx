@@ -10,6 +10,7 @@ import { MobileReactionPopup, DesktopHoverActions } from '@/components/chat/Mess
 import { ReplyQuote } from '@/components/chat/ReplyQuote';
 import { ChatImageThumbnail } from '@/components/chat/ChatImageThumbnail';
 import { MessageImageViewer } from '@/components/chat/MessageImageViewer';
+import { LockedMediaThumbnail } from '@/components/chat/LockedMediaThumbnail';
 import { MessageReactions } from '@/components/chat/MessageReactions';
 import { DeleteMessageModal, MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { ReportModal } from '@/components/chat/ReportModal';
@@ -41,6 +42,13 @@ interface ChatWindowProps {
   onLoadOlder?: () => void;
   streakNotice?: React.ReactNode;
   streakEndedAt?: Date | string | null;
+  keyboardInset?: number;
+  /**
+   * True when media sharing is locked for this conversation (anonymous match
+   * below Lv.3 — e.g. the streak ended and the level dropped). Previously
+   * shared photos/videos render as a blurred placeholder with a lock icon.
+   */
+  imagesLocked?: boolean;
 }
 
 export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
@@ -168,6 +176,7 @@ interface MessageBubbleProps {
   onForward?: (message: Message) => void;
   onDelete?: (message: Message, mode?: MessageDeleteMode) => void;
   onReport?: (message: Message) => void;
+  imagesLocked?: boolean;
 }
 
 function formatMessageTime(dateStr?: string | null): string {
@@ -214,6 +223,7 @@ const MessageBubble = memo(function MessageBubble({
   onForward,
   onDelete,
   onReport,
+  imagesLocked = false,
 }: MessageBubbleProps) {
   // ─── ALL hooks must be at the top — no early returns before this point ───
   const isSending = msg.status === 'sending';
@@ -246,6 +256,7 @@ const MessageBubble = memo(function MessageBubble({
   const primaryMedia = images[0] || '';
   const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
   const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
+  const isMediaLocked = Boolean(imagesLocked && hasMedia);
   const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
   const isMobile = useIsMobile();
 
@@ -273,6 +284,10 @@ const MessageBubble = memo(function MessageBubble({
   }, [msg.content]);
 
   const handleForward = useCallback(async () => {
+    if (isMediaLocked) {
+      toast.error('This photo is locked until you reach Lv.3 again');
+      return;
+    }
     const shareText = msg.content || primaryMedia;
     if (typeof navigator !== 'undefined' && navigator.share && shareText) {
       try {
@@ -283,7 +298,7 @@ const MessageBubble = memo(function MessageBubble({
       }
     }
     onForward?.(msg);
-  }, [msg, primaryMedia, onForward]);
+  }, [msg, primaryMedia, onForward, isMediaLocked]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -411,8 +426,18 @@ const MessageBubble = memo(function MessageBubble({
             imageUrl={msg.replyTo.imageUrl}
           />
         )}
+        {/* Locked media (streak ended → level dropped below Lv.3) */}
+        {isMediaLocked && (
+          <LockedMediaThumbnail
+            src={primaryMedia}
+            count={images.length}
+            isVideo={isVideoUrl}
+            className={cn(!isImageOnly && 'mb-2')}
+          />
+        )}
+
         {/* Single Media or Stacked Cards UI */}
-        {hasMedia && images.length === 1 && (
+        {!isMediaLocked && hasMedia && images.length === 1 && (
           isVideoUrl ? (
             <div className={cn('rounded-xl overflow-hidden', !isImageOnly && 'mb-2')}>
               <video
@@ -435,7 +460,7 @@ const MessageBubble = memo(function MessageBubble({
           )
         )}
 
-        {hasMedia && images.length > 1 && (
+        {!isMediaLocked && hasMedia && images.length > 1 && (
           <div
             onClick={() => {
               if (longPress.didLongPress()) return;
@@ -673,7 +698,7 @@ const MessageBubble = memo(function MessageBubble({
             }}
           />
         )}
-        {viewingImage && hasMedia && (
+        {viewingImage && hasMedia && !isMediaLocked && (
           <MessageImageViewer
             message={msg}
             initialIndex={viewingImageIndex}
@@ -715,6 +740,8 @@ export function ChatWindow({
   onLoadOlder,
   streakNotice,
   streakEndedAt,
+  keyboardInset = 0,
+  imagesLocked = false,
 }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -807,11 +834,66 @@ export function ChatWindow({
   }, [streakNotice, streakEndedAt, uniqueMessages, conversationId]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
-    } else if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (behavior === 'smooth') {
+      try {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      } catch {
+        el.scrollTop = el.scrollHeight;
+      }
+    } else {
+      el.scrollTop = el.scrollHeight;
     }
+  }, []);
+
+  // When keyboard opens or changes height on mobile, snap scroll to bottom
+  // so all chat messages push upward smoothly with the input!
+  useEffect(() => {
+    if (keyboardInset && keyboardInset > 0) {
+      scrollToBottom('auto');
+      const r1 = requestAnimationFrame(() => scrollToBottom('auto'));
+      const r2 = setTimeout(() => scrollToBottom('auto'), 40);
+      const r3 = setTimeout(() => scrollToBottom('auto'), 120);
+      return () => {
+        cancelAnimationFrame(r1);
+        clearTimeout(r2);
+        clearTimeout(r3);
+      };
+    }
+  }, [keyboardInset, scrollToBottom]);
+
+  // Keep chat anchored to bottom when container height shrinks (keyboard opens, reply bar, etc.)
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    let prevClientHeight = el.clientHeight;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const currentClientHeight = entry.contentRect.height;
+        if (prevClientHeight > 0 && currentClientHeight > 0 && prevClientHeight !== currentClientHeight) {
+          const heightDiff = prevClientHeight - currentClientHeight;
+          const wasNearBottom = el.scrollHeight - el.scrollTop - prevClientHeight < 150;
+
+          if (wasNearBottom || heightDiff > 0) {
+            // Container shrank (e.g. keyboard opened):
+            // Push messages upward so the latest message remains in view!
+            el.scrollTop = el.scrollHeight;
+            requestAnimationFrame(() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+              }
+            });
+          }
+        }
+        prevClientHeight = currentClientHeight;
+      }
+    });
+
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // When user scrolls near top (scrollTop <= 60), trigger loading older messages
@@ -944,6 +1026,7 @@ export function ChatWindow({
                 }
               }}
               onReport={(targetMsg) => setReportingMessage(targetMsg)}
+              imagesLocked={imagesLocked}
             />
           </Fragment>
         );

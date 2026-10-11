@@ -78,6 +78,36 @@ export function getIcebreakersEnabled(conversationId: string) {
   return request<boolean | null>(`/conversations/${conversationId}/icebreakers`);
 }
 
+export interface ConversationStreakResponse {
+  dayStreak: number;
+  streakActiveToday: boolean;
+  streakStatus: 'active' | 'at_risk' | 'lapsed' | 'expired' | 'inactive';
+  lastQualifyingDate: string | null;
+  expiresAt: string | null;
+  streakRestoreDeadline: string | null;
+  lapsedStreak?: number;
+  userRestoresRemaining: number;
+}
+
+export function getConversationStreak(conversationId: string) {
+  return request<ConversationStreakResponse>(`/conversations/${conversationId}/streak`);
+}
+
+export interface StreakEventItem {
+  id: string;
+  conversation_id: string;
+  event_type: 'ended' | 'restored';
+  streak_count: number;
+  actor_id: string | null;
+  last_active_pht: string | null;
+  restore_deadline: string | null;
+  created_at: string;
+}
+
+export function getConversationStreakEvents(conversationId: string) {
+  return request<StreakEventItem[]>(`/conversations/${conversationId}/streak/events`);
+}
+
 export function restoreConversationStreak(conversationId: string) {
   return request<{ restoresRemaining: number; newStreak: number }>(
     `/conversations/${conversationId}/streak/restore`,

@@ -95,6 +95,39 @@ export interface UpdateProfilePayload {
   match_gender_preference?: string | null;
 }
 
+export interface UserPreferences {
+  user_id: string;
+  discovery_enabled: boolean;
+  match_gender_preference: 'any' | 'male' | 'female' | 'non-binary';
+  match_department_preference: 'any' | 'same' | 'different';
+  match_same_year_only: boolean;
+  interests_strict_match: boolean;
+
+  show_online_status: boolean;
+  show_last_active: boolean;
+  read_receipts_enabled: boolean;
+  profile_visibility: 'campus' | 'matches_only' | 'hidden';
+  feed_post_audience: 'campus' | 'matches_only' | 'anonymous_only';
+
+  typing_indicators_enabled: boolean;
+  auto_reveal_identity_stage: number;
+
+  notify_chat_messages: boolean;
+  notify_match_requests: boolean;
+  notify_streak_reminders: boolean;
+  notify_confessions: boolean;
+  notify_sound_enabled: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type UpdateUserPreferencesPayload = Partial<Omit<UserPreferences, 'user_id' | 'created_at' | 'updated_at'>>;
+
+
 // ─── Lookups ────────────────────────────────────────────────────────────────
 
 export interface LookupDepartment {
@@ -893,6 +926,45 @@ export interface TimelineData {
   blurred: boolean;
   posts: TimelinePostView[];
 }
+
+// ─── Activity Log (Facebook-Style) ──────────────────────────────────────────
+
+export type ActivityBucket = 'content' | 'connections' | 'security' | 'safety';
+
+export interface ActivityLogRow {
+  id: string;
+  user_id: string;
+  bucket: ActivityBucket;
+  action: string;
+  title: string;
+  summary: string | null;
+  target_type: 'post' | 'profile' | 'comment' | 'security' | 'settings' | null;
+  target_id: string | null;
+  device_info: string | null;
+  ip_address: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+export interface ActivityGroup {
+  dateLabel: string;
+  dateKey: string;
+  items: ActivityLogRow[];
+}
+
+export interface FormattedActivityResponse {
+  items: ActivityLogRow[];
+  groups: ActivityGroup[];
+  nextCursor?: string;
+  totalCount: number;
+}
+
+export interface ListActivityLogsParams {
+  bucket?: ActivityBucket | 'all';
+  limit?: number;
+  cursor?: string;
+}
+
 
 
 

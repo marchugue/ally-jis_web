@@ -284,6 +284,11 @@ export function MessageInput({
               setText(e.target.value);
               onTextChange?.(e.target.value);
             }}
+            onFocus={() => {
+              if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              }
+            }}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={replyTo ? 'Write a reply…' : 'Write a message...'}
             className="flex-1 min-w-0 bg-transparent border-none py-1.5 px-2 text-sm md:text-[15px] font-jakarta text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
