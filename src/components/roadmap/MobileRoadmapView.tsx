@@ -20,7 +20,8 @@ import {
   stageName,
   TOTAL_POINTS_FOR_PROFILE_UNLOCK,
 } from '@/constants/roadmap';
-import type { DailyTaskStatus } from '@/api/types';
+import type { AvatarRevealView, DailyTaskStatus } from '@/api/types';
+import { AvatarRevealCard } from '@/components/match/AvatarRevealCard';
 
 export interface MobileRoadmapViewProps {
   stage?: number;
@@ -30,6 +31,9 @@ export interface MobileRoadmapViewProps {
   effectiveMultiplier?: number;
   dailyTasks?: DailyTaskStatus[];
   partnerAlias?: string;
+  avatarReveal?: AvatarRevealView | null;
+  partnerAvatarKey?: string | null;
+  partnerName?: string | null;
   onBack: () => void;
   className?: string;
 }
@@ -44,6 +48,9 @@ export const MobileRoadmapView: React.FC<MobileRoadmapViewProps> = ({
   effectiveMultiplier = 1,
   dailyTasks = [],
   partnerAlias = 'Your match',
+  avatarReveal,
+  partnerAvatarKey,
+  partnerName,
   onBack,
   className,
 }) => {

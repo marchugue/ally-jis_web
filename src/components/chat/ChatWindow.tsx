@@ -19,6 +19,8 @@ import { getReplyBubbleLabel } from '@/lib/replyLabels';
 import { ConversationWelcomeHeader } from './ConversationWelcomeHeader';
 import { ChatSkeleton } from './ChatSkeleton';
 import { dedupeMessages } from '@/hooks/useRealtimeMessages';
+import { RevealAvatar } from '@/components/match/RevealAvatar';
+import type { AvatarRevealView } from '@/api/types';
 
 interface ChatWindowProps {
   messages: Message[];
@@ -49,6 +51,7 @@ interface ChatWindowProps {
    * shared photos/videos render as a blurred placeholder with a lock icon.
    */
   imagesLocked?: boolean;
+  avatarReveal?: AvatarRevealView | null;
 }
 
 export type MessageGroupPosition = 'single' | 'first' | 'middle' | 'last';
@@ -177,6 +180,9 @@ interface MessageBubbleProps {
   onDelete?: (message: Message, mode?: MessageDeleteMode) => void;
   onReport?: (message: Message) => void;
   imagesLocked?: boolean;
+  isAnonymous?: boolean;
+  avatarReveal?: AvatarRevealView | null;
+  partnerAvatar?: string | null;
 }
 
 function formatMessageTime(dateStr?: string | null): string {
@@ -224,6 +230,9 @@ const MessageBubble = memo(function MessageBubble({
   onDelete,
   onReport,
   imagesLocked = false,
+  isAnonymous = false,
+  avatarReveal,
+  partnerAvatar,
 }: MessageBubbleProps) {
   // ─── ALL hooks must be at the top — no early returns before this point ───
   const isSending = msg.status === 'sending';
@@ -320,12 +329,24 @@ const MessageBubble = memo(function MessageBubble({
         {!isMe && (
           <div className="w-8 h-8 flex-shrink-0">
             {showAvatar ? (
-              <AvatarDisplay
-                src={participantAvatar}
-                name={participantName}
-                className="w-8 h-8 rounded-full overflow-hidden opacity-50"
-                textClassName="text-[10px]"
-              />
+              isAnonymous ? (
+                <RevealAvatar
+                  reveal={avatarReveal}
+                  avatarKey={partnerAvatar || participantAvatar}
+                  size={32}
+                  showRing={false}
+                  showGainChip={false}
+                  fallbackInitials={participantName}
+                  className="rounded-full opacity-50"
+                />
+              ) : (
+                <AvatarDisplay
+                  src={participantAvatar}
+                  name={participantName}
+                  className="w-8 h-8 rounded-full overflow-hidden opacity-50"
+                  textClassName="text-[10px]"
+                />
+              )
             ) : (
               <div className="w-8 h-8" />
             )}
@@ -625,12 +646,24 @@ const MessageBubble = memo(function MessageBubble({
       {!isMe && (
         <div className="w-8 h-8 flex-shrink-0">
           {showAvatar ? (
-            <AvatarDisplay
-              src={participantAvatar}
-              name={participantName}
-              className="w-8 h-8 rounded-full overflow-hidden"
-              textClassName="text-[10px]"
-            />
+            isAnonymous ? (
+              <RevealAvatar
+                reveal={avatarReveal}
+                avatarKey={partnerAvatar || participantAvatar}
+                size={32}
+                showRing={false}
+                showGainChip={false}
+                fallbackInitials={participantName}
+                className="rounded-full"
+              />
+            ) : (
+              <AvatarDisplay
+                src={participantAvatar}
+                name={participantName}
+                className="w-8 h-8 rounded-full overflow-hidden"
+                textClassName="text-[10px]"
+              />
+            )
           ) : (
             <div className="w-8 h-8" />
           )}
@@ -742,6 +775,7 @@ export function ChatWindow({
   streakEndedAt,
   keyboardInset = 0,
   imagesLocked = false,
+  avatarReveal,
 }: ChatWindowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -976,6 +1010,7 @@ export function ChatWindow({
           sharedInterests={sharedInterests}
           partnerAvatar={partnerAvatar}
           isAnonymous={isAnonymous}
+          avatarReveal={avatarReveal}
           className={uniqueMessages.length === 0 ? 'my-auto' : 'mb-4'}
         />
       )}
@@ -1027,6 +1062,9 @@ export function ChatWindow({
               }}
               onReport={(targetMsg) => setReportingMessage(targetMsg)}
               imagesLocked={imagesLocked}
+              isAnonymous={isAnonymous}
+              avatarReveal={avatarReveal}
+              partnerAvatar={partnerAvatar}
             />
           </Fragment>
         );

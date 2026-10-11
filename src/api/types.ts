@@ -869,6 +869,32 @@ export interface RevealPartnerView {
   // Stage 3+
   favoriteHobby?: string | null;
   // Stage 4: feed unlock only — no identity fields exposed here
+  // Profile unlocked (250 pts / revealed_at)
+  userId?: string | null;
+  fullName?: string | null;
+  username?: string | null;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  department?: string | null;
+  course?: string | null;
+}
+
+/** Progressive real-avatar reveal state (server-capped per tier). */
+export interface AvatarRevealView {
+  /** 0 = animal only … 5 = fully revealed. */
+  tier: number;
+  maxTier: number;
+  /** Exact progress 0..1 toward profile unlock. */
+  progress: number;
+  matchPoints: number;
+  target: number;
+  tierStart: number;
+  tierEnd: number;
+  tierThresholds: number[];
+  hasPhoto: boolean;
+  dominantColor: string | null;
+  /** Tier thumbnail data URI (tiers 1–4) or real avatar URL (tier 5). */
+  previewUrl: string | null;
 }
 
 export interface DailyTaskStatus {
@@ -908,6 +934,10 @@ export interface RevealData {
   dailyTasks: DailyTaskStatus[];
   activeTasks: StageTask[];
   partner: RevealPartnerView;
+  isProfileUnlocked?: boolean;
+  profileUnlockTarget?: number;
+  pointsToProfileUnlock?: number;
+  avatarReveal?: AvatarRevealView;
 }
 
 export interface TimelinePostView {

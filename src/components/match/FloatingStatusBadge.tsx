@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getAnonymousAnimalAnimatedUrl } from '@/lib/fluentEmoji';
 import { AVATAR_EMOJI, DEFAULT_AVATAR_EMOJI } from '@/lib/matchOptions';
+import type { AvatarRevealView } from '@/api/types';
 
 export interface FloatingStatusBadgeProps {
   stage?: number;
@@ -15,6 +16,8 @@ export interface FloatingStatusBadgeProps {
   onClick: () => void;
   className?: string;
   emojiSize?: number;
+  /** When provided and tier ≥ 1, the partner's photo starts showing through. */
+  avatarReveal?: AvatarRevealView | null;
 }
 
 export interface StageProgression {
@@ -35,7 +38,7 @@ export function calculateStageProgression(
   stage: number = 1,
   matchPoints: number = 0,
   dayStreak: number = 0,
-  profileUnlockTarget: number = 500,
+  profileUnlockTarget: number = 250,
 ): StageProgression {
   const currentStage = Math.max(1, Math.min(4, stage));
   const isProfileUnlocked = matchPoints >= profileUnlockTarget;
@@ -66,13 +69,14 @@ export const FloatingStatusBadge: React.FC<FloatingStatusBadgeProps> = ({
   dayStreak = 0,
   matchPoints = 0,
   stagePoints = 0,
-  pointsPerStage = 500,
-  profileUnlockTarget = 500,
+  pointsPerStage = 250,
+  profileUnlockTarget = 250,
   effectiveMultiplier = 1,
   avatarKey,
   onClick,
   className,
   emojiSize = 63,
+  avatarReveal,
 }) => {
   const [imgError, setImgError] = useState(false);
   const currentPoints = matchPoints > 0 ? matchPoints : stagePoints;
@@ -100,16 +104,18 @@ export const FloatingStatusBadge: React.FC<FloatingStatusBadgeProps> = ({
       title={tooltipText}
       aria-label="Open Ally Roadmap & Progression"
     >
-      {/* Animated Microsoft 3D Emoji (1.5x Scale) */}
+      {/* 3D Animal with gentle float animation on hover */}
       <div
-        className="flex items-center justify-center relative select-none"
+        className="flex items-center justify-center relative select-none group-hover:scale-110 transition-transform duration-300"
         style={{ width: emojiSize, height: emojiSize }}
       >
         <img
           src={animatedUrl}
           alt={fallbackEmoji}
+          className="w-full h-full object-contain drop-shadow-md pointer-events-none"
+          loading="eager"
+          decoding="async"
           onError={() => setImgError(true)}
-          className="w-full h-full object-contain pointer-events-none drop-shadow-md group-hover:scale-110 transition-transform duration-300"
         />
       </div>
 

@@ -14,7 +14,8 @@ import {
   MASTER_DAILY_TASKS,
   stageName,
 } from '@/constants/roadmap';
-import type { DailyTaskStatus } from '@/api/types';
+import type { AvatarRevealView, DailyTaskStatus } from '@/api/types';
+import { AvatarRevealCard } from '@/components/match/AvatarRevealCard';
 
 export interface RoadmapInfoPanelProps {
   stage?: number;
@@ -23,6 +24,10 @@ export interface RoadmapInfoPanelProps {
   effectiveMultiplier?: number;
   dailyTasks?: DailyTaskStatus[];
   partnerAlias?: string;
+  /** Progressive real-avatar reveal state from the reveal endpoint. */
+  avatarReveal?: AvatarRevealView | null;
+  partnerAvatarKey?: string | null;
+  partnerName?: string | null;
   onClose: () => void;
   className?: string;
 }
@@ -32,6 +37,10 @@ export const RoadmapInfoPanel: React.FC<RoadmapInfoPanelProps> = ({
   dayStreak = 0,
   effectiveMultiplier = 1,
   dailyTasks = [],
+  partnerAlias,
+  avatarReveal,
+  partnerAvatarKey,
+  partnerName,
   onClose,
   className,
 }) => {

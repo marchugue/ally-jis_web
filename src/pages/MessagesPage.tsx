@@ -27,6 +27,7 @@ import { DeleteConversationModal, DeleteMode } from '@/components/chat/DeleteCon
 import { MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { ForwardMessageModal } from '@/components/chat/ForwardMessageModal';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { RevealAvatar } from '@/components/match/RevealAvatar';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { MatchTimerBadge, ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { FloatingStatusBadge } from '@/components/match/FloatingStatusBadge';
@@ -36,6 +37,8 @@ import { MobileRoadmapView } from '@/components/roadmap/MobileRoadmapView';
 import { TOTAL_POINTS_FOR_PROFILE_UNLOCK } from '@/constants/roadmap';
 import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
+import { AvatarRevealCeremony } from '@/components/match/AvatarRevealCeremony';
+import { REVEAL_TIER_META } from '@/lib/avatarReveal';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { notify } from '@/components/ui/sonner';
 import { toast } from 'sonner';
@@ -439,7 +442,23 @@ export default function MessagesPage() {
       stagePoints?: number;
       matchPoints?: number;
       stage?: number;
+      revealTier?: number;
+      previousRevealTier?: number;
     }) => {
+      // Avatar came further into focus — the final tier has its own ceremony.
+      if (
+        payload.matchId &&
+        payload.matchId === activeConversation?.matchInfo?.matchId &&
+        typeof payload.revealTier === 'number' &&
+        typeof payload.previousRevealTier === 'number' &&
+        payload.revealTier > payload.previousRevealTier &&
+        payload.revealTier < 5
+      ) {
+        const alias = activeConversation?.matchInfo?.partnerAlias ?? 'Your ally';
+        toast(`${alias} is coming into focus · ${payload.revealTier * 20}%`, {
+          description: REVEAL_TIER_META[payload.revealTier]?.hint,
+        });
+      }
       setActiveConversation((prev) => {
         if (!prev) return prev;
         if (!payload.matchId || prev.matchInfo?.matchId !== payload.matchId) return prev;
@@ -912,7 +931,15 @@ export default function MessagesPage() {
                 </button>
                 <div className="relative">
                   {isAnonymousConversation ? (
-                    <AnonymousAvatar avatarKey={activeConversation.matchInfo?.partnerAvatar} size={40} className="rounded-full" />
+                    <RevealAvatar
+                      reveal={reveal.reveal?.avatarReveal}
+                      avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
+                      size={40}
+                      showRing={false}
+                      showGainChip={false}
+                      fallbackInitials={reveal.reveal?.partner?.fullName ?? activeConversation.participantName}
+                      className="rounded-full"
+                    />
                   ) : (
                     <AvatarDisplay
                       src={activeConversation.participantAvatar}
@@ -1018,6 +1045,7 @@ export default function MessagesPage() {
                     profileUnlockTarget={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
                     effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
                     avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
+                    avatarReveal={reveal.reveal?.avatarReveal ?? null}
                     onClick={() => {
                       setIsRoadmapActive(true);
                       if (!isMobileView) setShowInfoPanel(true);
@@ -1038,6 +1066,7 @@ export default function MessagesPage() {
                   }
                   partnerAvatar={activeConversation.matchInfo?.partnerAvatar}
                   isAnonymous={isAnonymousConversation}
+                  avatarReveal={reveal.reveal?.avatarReveal ?? null}
                   isLoading={loadingMessages}
                   conversationId={activeConversation.id}
                   onRetry={retrySend}
@@ -1180,6 +1209,9 @@ export default function MessagesPage() {
                 effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
                 dailyTasks={reveal.reveal?.dailyTasks ?? []}
                 partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
+                avatarReveal={reveal.reveal?.avatarReveal ?? null}
+                partnerAvatarKey={activeConversation.matchInfo?.partnerAvatar ?? null}
+                partnerName={reveal.reveal?.partner?.fullName ?? null}
                 onClose={() => {
                   setIsRoadmapActive(false);
                   setShowInfoPanel(false);
@@ -1205,6 +1237,7 @@ export default function MessagesPage() {
               }
               variant="desktop"
               onClose={() => setShowInfoPanel(false)}
+              avatarReveal={reveal.reveal?.avatarReveal ?? null}
             />
           )
         )}
@@ -1230,6 +1263,7 @@ export default function MessagesPage() {
           }
           variant="mobile"
           onClose={() => setShowInfoPanel(false)}
+          avatarReveal={reveal.reveal?.avatarReveal ?? null}
         />
       )}
 
@@ -1243,7 +1277,21 @@ export default function MessagesPage() {
           effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
           dailyTasks={reveal.reveal?.dailyTasks ?? []}
           partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
+          avatarReveal={reveal.reveal?.avatarReveal ?? null}
+          partnerAvatarKey={activeConversation.matchInfo?.partnerAvatar ?? null}
+          partnerName={reveal.reveal?.partner?.fullName ?? null}
           onBack={() => setIsRoadmapActive(false)}
+        />
+      )}
+      {/* ── One-time 100% avatar reveal ceremony ── */}
+      {isAnonymousConversation && activeConversation && (
+        <AvatarRevealCeremony
+          matchId={activeConversation.matchInfo?.matchId ?? null}
+          isRevealed={(reveal.reveal?.avatarReveal?.tier ?? 0) >= 5}
+          avatarUrl={reveal.reveal?.partner?.avatarUrl ?? reveal.reveal?.avatarReveal?.previewUrl ?? null}
+          avatarKey={activeConversation.matchInfo?.partnerAvatar ?? null}
+          fullName={reveal.reveal?.partner?.fullName ?? null}
+          partnerAlias={activeConversation.matchInfo?.partnerAlias ?? null}
         />
       )}
       {forwardMessage && activeConversation && (

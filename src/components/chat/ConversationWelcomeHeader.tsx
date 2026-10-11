@@ -1,6 +1,8 @@
 import React from 'react';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { RevealAvatar } from '@/components/match/RevealAvatar';
+import type { AvatarRevealView } from '@/api/types';
 import { cn } from '@/lib/utils';
 
 interface ConversationWelcomeHeaderProps {
@@ -12,6 +14,7 @@ interface ConversationWelcomeHeaderProps {
   partnerAvatar?: string | null;
   isAnonymous?: boolean;
   className?: string;
+  avatarReveal?: AvatarRevealView | null;
 }
 
 export const ConversationWelcomeHeader: React.FC<ConversationWelcomeHeaderProps> = ({
@@ -23,6 +26,7 @@ export const ConversationWelcomeHeader: React.FC<ConversationWelcomeHeaderProps>
   partnerAvatar,
   isAnonymous = false,
   className,
+  avatarReveal,
 }) => {
   const courseAndProgram = [participantCourse, participantDepartment]
     .filter(Boolean)
@@ -38,9 +42,13 @@ export const ConversationWelcomeHeader: React.FC<ConversationWelcomeHeaderProps>
       {isAnonymous ? (
         <>
           {partnerAvatar && (
-            <AnonymousAvatar
+            <RevealAvatar
+              reveal={avatarReveal}
               avatarKey={partnerAvatar}
               size={72}
+              showRing={true}
+              showGainChip={false}
+              fallbackInitials={participantName}
               className="rounded-full mb-3 shadow-xs"
             />
           )}

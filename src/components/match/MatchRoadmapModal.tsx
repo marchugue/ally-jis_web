@@ -88,7 +88,7 @@ const ROADMAP_STAGES: RoadmapStage[] = [
     tag: 'STAGE 3 • 7-DAY STREAK',
     title: 'Media Sharing',
     subtitle: '3× Point Multiplier',
-    description: 'Unlocks photo sharing in chat and partner hobby clues. Earn 3× points on all daily tasks to fast-track your 500-pt profile unlock!',
+    description: 'Unlocks photo sharing in chat and partner hobby clues. Earn 3× points on all daily tasks to fast-track your 250-pt profile unlock!',
     thresholdDays: 7,
     multiplier: 3,
     tasks: [
@@ -104,7 +104,7 @@ const ROADMAP_STAGES: RoadmapStage[] = [
     tag: 'STAGE 4 • 10-DAY STREAK',
     title: 'Campus Allies',
     subtitle: '4× Point Multiplier • Feed Unlocked',
-    description: "Your feeds are now visible to each other in the Allies newsfeed filter (still anonymous). Real names & profiles unlock when you reach 500 total points!",
+    description: "Your feeds are now visible to each other in the Allies newsfeed filter (still anonymous). Real names & profiles unlock when you reach 250 total points!",
     thresholdDays: 10,
     multiplier: 4,
     tasks: [
@@ -117,7 +117,7 @@ const ROADMAP_STAGES: RoadmapStage[] = [
   },
 ];
 
-const TOTAL_POINTS_FOR_PROFILE_UNLOCK = 500;
+const TOTAL_POINTS_FOR_PROFILE_UNLOCK = 250;
 
 const stageColorMap: Record<string, { bg: string; text: string; border: string; fill: string }> = {
   blue:    { bg: 'bg-blue-50 dark:bg-blue-950/20',    text: 'text-blue-600 dark:text-blue-400',    border: 'border-blue-200 dark:border-blue-800/40',    fill: 'bg-blue-500 dark:bg-blue-400' },
@@ -142,7 +142,7 @@ export const MatchRoadmapModal: React.FC<MatchRoadmapModalProps> = ({
   const selectedStage = ROADMAP_STAGES.find((s) => s.id === selectedStageId) ?? ROADMAP_STAGES[0];
   const colors = stageColorMap[selectedStage.color];
 
-  // 500-pt profile unlock calculation
+  // 250-pt profile unlock calculation
   const isProfileUnlocked = matchPoints >= TOTAL_POINTS_FOR_PROFILE_UNLOCK;
   const pointsProgress = Math.min(100, Math.round((matchPoints / TOTAL_POINTS_FOR_PROFILE_UNLOCK) * 100));
   const pointsRemaining = Math.max(0, TOTAL_POINTS_FOR_PROFILE_UNLOCK - matchPoints);
@@ -185,26 +185,26 @@ export const MatchRoadmapModal: React.FC<MatchRoadmapModalProps> = ({
         </DialogHeader>
 
         <div className="p-5 sm:p-7 space-y-6">
-          {/* ── 500-PT PROFILE UNLOCK STATUS CARD ── */}
+          {/* ── 250-PT PROFILE UNLOCK STATUS CARD ── */}
           <div className="bg-white dark:bg-[#181818] border-2 border-gray-900/20 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🔓</span>
                   <h3 className="font-jakarta font-black text-base sm:text-lg">
-                    {isProfileUnlocked ? 'Profile & Real Identities Unlocked!' : 'Profile Unlock Goal (500 pts)'}
+                    {isProfileUnlocked ? 'Profile & Real Identities Unlocked!' : 'Profile Unlock Goal (250 pts)'}
                   </h3>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {isProfileUnlocked
-                    ? 'You both reached 500 points! Real names, avatars, and bios are now revealed.'
+                    ? 'You both reached 250 points! Real names, avatars, and bios are now revealed.'
                     : `${pointsRemaining} pts needed to reveal mutual real names, avatars, and profiles.`}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-1.5 text-center">
                   <p className="text-base font-black text-amber-600 dark:text-amber-400 font-mono leading-none">
-                    {matchPoints} <span className="text-xs font-normal text-gray-500">/ 500</span>
+                    {matchPoints} <span className="text-xs font-normal text-gray-500">/ 250</span>
                   </p>
                   <p className="text-[9px] font-mono text-gray-400 uppercase tracking-wide mt-0.5">Total Points</p>
                 </div>
@@ -217,7 +217,7 @@ export const MatchRoadmapModal: React.FC<MatchRoadmapModalProps> = ({
               </div>
             </div>
 
-            {/* 500-pt progress bar */}
+            {/* 250-pt progress bar */}
             <div className="space-y-1.5">
               <div className="w-full h-3.5 bg-gray-100 dark:bg-neutral-800 rounded-full overflow-hidden p-[1px]">
                 <div
@@ -231,7 +231,7 @@ export const MatchRoadmapModal: React.FC<MatchRoadmapModalProps> = ({
                 />
               </div>
               <div className="flex justify-between items-center text-[10.5px] font-mono text-gray-500 dark:text-gray-400">
-                <span>{pointsProgress}% of 500 pts</span>
+                <span>{pointsProgress}% of 250 pts</span>
                 <span>{isProfileUnlocked ? '🎉 UNLOCKED' : `${pointsRemaining} pts left`}</span>
               </div>
             </div>
@@ -384,7 +384,7 @@ export const MatchRoadmapModal: React.FC<MatchRoadmapModalProps> = ({
                   <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30">
                     <Users size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-300 font-jakarta">
-                      Your feeds appear in each other's <strong>Allies newsfeed filter</strong> (still anonymous). Profiles unlock when reaching 500 total points!
+                      Your feeds appear in each other's <strong>Allies newsfeed filter</strong> (still anonymous). Profiles unlock when reaching 250 total points!
                     </p>
                   </div>
                 )}

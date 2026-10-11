@@ -35,7 +35,7 @@ interface MatchRevealPanelProps {
   ended?: boolean;
 }
 
-const POINTS_PER_STAGE = 500;
+const POINTS_PER_STAGE = 250;
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (

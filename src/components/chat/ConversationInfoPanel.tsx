@@ -4,6 +4,8 @@ import { Conversation, BlockStatus } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { RevealAvatar } from '@/components/match/RevealAvatar';
+import type { AvatarRevealView } from '@/api/types';
 import { ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { ReportModal } from '@/components/chat/ReportModal';
@@ -35,6 +37,7 @@ interface ConversationInfoPanelProps {
   sharedInterests?: string[];
   variant: 'desktop' | 'mobile';
   onClose: () => void;
+  avatarReveal?: AvatarRevealView | null;
 }
 
 export function ConversationInfoPanel({
@@ -51,6 +54,7 @@ export function ConversationInfoPanel({
   sharedInterests,
   variant,
   onClose,
+  avatarReveal,
 }: ConversationInfoPanelProps) {
   if (variant === 'mobile') {
     return (
@@ -79,6 +83,7 @@ export function ConversationInfoPanel({
             onDelete={onDelete}
             onEndMatch={onEndMatch}
             sharedInterests={sharedInterests}
+            avatarReveal={avatarReveal}
           />
         </div>
       </div>
@@ -124,6 +129,7 @@ export function ConversationInfoPanel({
         onDelete={onDelete}
         onEndMatch={onEndMatch}
         sharedInterests={sharedInterests}
+        avatarReveal={avatarReveal}
       />
     </div>
   );
@@ -144,6 +150,7 @@ function ConversationInfoContent({
   onDelete,
   onEndMatch,
   sharedInterests: extraSharedInterests,
+  avatarReveal,
 }: {
   conversation: Conversation;
   isOnline: boolean;
@@ -157,6 +164,7 @@ function ConversationInfoContent({
   onDelete?: (conv: Conversation, mode?: DeleteMode) => void;
   onEndMatch?: () => void;
   sharedInterests?: string[];
+  avatarReveal?: AvatarRevealView | null;
 }) {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -189,9 +197,13 @@ function ConversationInfoContent({
       {/* ── Profile header ── */}
       <div className="flex flex-col items-center text-center border-b border-gray-100 dark:border-white/10 p-6">
         {isAnonymous ? (
-          <AnonymousAvatar
+          <RevealAvatar
+            reveal={avatarReveal}
             avatarKey={conversation.matchInfo?.partnerAvatar}
             size={avatarSize === 'lg' ? 88 : 72}
+            showRing={true}
+            showGainChip={false}
+            fallbackInitials={conversation.participantName}
             className="rounded-full mb-3"
           />
         ) : (

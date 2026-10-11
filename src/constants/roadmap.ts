@@ -12,7 +12,7 @@ export type RoadmapStageNumber = (typeof STAGES)[number];
 export const STAGE_STREAK_REQS = [0, 0, 3, 7, 10]; // index = stage (0: unused, 1: 0d, 2: 3d, 3: 7d, 4: 10d)
 
 /** Points required to unlock real profile / mutual identity */
-export const TOTAL_POINTS_FOR_PROFILE_UNLOCK = 500;
+export const TOTAL_POINTS_FOR_PROFILE_UNLOCK = 250;
 
 export const STAGE_NAMES = [
   'Stranger',
