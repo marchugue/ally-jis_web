@@ -1,14 +1,15 @@
-// src/pages/ProfilePage.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { getDeterministicAnonymousAvatar } from '@/lib/matchOptions';
 import {
   Pencil, Building2, GraduationCap,
   Shield, Users, ImageIcon,
   UserPlus, RefreshCw,
   Sparkles, MessageSquare,
-  Newspaper, Layers, Heart, MessageCircle,
+  Newspaper, Layers, MessageCircle,
   Menu, ArrowLeft,
 } from 'lucide-react';
+import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import { CURRENT_USER } from '@/data/mockData';
 import { Student } from '@/types/ally';
 import type { FeedPost } from '@/types/feed';
@@ -33,7 +34,17 @@ import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 
 const PAGE_SIZE = 10;
 
-function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
+function ProfileSkeleton({
+  isOwnProfile = true,
+  avatarKey,
+  avatarUrl,
+  name,
+}: {
+  isOwnProfile?: boolean;
+  avatarKey?: string | null;
+  avatarUrl?: string | null;
+  name?: string | null;
+}) {
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar w-full bg-[#F7F4EF] dark:bg-[#121212] transition-colors duration-200">
       <div className="max-w-7xl xl:max-w-[1440px] mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 w-full">
@@ -41,7 +52,24 @@ function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
         <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] overflow-hidden mb-0 sm:mb-6 shadow-none sm:shadow-2xs animate-pulse">
           <div className="h-44 sm:h-56 lg:h-64 bg-gradient-to-r from-[#0A331C]/60 via-[#1A6B3C]/50 to-[#185E35]/60 relative flex-shrink-0">
             <div className="absolute bottom-0 left-6 sm:left-8 translate-y-1/2">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 dark:bg-white/10 border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15" />
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-[#181818] border-4 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center">
+                {avatarUrl ? (
+                  <AvatarDisplay
+                    src={avatarUrl}
+                    name={name}
+                    className="w-full h-full object-cover rounded-full"
+                    textClassName="text-4xl sm:text-5xl"
+                  />
+                ) : avatarKey ? (
+                  <AnonymousAvatar
+                    avatarKey={avatarKey}
+                    size={96}
+                    className="w-full h-full rounded-full"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-white/10 rounded-full" />
+                )}
+              </div>
             </div>
           </div>
           <div className="pt-16 sm:pt-18 pb-5 px-6 sm:px-8 border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between gap-4 flex-wrap">
@@ -122,7 +150,14 @@ function ProfileSkeleton({ isOwnProfile = true }: { isOwnProfile?: boolean }) {
 export default function ProfilePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userId: routeUserId } = useParams<{ userId?: string }>();
+
+  const routeState = (location.state || {}) as {
+    avatarUrl?: string | null;
+    avatarKey?: string | null;
+    name?: string | null;
+  };
 
   const viewedUserId = routeUserId || user?.id || null;
   const isOwnProfile = !routeUserId || routeUserId === user?.id;
@@ -292,6 +327,11 @@ export default function ProfilePage() {
     setPosts((prev) => prev.map((p) =>
       p.id === post.id ? { ...p, liked_by_me: !wasLiked, likes_count: p.likes_count + (wasLiked ? -1 : 1) } : p
     ));
+    setActivePost((prev) =>
+      prev && prev.id === post.id
+        ? { ...prev, liked_by_me: !wasLiked, likes_count: prev.likes_count + (wasLiked ? -1 : 1) }
+        : prev
+    );
     try {
       const result = wasLiked
         ? await apiClient.unlikePost(post.id)
@@ -299,10 +339,20 @@ export default function ProfilePage() {
       setPosts((prev) => prev.map((p) =>
         p.id === post.id ? { ...p, liked_by_me: result.liked, likes_count: result.likesCount } : p
       ));
+      setActivePost((prev) =>
+        prev && prev.id === post.id
+          ? { ...prev, liked_by_me: result.liked, likes_count: result.likesCount }
+          : prev
+      );
     } catch (err: any) {
       setPosts((prev) => prev.map((p) =>
         p.id === post.id ? { ...p, liked_by_me: wasLiked, likes_count: post.likes_count } : p
       ));
+      setActivePost((prev) =>
+        prev && prev.id === post.id
+          ? { ...prev, liked_by_me: wasLiked, likes_count: post.likes_count }
+          : prev
+      );
       notify.error('Action failed', err.message);
     }
   }, []);
@@ -340,9 +390,37 @@ export default function ProfilePage() {
   }, [useBackend, activePost]);
 
   // ── early return for loading ──────────────────────────────────────────────
-  if (!profile) return <ProfileSkeleton isOwnProfile={isOwnProfile} />;
+  if (!profile) {
+    return (
+      <ProfileSkeleton
+        isOwnProfile={isOwnProfile}
+        avatarKey={routeState.avatarKey || getDeterministicAnonymousAvatar(viewedUserId)}
+        avatarUrl={routeState.avatarUrl}
+        name={routeState.name}
+      />
+    );
+  }
 
-  const isConfirmedAlly = isOwnProfile || relationship?.allyStatus === 'allies';
+  const isUnrevealedMatch = Boolean(profile.isUnrevealedMatch || (profile as any).is_unrevealed_match);
+  const isConfirmedAlly =
+    isOwnProfile ||
+    relationship?.allyStatus === 'allies' ||
+    (relationship?.allyStatus as any) === 'accepted' ||
+    Boolean(profile.isAlly || (profile as any).is_ally);
+  const isIdentityRevealed = isConfirmedAlly && !isUnrevealedMatch;
+
+  const resolvedAvatarKey =
+    profile.avatarKey ||
+    (profile as any).avatar_preset_id ||
+    routeState.avatarKey ||
+    getDeterministicAnonymousAvatar(viewedUserId);
+  const resolvedAvatarUrl = profile.avatar || routeState.avatarUrl || null;
+  const showRealAvatar = isIdentityRevealed && Boolean(resolvedAvatarUrl);
+
+  // Public accounts show posts to everyone (identity stays anonymous unless allied);
+  // private accounts only show posts to allies.
+  const isPrivateAccount = Boolean(relationship?.isPrivate);
+  const canViewPosts = isConfirmedAlly || !isPrivateAccount;
   const currentUser = profile ?? CURRENT_USER;
 
   // ── Right Side Blended Information Panel Content ─────────────────────────
@@ -353,7 +431,7 @@ export default function ProfilePage() {
         <h3 className="font-jakarta font-bold text-xs uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400 mb-3 flex items-center gap-1.5">
           <MessageSquare size={13} className="text-[#1A6B3C] dark:text-emerald-400" /> About
         </h3>
-        {isConfirmedAlly ? (
+        {isIdentityRevealed ? (
           profile.bio ? (
             <p className="font-jakarta text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">
               {profile.bio}
@@ -555,16 +633,16 @@ export default function ProfilePage() {
                 )}
                 title={isOwnProfile ? "Click to edit profile & avatar" : undefined}
               >
-                {isConfirmedAlly ? (
+                {showRealAvatar ? (
                   <AvatarDisplay
-                    src={profile.avatar}
+                    src={resolvedAvatarUrl}
                     name={profile.username || profile.name}
                     className="w-full h-full object-cover rounded-full"
                     textClassName="text-4xl sm:text-5xl"
                   />
                 ) : (
                   <AnonymousAvatar
-                    avatarKey={(profile as any).avatarKey || 'fox'}
+                    avatarKey={resolvedAvatarKey}
                     size={96}
                     className="w-full h-full rounded-full"
                   />
@@ -578,9 +656,13 @@ export default function ProfilePage() {
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                  {isConfirmedAlly ? (profile.name || (profile.username ? `@${profile.username}` : 'Student')) : 'Anonymous Peer'}
+                  {isIdentityRevealed
+                    ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
+                    : isUnrevealedMatch
+                    ? (profile.name || routeState.name || 'Anonymous Ally')
+                    : 'Anonymous Peer'}
                 </h1>
-                {isConfirmedAlly && profile.isVerified && (
+                {isIdentityRevealed && profile.isVerified && (
                   <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-md">
                     <Shield size={11} />
                     <span className="font-jakarta text-xs font-semibold">CHMSU VERIFIED</span>
@@ -588,7 +670,11 @@ export default function ProfilePage() {
                 )}
               </div>
               <p className="font-jakarta text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
-                {isConfirmedAlly ? (profile.username ? `@${profile.username}` : '') : '@anonymous'}
+                {isIdentityRevealed
+                  ? (profile.username ? `@${profile.username}` : '')
+                  : isUnrevealedMatch
+                  ? '@campus-ally'
+                  : '@anonymous'}
               </p>
             </div>
 
@@ -600,7 +686,13 @@ export default function ProfilePage() {
                 ) : relationship && viewedUserId ? (
                   <RelationshipButtons
                     targetUserId={viewedUserId}
-                    targetName={isConfirmedAlly ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student') : 'Anonymous Peer'}
+                    targetName={
+                      isIdentityRevealed
+                        ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student')
+                        : isUnrevealedMatch
+                        ? (profile.name || 'Anonymous Ally')
+                        : 'Anonymous Peer'
+                    }
                     allyStatus={relationship.allyStatus}
                     isFollowing={relationship.isFollowing}
                     isFollowedBy={relationship.isFollowedBy}
@@ -628,8 +720,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats Bar */}
-          {(isOwnProfile ? true : isConfirmedAlly) && (
-            <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
+          <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
               <button
                 type="button"
                 onClick={() => viewedUserId && setListModal('followers')}
@@ -663,7 +754,6 @@ export default function ProfilePage() {
                 </span>
               )}
             </div>
-          )}
 
           {/* ── Mobile Tab Segment Switcher (visible only < lg, anchored right here inside header) ── */}
           <div className="lg:hidden flex border-t border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818]">
@@ -704,12 +794,12 @@ export default function ProfilePage() {
             'lg:col-span-7 xl:col-span-8 space-y-0 sm:space-y-4 min-w-0',
             mobileTab !== 'posts' && 'hidden lg:block'
           )}>
-            {!isConfirmedAlly ? (
+            {!canViewPosts ? (
               <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-12 text-center shadow-none sm:shadow-2xs">
                 <Shield size={36} className="mx-auto text-[#1A6B3C] dark:text-emerald-400 mb-3 opacity-60" />
-                <h4 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Profile is Protected</h4>
+                <h4 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">This Account is Private</h4>
                 <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-                  Posts and media are only visible to confirmed Campus Allies. Complete the matching roadmap to reveal profiles and posts.
+                  Posts and media on this account are only visible to confirmed Campus Allies.
                 </p>
               </div>
             ) : (
@@ -892,7 +982,7 @@ export default function ProfilePage() {
                           {/* Hover overlay with likes and comment counts */}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-jakarta text-xs font-semibold">
                             <span className="flex items-center gap-1">
-                              <Heart size={14} className="fill-white" /> {post.likes_count}
+                              <LordHeartIcon isLiked={true} size={14} className="text-white" /> {post.likes_count}
                             </span>
                             <span className="flex items-center gap-1">
                               <MessageCircle size={14} className="fill-white" /> {post.comments_count}

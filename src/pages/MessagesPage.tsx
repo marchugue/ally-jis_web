@@ -1,6 +1,6 @@
 // src/pages/MessagesPage.tsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Search, Info, Clock, MessagesSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations } from '@/hooks/useConversations';
@@ -37,6 +37,12 @@ import { MobileRoadmapView } from '@/components/roadmap/MobileRoadmapView';
 import { TOTAL_POINTS_FOR_PROFILE_UNLOCK } from '@/constants/roadmap';
 import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
+import {
+  getCachedAvatarReveal,
+  getEffectiveAvatarReveal,
+  setCachedAvatarReveal,
+  synthesizeAvatarReveal,
+} from '@/lib/avatarRevealCache';
 import { AvatarRevealCeremony } from '@/components/match/AvatarRevealCeremony';
 import { REVEAL_TIER_META } from '@/lib/avatarReveal';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
@@ -89,6 +95,32 @@ export default function MessagesPage() {
     isAnonymousConversation ? activeConversation!.matchInfo?.matchId ?? null : null,
     activeConversation?.matchInfo?.stage ?? 0,
   );
+
+  const effectiveHeaderReveal = useMemo(() => {
+    if (!isAnonymousConversation) return null;
+    const matchId = activeConversation?.matchInfo?.matchId;
+    const matchPoints =
+      activeConversation?.matchInfo?.matchPoints ??
+      activeConversation?.matchInfo?.stagePoints ??
+      reveal.reveal?.matchPoints ??
+      0;
+    return getEffectiveAvatarReveal(
+      matchId,
+      matchPoints,
+      reveal.reveal?.avatarReveal,
+      {
+        partnerAvatar: activeConversation?.matchInfo?.partnerAvatar || 'fox',
+        previewUrl: reveal.reveal?.partner?.avatarUrl ?? reveal.reveal?.avatarReveal?.previewUrl,
+      }
+    );
+  }, [
+    isAnonymousConversation,
+    activeConversation?.matchInfo?.matchId,
+    activeConversation?.matchInfo?.matchPoints,
+    activeConversation?.matchInfo?.stagePoints,
+    activeConversation?.matchInfo?.partnerAvatar,
+    reveal.reveal,
+  ]);
 
   // Streak active today — derived purely from backend state.
   // The backend is the single source of truth; we do NOT re-derive from messages
@@ -289,7 +321,11 @@ export default function MessagesPage() {
       toast('Message deleted for you');
     }
   }, [deleteRealtimeMessage]);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+  const userExitedRef = useRef(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [variantFilter, setVariantFilter] = useState<'all' | 'regular' | 'anonymous'>('all');
@@ -474,6 +510,18 @@ export default function MessagesPage() {
             : prev.matchInfo,
         };
       });
+      if (payload.matchId && typeof payload.matchPoints === 'number') {
+        const cached = getCachedAvatarReveal(payload.matchId);
+        if (cached) {
+          const updated = synthesizeAvatarReveal(payload.matchPoints, {
+            target: cached.target,
+            previewUrl: cached.previewUrl,
+            dominantColor: cached.dominantColor,
+            partnerAvatar: activeConversation?.matchInfo?.partnerAvatar || 'fox',
+          });
+          setCachedAvatarReveal(payload.matchId, updated);
+        }
+      }
       void reveal.refetch();
     };
 
@@ -672,8 +720,11 @@ export default function MessagesPage() {
     }
   }, [activeConversation, refreshConvs]);
 
-  // ── Routing ───────────────────────────────────────────────────────────────
-  const requestedConversationId = (location.state as { conversationId?: string } | null)?.conversationId;
+  // ── Routing & Search Params ───────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramConvId = searchParams.get('conversationId');
+  const stateConvId = (location.state as { conversationId?: string } | null)?.conversationId;
+  const requestedConversationId = stateConvId || paramConvId || null;
 
   // ── Responsive ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -689,6 +740,45 @@ export default function MessagesPage() {
     return () => setChatFocused(false);
   }, [isMobileView, activeConversation, setChatFocused]);
 
+  // ── Conversation Exit & Reset Handlers ────────────────────────────────────
+  const handleExitConversation = useCallback(() => {
+    userExitedRef.current = true;
+    setActiveConversation(null);
+    setIsRoadmapActive(false);
+    setShowInfoPanel(false);
+    setReplyTarget(null);
+    setForwardMessage(null);
+    setChatFocused(false);
+
+    // Clean up conversationId from searchParams and history state
+    let cleanedParams = false;
+    if (searchParams.has('conversationId')) {
+      searchParams.delete('conversationId');
+      setSearchParams(searchParams, { replace: true });
+      cleanedParams = true;
+    }
+    if ((location.state as any)?.conversationId && !cleanedParams) {
+      navigate(location.pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''), {
+        replace: true,
+        state: {},
+      });
+    }
+  }, [location.pathname, location.state, navigate, searchParams, setSearchParams, setChatFocused]);
+
+  const handleSelectConversation = useCallback((conv: Conversation) => {
+    userExitedRef.current = false;
+    setActiveConversation(conv);
+  }, []);
+
+  // Listen for reset events (e.g. user clicking "Messages" in the navbar)
+  useEffect(() => {
+    const handleReset = () => {
+      handleExitConversation();
+    };
+    window.addEventListener('reset-messages-page', handleReset);
+    return () => window.removeEventListener('reset-messages-page', handleReset);
+  }, [handleExitConversation]);
+
   // ── Conversation selection ────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
@@ -696,7 +786,12 @@ export default function MessagesPage() {
     const findAndSetActive = async () => {
       if (loadingConvs) return;
 
-      if (requestedConversationId) {
+      // If user explicitly exited to the chatlist window, do not auto-select!
+      if (userExitedRef.current) return;
+
+      const isMobile = isMobileView || (typeof window !== 'undefined' && window.innerWidth < 768);
+
+      if (requestedConversationId && !userExitedRef.current) {
         let match = conversations.find((conv) => conv.id === requestedConversationId);
 
         if (!match && useBackend) {
@@ -704,21 +799,45 @@ export default function MessagesPage() {
           match = conversations.find((conv) => conv.id === requestedConversationId);
         }
 
-        if (match && isMounted) {
+        if (match && isMounted && !userExitedRef.current) {
           setActiveConversation(match);
-          navigate(location.pathname, { replace: true, state: {} });
-        } else if (useBackend && !match) {
+          if (searchParams.has('conversationId')) {
+            searchParams.delete('conversationId');
+            setSearchParams(searchParams, { replace: true });
+          }
+          if ((location.state as any)?.conversationId) {
+            navigate(location.pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''), {
+              replace: true,
+              state: {},
+            });
+          }
+        } else if (useBackend && !match && !userExitedRef.current) {
           try {
             const conv = await chatService.getConversation(requestedConversationId, user?.id ?? '');
-            if (isMounted) {
+            if (isMounted && !userExitedRef.current) {
               setActiveConversation(conv);
-              navigate(location.pathname, { replace: true, state: {} });
+              if (searchParams.has('conversationId')) {
+                searchParams.delete('conversationId');
+                setSearchParams(searchParams, { replace: true });
+              }
+              if ((location.state as any)?.conversationId) {
+                navigate(location.pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''), {
+                  replace: true,
+                  state: {},
+                });
+              }
             }
           } catch (e) {
             console.error('Failed to fetch requested conversation:', e);
           }
         }
-      } else if (conversations.length > 0 && !activeConversationRef.current && !isMobileView) {
+      } else if (
+        conversations.length > 0 &&
+        !activeConversationRef.current &&
+        !isMobile &&
+        !userExitedRef.current
+      ) {
+        // Desktop only: select the first conversation only on wider non-mobile screens if user hasn't exited
         setActiveConversation(conversations[0]);
       }
     };
@@ -735,6 +854,8 @@ export default function MessagesPage() {
     user?.id,
     refreshConvs,
     isMobileView,
+    searchParams,
+    setSearchParams,
   ]);
 
   // ── Keep activeConversation in sync with the refreshed list ──────────────
@@ -873,7 +994,7 @@ export default function MessagesPage() {
                 conversations={filteredConversations}
                 activeId={activeConversation?.id}
                 activeIsStreakActiveToday={isStreakActiveToday}
-                onSelect={setActiveConversation}
+                onSelect={handleSelectConversation}
                 onDelete={setConvToDelete}
                 isLoading={loadingConvs}
                 onlineUserIds={onlineUserIds}
@@ -924,16 +1045,17 @@ export default function MessagesPage() {
                 )}
               >
                 <button
-                  onClick={() => setActiveConversation(null)}
+                  onClick={handleExitConversation}
                   className="md:hidden p-2 -ml-2 rounded-full text-gray-700 hover:text-[#1A6B3C] dark:text-gray-200 dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  aria-label="Back to conversations list"
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div className="relative">
                   {isAnonymousConversation ? (
                     <RevealAvatar
-                      reveal={reveal.reveal?.avatarReveal}
-                      avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
+                      reveal={effectiveHeaderReveal}
+                      avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar || 'fox'}
                       size={40}
                       showRing={false}
                       showGainChip={false}
@@ -1162,7 +1284,7 @@ export default function MessagesPage() {
               </div>
             </>
             )
-          ) : loadingConvs || Boolean(requestedConversationId) || (!isMobileView && conversations.length > 0) ? (
+          ) : loadingConvs || (Boolean(requestedConversationId) && !userExitedRef.current) ? (
             <ConversationPaneSkeleton />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-[#F9F8F6] dark:bg-[#090D16] relative z-10">

@@ -397,7 +397,7 @@ const MessageBubble = memo(function MessageBubble({
       : null;
 
   const bubbleContent = (
-    <div className="flex flex-col relative" style={{ maxWidth: '100%' }}>
+    <div className="flex flex-col relative min-w-0 max-w-full" style={{ maxWidth: '100%' }}>
       {/* Desktop hover: small flat card with only the time */}
       {!isSending && !isFailed && (
         <div
@@ -426,11 +426,11 @@ const MessageBubble = memo(function MessageBubble({
         }}
         style={isImageOnly || isEmojiOnly ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
         className={cn(
-          'max-w-full text-sm font-jakarta transition-opacity select-none',
+          'w-fit max-w-full text-sm font-jakarta transition-opacity h-auto min-w-0',
           isImageOnly || isEmojiOnly
             ? 'p-0 bg-transparent dark:bg-transparent shadow-none border-none'
             : cn(
-                'px-4 py-2 cursor-pointer',
+                'px-4 py-2 cursor-pointer break-words [overflow-wrap:anywhere] [word-break:break-word]',
                 isMe
                   ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white'
                   : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100',
@@ -566,8 +566,15 @@ const MessageBubble = memo(function MessageBubble({
           <p
             className={cn(
               isImageOnly ? 'hidden' : undefined,
-              isEmojiOnly ? 'text-4xl sm:text-5xl leading-tight py-1 my-0.5' : undefined
+              isEmojiOnly
+                ? 'text-4xl sm:text-5xl leading-tight py-1 my-0.5'
+                : 'whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] leading-relaxed min-w-0 select-text',
             )}
+            style={{
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+            }}
           >
             {msg.content}
           </p>
@@ -670,7 +677,7 @@ const MessageBubble = memo(function MessageBubble({
         </div>
       )}
 
-      <div className="flex flex-col" style={{ maxWidth: '75%' }}>
+      <div className="flex flex-col min-w-0 max-w-[85%] sm:max-w-[75%] md:max-w-[70%]">
         {showSenderName && (
           <span
             className={cn(
@@ -681,16 +688,19 @@ const MessageBubble = memo(function MessageBubble({
             {senderDisplayName}
           </span>
         )}
-        <div className="flex items-center gap-1.5">
+        <div className={cn(
+          'flex items-center gap-1.5 min-w-0 max-w-full',
+          isMe ? 'justify-end' : 'justify-start'
+        )}>
           {isMe ? (
             <>
-              {hoverActions}
+              <div className="flex-shrink-0">{hoverActions}</div>
               {bubbleContent}
             </>
           ) : (
             <>
               {bubbleContent}
-              {hoverActions}
+              <div className="flex-shrink-0">{hoverActions}</div>
             </>
           )}
         </div>

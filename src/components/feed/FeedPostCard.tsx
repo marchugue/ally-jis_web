@@ -1,11 +1,12 @@
 // src/components/feed/FeedPostCard.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2 } from 'lucide-react';
+import { MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
-import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
+import LordHeartIcon from '@/components/ally/LordHeartIcon';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import ReportPostModal from './ReportPostModal';
@@ -105,6 +106,7 @@ export default function FeedPostCard({
   showBorder = true,
   className,
 }: FeedPostCardProps) {
+  const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -189,25 +191,46 @@ export default function FeedPostCard({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <div
-          className={`flex items-center gap-3 min-w-0 ${onAuthorClick && !isOwn && post.author_id && author?.avatar_url ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
-          onClick={() => { if (onAuthorClick && !isOwn && post.author_id && author?.avatar_url) onAuthorClick(post.author_id); }}
-        >
-          {isAlly && author?.avatar_url ? (
-            <AvatarDisplay
-              src={author.avatar_url}
-              name={displayName}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            />
-          ) : (
-            <AnonymousAvatar
-              avatarKey={author?.avatarKey || 'fox'}
-              size={40}
-              className="rounded-full flex-shrink-0 shadow-xs"
-            />
-          )}
+        <div className="flex items-center gap-3 min-w-0">
+          <ClickableAvatar
+            userId={post.author_id}
+            avatarUrl={author?.avatar_url}
+            avatarKey={author?.avatarKey}
+            name={displayName}
+            revealed={Boolean(isAlly && author?.avatar_url)}
+            size={40}
+            className="w-10 h-10 shadow-xs"
+            onNavigate={(id) => {
+              navigate(isOwn ? '/profile' : `/profile/${id}`, {
+                state: {
+                  avatarUrl: author?.avatar_url,
+                  avatarKey: author?.avatarKey,
+                  name: displayName,
+                },
+              });
+            }}
+          />
           <div className="min-w-0">
-            <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">{displayName}</p>
+            <p
+              onClick={() => {
+                if (post.author_id) {
+                  if (onAuthorClick) {
+                    onAuthorClick(post.author_id);
+                  } else {
+                    navigate(isOwn ? '/profile' : `/profile/${post.author_id}`, {
+                      state: {
+                        avatarUrl: author?.avatar_url,
+                        avatarKey: author?.avatarKey,
+                        name: displayName,
+                      },
+                    });
+                  }
+                }
+              }}
+              className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate cursor-pointer hover:underline"
+            >
+              {displayName}
+            </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">
                 {isAlly && author?.username && author?.avatar_url ? `@${author.username} · ` : ''}{timeAgo}
@@ -223,7 +246,7 @@ export default function FeedPostCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {!isOwn && isAlly && author?.avatar_url && post.author_id && (
+          {!isOwn && post.author_id && (
             <button
               type="button"
               onClick={handleToggleFollow}
@@ -326,22 +349,16 @@ export default function FeedPostCard({
           type="button"
           onClick={() => onToggleLike(post)}
           className={cn(
-            "flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-all active:scale-95 group cursor-pointer",
+            "flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-colors active:scale-95 group cursor-pointer",
             post.liked_by_me
               ? "text-[#1A6B3C] dark:text-emerald-400"
               : "text-gray-400 dark:text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
           )}
           aria-label={post.liked_by_me ? "Unlike post" : "Like post"}
         >
-          <Heart
+          <LordHeartIcon
+            isLiked={post.liked_by_me}
             size={18}
-            className={cn(
-              "transition-transform duration-150 group-hover:scale-110",
-              post.liked_by_me
-                ? "fill-[#1A6B3C] text-[#1A6B3C] dark:fill-emerald-400 dark:text-emerald-400"
-                : "text-gray-400 dark:text-gray-500 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400"
-            )}
-            strokeWidth={post.liked_by_me ? 2.5 : 2}
           />
           {post.likes_count > 0 && (
             <span
@@ -349,7 +366,7 @@ export default function FeedPostCard({
                 "font-medium text-xs sm:text-[13px]",
                 post.liked_by_me
                   ? "text-[#1A6B3C] dark:text-emerald-400"
-                  : "text-gray-600 dark:text-gray-400"
+                  : "text-gray-600 dark:text-gray-400 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400"
               )}
             >
               {post.likes_count}

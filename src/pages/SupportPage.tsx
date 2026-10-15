@@ -47,9 +47,7 @@ export default function SupportPage() {
                 <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                   Ally<span className="text-[#E8A838]">-jis</span>
                 </span>
-                <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
-                  CHMSU Alijis
-                </span>
+
               </div>
             </Link>
 

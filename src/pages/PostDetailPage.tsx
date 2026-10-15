@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Heart, Reply, UserCheck, Send, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Reply, UserCheck, Send, X, AlertCircle } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { PageTransition } from '@/components/PageTransition';
 import FeedPostCard from '@/components/feed/FeedPostCard';
+import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
-import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
 import { apiClient, isApiConfigured } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { profileService } from '@/lib/services/profileService';
@@ -79,31 +80,24 @@ function CommentItem({
   };
 
   const handleAuthorClick = () => {
-    if (onAuthorClick && comment.author_id && isAlly) {
+    if (onAuthorClick && comment.author_id) {
       onAuthorClick(comment.author_id);
     }
   };
 
   return (
     <div className="flex items-start gap-2.5 sm:gap-3 group">
-      <div
-        className={onAuthorClick && comment.author_id && isAlly ? 'cursor-pointer hover:opacity-85 transition-opacity flex-shrink-0' : 'flex-shrink-0'}
-        onClick={handleAuthorClick}
-      >
-        {isAlly ? (
-          <AvatarDisplay
-            src={author?.avatar_url}
-            name={displayName}
-            className="w-8 h-8 rounded-xl object-cover ring-1 ring-black/5 dark:ring-white/10 shadow-xs"
-          />
-        ) : (
-          <AnonymousAvatar
-            avatarKey={author?.avatarKey || 'fox'}
-            size={32}
-            className="rounded-xl shadow-xs"
-          />
-        )}
-      </div>
+      <ClickableAvatar
+        userId={comment.author_id}
+        avatarUrl={author?.avatar_url}
+        avatarKey={author?.avatarKey}
+        name={displayName}
+        revealed={Boolean(isAlly)}
+        size={32}
+        className="w-8 h-8 rounded-xl ring-1 ring-black/5 dark:ring-white/10 shadow-xs"
+        wrapperClassName="rounded-xl"
+        onNavigate={onAuthorClick}
+      />
 
       <div className="flex-1 min-w-0">
         {/* Comment Block: Lightened background when highlighted */}
@@ -119,7 +113,7 @@ function CommentItem({
             <div
               className={cn(
                 'flex items-center gap-1.5',
-                onAuthorClick && comment.author_id && isAlly && 'cursor-pointer hover:underline'
+                onAuthorClick && comment.author_id && 'cursor-pointer hover:underline'
               )}
               onClick={handleAuthorClick}
             >
@@ -166,11 +160,11 @@ function CommentItem({
             className={cn(
               'font-jakarta text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer',
               comment.liked_by_me
-                ? 'text-red-500'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'text-[#1A6B3C] dark:text-emerald-400'
+                : 'text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400'
             )}
           >
-            <Heart size={12} className={comment.liked_by_me ? 'fill-red-500 text-red-500' : ''} />
+            <LordHeartIcon isLiked={comment.liked_by_me} size={13} />
             <span>{comment.likes_count > 0 ? comment.likes_count : 'Like'}</span>
           </button>
           {onReply && (
@@ -547,7 +541,6 @@ export default function PostDetailPage() {
                 onToggleLike={handlePostLike}
                 onCommentClick={() => inputRef.current?.focus()}
                 onDelete={handleDeletePost}
-                onAuthorClick={(authorId) => navigate(`/profile/${authorId}`)}
                 showBorder={true}
                 className="rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 shadow-none sm:shadow-2xs"
               />

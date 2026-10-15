@@ -1,6 +1,60 @@
 /* src/components/match/animotionQueue.css */
-/* Animotion-powered keyframes and animation utility classes for Matchmaking Radar */
+/* Animotion-powered keyframes and animation utility classes for Litmatch Queue */
 
+/* ── Litmatch Center Spotlight & Aura ── */
+@keyframes animotion-spotlightBeam {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scaleX(1.18);
+  }
+}
+
+.animotion-spotlight {
+  animation: animotion-spotlightBeam 3.6s ease-in-out infinite;
+}
+
+/* ── Conveyor Ripple Pulse behind Center Avatar ── */
+@keyframes animotion-conveyorRipple {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.85;
+    border-color: rgba(16, 185, 129, 0.8);
+  }
+  50% {
+    border-color: rgba(232, 168, 56, 0.6);
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+    border-color: rgba(16, 185, 129, 0);
+  }
+}
+
+.animotion-conveyor-ripple {
+  animation: animotion-conveyorRipple 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+/* ── Center Focus Glowing Halo ── */
+@keyframes animotion-centerHalo {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(26, 107, 60, 0.45), 0 0 45px rgba(232, 168, 56, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 38px rgba(26, 107, 60, 0.85), 0 0 68px rgba(232, 168, 56, 0.55);
+    transform: scale(1.03);
+  }
+}
+
+.animotion-center-halo {
+  animation: animotion-centerHalo 2.2s ease-in-out infinite;
+}
+
+/* ── Dual Rings Spin ── */
 @keyframes animotion-dualRing {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -11,74 +65,32 @@
   100% { transform: rotate(0deg); }
 }
 
-@keyframes animotion-radarSweep {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.animotion-ring-spin {
+  animation: animotion-dualRing 12s linear infinite;
 }
 
-@keyframes animotion-orbit1 {
-  0% {
-    transform: rotate(0deg) translateX(85px) rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg) translateX(85px) rotate(-360deg);
-  }
+.animotion-ring-spin-rev {
+  animation: animotion-dualRingRev 16s linear infinite;
 }
 
-@keyframes animotion-orbit2 {
-  0% {
-    transform: rotate(120deg) translateX(118px) rotate(-120deg);
-  }
-  100% {
-    transform: rotate(480deg) translateX(118px) rotate(-480deg);
-  }
-}
-
-@keyframes animotion-orbit3 {
-  0% {
-    transform: rotate(240deg) translateX(148px) rotate(-240deg);
-  }
-  100% {
-    transform: rotate(600deg) translateX(148px) rotate(-600deg);
-  }
-}
-
-@keyframes animotion-orbit4 {
-  0% {
-    transform: rotate(50deg) translateX(124px) rotate(-50deg);
-  }
-  100% {
-    transform: rotate(410deg) translateX(124px) rotate(-410deg);
-  }
-}
-
-@keyframes animotion-sonarWave {
-  0% {
-    transform: scale(0.65);
-    opacity: 0.85;
-    border-color: rgba(26, 107, 60, 0.8);
-  }
-  50% {
-    border-color: rgba(232, 168, 56, 0.6);
-  }
-  100% {
-    transform: scale(2.4);
-    opacity: 0;
-    border-color: rgba(56, 193, 133, 0);
-  }
-}
-
-@keyframes animotion-glowPulse {
+/* ── Status Badge Pulse ── */
+@keyframes animotion-badgePulse {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(26, 107, 60, 0.4), 0 0 35px rgba(232, 168, 56, 0.2);
     transform: scale(1);
+    opacity: 0.92;
   }
   50% {
-    box-shadow: 0 0 35px rgba(26, 107, 60, 0.85), 0 0 65px rgba(232, 168, 56, 0.55);
-    transform: scale(1.04);
+    transform: scale(1.05);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));
   }
 }
 
+.animotion-badge-pulse {
+  animation: animotion-badgePulse 2s ease-in-out infinite;
+}
+
+/* ── Telemetry Acoustic Waveform ── */
 @keyframes animotion-waveformLoader {
   0%, 100% {
     height: 6px;
@@ -90,6 +102,7 @@
   }
 }
 
+/* ── Match Found Celebration Explosions ── */
 @keyframes animotion-particleExplode {
   0% {
     transform: scale(0.4);
@@ -97,66 +110,35 @@
     filter: brightness(2.2);
   }
   50% {
-    opacity: 0.8;
+    opacity: 0.85;
   }
   100% {
-    transform: scale(2.8);
+    transform: scale(2.6);
     opacity: 0;
     filter: brightness(1);
   }
 }
 
+.animotion-shockwave {
+  animation: animotion-particleExplode 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @keyframes animotion-cardFadeIn {
   0% {
     opacity: 0;
+    transform: scale(0.96) translateY(12px);
   }
   100% {
     opacity: 1;
+    transform: scale(1) translateY(0);
   }
-}
-
-/* Helper utility classes */
-.animotion-ring-spin {
-  animation: animotion-dualRing 9s linear infinite;
-}
-
-.animotion-ring-spin-rev {
-  animation: animotion-dualRingRev 14s linear infinite;
-}
-
-.animotion-sweep {
-  animation: animotion-radarSweep 3.2s linear infinite;
-}
-
-.animotion-orbit-1 {
-  animation: animotion-orbit1 32s linear infinite;
-}
-
-.animotion-orbit-2 {
-  animation: animotion-orbit2 42s linear infinite;
-}
-
-.animotion-orbit-3 {
-  animation: animotion-orbit3 52s linear infinite;
-}
-
-.animotion-orbit-4 {
-  animation: animotion-orbit4 36s linear infinite;
-}
-
-.animotion-core-glow {
-  animation: animotion-glowPulse 2.4s ease-in-out infinite;
-}
-
-.animotion-shockwave {
-  animation: animotion-particleExplode 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animotion-match-card-enter {
   animation: animotion-cardFadeIn 0.35s ease-out forwards;
 }
 
-/* ── Starfield & Celestial Animations (Animotion B06 & CR28) ── */
+/* ── Starfield & Celestial Animations ── */
 @keyframes animotion-starfield {
   from {
     background-position: 0 0;
@@ -226,4 +208,3 @@
 .animotion-shooting-star {
   animation: animotion-shooting-star 10s ease-in-out infinite;
 }
-

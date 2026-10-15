@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationsContext';
+import { useRealtimeFollowStatus } from '@/hooks/useRealtimeFollowStatus';
 import { interactionService } from '@/lib/services/interactionService';
 import { PageTransition } from '@/components/PageTransition';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -137,6 +138,8 @@ function getActionText(notif: Notification): string {
     case 'friend_request':
     case 'connection_request':
       return 'sent you a match request';
+    case 'new_follower':
+      return 'started following you';
     case 'accepted':
     case 'connection_accepted':
       return 'accepted your connection request';
@@ -274,6 +277,14 @@ function getNotificationContent(notif: Notification) {
     return { authorName, actionText, description: '' };
   }
 
+  if (notif.type === 'new_follower') {
+    return {
+      authorName,
+      actionText: 'started following you',
+      description: notif.description || 'Someone started following you.',
+    };
+  }
+
   const subtext = extractSubtext(notif);
   let description = subtext;
 
@@ -358,6 +369,10 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
       badgeIcon = <UserPlus size={10} className="text-white" />;
       badgeBg = 'bg-[#1A6B3C]';
       break;
+    case 'new_follower':
+      badgeIcon = <UserPlus size={10} className="text-white" />;
+      badgeBg = 'bg-[#1A6B3C] dark:bg-emerald-600';
+      break;
     case 'streak_reminder':
       badgeIcon = <Flame size={10} className="text-white" />;
       badgeBg = 'bg-[#EB5600]';
@@ -368,10 +383,10 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
   if (notif.type === 'streak_reminder') {
     return (
       <div className="relative w-11 h-11 flex-shrink-0">
-        <div className="w-11 h-11 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/40 flex items-center justify-center text-xl select-none">
+        <div className="w-11 h-11 rounded-full bg-orange-50 dark:bg-orange-950/40 border-0 flex items-center justify-center text-xl select-none shadow-xs">
           🔥
         </div>
-        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0D131F] shadow-sm bg-[#EB5600]">
+        <div className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-0 shadow-xs bg-[#EB5600]">
           <Flame size={10} className="text-white" />
         </div>
       </div>
@@ -385,18 +400,18 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
           avatarKey={anonInfo.avatarKey || 'fox'}
           photoUrl={null}
           size={44}
-          className="w-11 h-11 rounded-2xl shadow-xs"
+          className="w-11 h-11 rounded-full shadow-xs"
         />
       ) : (
         <AvatarDisplay
           src={notif.fromUserAvatar}
           name={notif.fromUserName || 'Ally'}
-          className="w-11 h-11 rounded-2xl object-cover"
+          className="w-11 h-11 rounded-full object-cover"
         />
       )}
       <div
         className={cn(
-          'absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#111827] shadow-xs',
+          'absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-0 shadow-xs',
           badgeBg
         )}
       >
@@ -409,13 +424,24 @@ function NotificationAvatarBadge({ notif }: { notif: Notification }) {
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAll, removeNotification } = useNotifications();
+
+  const {
+    followStatusMap,
+    dismissedCtaMap,
+    busyMap: followBusyMap,
+    handleFollowBack,
+    handleCloseFollowCta,
+  } = useRealtimeFollowStatus({
+    userId: user?.id,
+    notifications,
+    onRemoveNotification: removeNotification,
+  });
 
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({});
   const [handledRequests, setHandledRequests] = useState<Record<string, 'accepted' | 'declined'>>({});
-  const [showMobileFilterDropdown, setShowMobileFilterDropdown] = useState(false);
   const [replyingNotifId, setReplyingNotifId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
@@ -439,14 +465,27 @@ export default function NotificationsPage() {
     }
   };
 
+  // If user is already followed back, remove/do not show the notification
+  const visibleNotifications = useMemo(() => {
+    return notifications.filter((n) => {
+      if (n.type === 'new_follower') {
+        const followerTargetId = n.fromUserId || n.targetId;
+        if (followerTargetId && followStatusMap[followerTargetId]) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [notifications, followStatusMap]);
+
   const categoryCounts = useMemo(() => {
     return {
-      all: notifications.length,
-      unread: notifications.filter((n) => !n.isRead).length,
-      messages: notifications.filter(
+      all: visibleNotifications.length,
+      unread: visibleNotifications.filter((n) => !n.isRead).length,
+      messages: visibleNotifications.filter(
         (n) => n.category === 'messages' || n.type === 'message' || n.type === 'anon_match'
       ).length,
-      connections: notifications.filter(
+      connections: visibleNotifications.filter(
         (n) =>
           n.category === 'connections' ||
           n.type === 'friend_request' ||
@@ -455,28 +494,28 @@ export default function NotificationsPage() {
           n.type === 'connection_accepted' ||
           n.type === 'new_follower'
       ).length,
-      ally: notifications.filter(
+      ally: visibleNotifications.filter(
         (n) =>
           n.category === 'ally' ||
           n.type === 'match' ||
           n.type.includes('ally') ||
           n.type.includes('stage')
       ).length,
-      safety: notifications.filter(
+      safety: visibleNotifications.filter(
         (n) =>
           n.category === 'safety' ||
           n.type === 'admin_warning' ||
           n.type === 'safety' ||
           n.type === 'emergency'
       ).length,
-      activity: notifications.filter(
+      activity: visibleNotifications.filter(
         (n) =>
           n.category === 'activity' ||
           (!['messages', 'connections', 'ally', 'safety'].includes(n.category || '') &&
            !['message', 'anon_match', 'friend_request', 'connection_request', 'accepted', 'connection_accepted', 'new_follower', 'match', 'admin_warning'].includes(n.type))
       ).length,
     };
-  }, [notifications]);
+  }, [visibleNotifications]);
 
 
   const handleClick = async (notif: Notification, isReplyAction = false) => {
@@ -696,7 +735,7 @@ export default function NotificationsPage() {
   };
 
   const filteredNotifications = useMemo(() => {
-    return notifications.filter((n) => {
+    return visibleNotifications.filter((n) => {
       const isUnread = !n.isRead;
       if (activeFilter === 'unread') return isUnread;
       if (activeFilter === 'messages') {
@@ -737,7 +776,7 @@ export default function NotificationsPage() {
       }
       return true;
     });
-  }, [notifications, activeFilter]);
+  }, [visibleNotifications, activeFilter]);
 
 
   const notificationSections = useMemo(() => {
@@ -765,6 +804,18 @@ export default function NotificationsPage() {
   const renderRow = (notif: Notification) => {
     const isUnread = !notif.isRead;
     const isMatchReq = notif.type === 'friend_request' || notif.type === 'connection_request';
+    const isFollower = notif.type === 'new_follower';
+    const followerTargetId = notif.fromUserId || notif.targetId;
+    const isFollowedBack = Boolean(followerTargetId && followStatusMap[followerTargetId]);
+
+    // If already followed back, remove/do not render the notification
+    if (isFollower && isFollowedBack) {
+      return null;
+    }
+
+    const isFollowDismissed = Boolean(dismissedCtaMap[notif.id]);
+    const isFollowBusy = Boolean(followerTargetId && followBusyMap[followerTargetId]);
+
     const reqStatus = handledRequests[notif.id];
     const isBusy = busyIds[notif.id];
     const { authorName, actionText, description } = getNotificationContent(notif);
@@ -784,9 +835,12 @@ export default function NotificationsPage() {
           }
         }}
         className={cn(
-          'w-full text-left flex items-start gap-3.5 sm:gap-4 px-4 sm:px-5 py-3.5 transition-all duration-150',
-          'bg-transparent hover:bg-gray-50/90 dark:hover:bg-white/[0.04] active:bg-gray-100/70 dark:active:bg-white/[0.06]',
-          'border-b border-gray-100/80 dark:border-white/5 last:border-0 group cursor-pointer relative select-none'
+          'w-full text-left flex items-start gap-3.5 sm:gap-4 px-3 sm:px-4 py-3.5 transition-all duration-150',
+          isUnread
+            ? 'bg-[#1A6B3C]/[0.035] hover:bg-[#1A6B3C]/[0.06] dark:bg-emerald-500/[0.045] dark:hover:bg-emerald-500/[0.075]'
+            : 'bg-transparent hover:bg-black/[0.02] dark:hover:bg-white/[0.03]',
+          'active:bg-black/[0.04] dark:active:bg-white/[0.05]',
+          'border-b border-gray-200/50 dark:border-white/5 last:border-0 group cursor-pointer relative select-none rounded-2xl'
         )}
       >
 
@@ -840,6 +894,51 @@ export default function NotificationsPage() {
                 >
                   <X size={13} />
                   <span>{isBusy ? 'Declining...' : 'Decline Request'}</span>
+                </button>
+              </div>
+            )
+          ) : isFollower ? (
+            isFollowDismissed ? (
+              <p className="font-jakarta text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+                {description || 'Someone started following you.'}
+              </p>
+            ) : (
+              <div
+                className="flex items-center gap-2 sm:gap-2.5 mt-2.5 max-w-xs sm:max-w-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    void markAsRead(notif.id);
+                    if (followerTargetId) {
+                      await handleFollowBack(followerTargetId, notif.id);
+                      void removeNotification(notif.id);
+                    }
+                  }}
+                  disabled={isFollowBusy}
+                  className="flex items-center justify-center gap-1.5 bg-[#1A6B3C] hover:bg-[#155a33] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-jakarta font-bold text-xs py-1.5 px-3.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {isFollowBusy ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <UserPlus size={13} className="stroke-[2.5]" />
+                  )}
+                  <span>{isFollowBusy ? 'Checking...' : 'Follow Back'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void markAsRead(notif.id);
+                    handleCloseFollowCta(notif.id);
+                  }}
+                  disabled={isFollowBusy}
+                  className="flex items-center justify-center gap-1 bg-gray-100 hover:bg-gray-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-gray-700 dark:text-gray-300 font-jakarta font-semibold text-xs py-1.5 px-3.5 rounded-xl border border-gray-200/80 dark:border-white/10 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  <X size={13} />
+                  <span>Close</span>
                 </button>
               </div>
             )
@@ -964,277 +1063,184 @@ export default function NotificationsPage() {
 
   return (
     <PageTransition>
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-8">
-        <div className="max-w-3xl mx-auto px-0 sm:px-4 pt-4 sm:pt-6">
-          {/* ═══ Header Bar (Title, Count, Read All, Clear All) ═══ */}
-          <div className="flex items-center justify-between mb-4 px-4 sm:px-0">
-            <div className="flex items-center gap-3">
-              <h1 className="font-fraunces font-bold text-2xl sm:text-3xl text-[#1A6B3C] dark:text-white tracking-tight">
-                Notifications
-              </h1>
-              {unreadCount > 0 && (
-                <span className="bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-extrabold text-[11px] px-2.5 py-0.5 rounded-full shadow-xs">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {browserPerm !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
-                <button
-                  type="button"
-                  onClick={handleEnableBrowserNotifications}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 font-jakarta font-semibold text-xs transition-colors cursor-pointer"
-                  title="Enable browser notifications for messages and alerts"
-                >
-                  <Bell size={13} />
-                  <span className="hidden sm:inline">Enable Browser Alerts</span>
-                  <span className="sm:hidden">Alerts</span>
-                </button>
-              )}
-
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={markAllAsRead}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/15 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-[#1A6B3C] dark:text-emerald-400 font-jakarta font-bold text-xs transition-colors cursor-pointer"
-                >
-                  <CheckCheck size={14} className="stroke-[2.5]" />
-                  <span>Read All</span>
-                </button>
-              )}
-
-              {notifications.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowClearConfirm(true)}
-                  title="Clear all notifications"
-                  className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* ═══ Filter Category Controls: Desktop Tabs & Mobile Responsive Dropdown ═══ */}
-          <div className="flex items-center justify-between gap-3 mb-4 px-4 sm:px-0">
-            {/* Desktop Tabs (hidden on mobile) */}
-            <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {[
-                { id: 'all', label: 'All', count: categoryCounts.all },
-                { id: 'unread', label: 'Unread', count: categoryCounts.unread },
-                { id: 'messages', label: 'Messages', count: categoryCounts.messages },
-                { id: 'connections', label: 'Connections', count: categoryCounts.connections },
-                { id: 'ally', label: 'Ally', count: categoryCounts.ally },
-                { id: 'safety', label: 'Safety', count: categoryCounts.safety },
-                { id: 'activity', label: 'Activity', count: categoryCounts.activity },
-              ].map((tab) => {
-                const isActive = activeFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveFilter(tab.id as FilterCategory)}
-                    className={cn(
-                      'px-3.5 py-1.5 rounded-2xl font-jakarta text-xs transition-all cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap',
-                      isActive
-                        ? 'bg-[#1A6B3C] text-white font-extrabold shadow-xs'
-                        : 'bg-white dark:bg-[#181818] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 font-semibold border border-gray-200/80 dark:border-white/10'
-                    )}
-                  >
-                    <span>{tab.label}</span>
-                    <span
-                      className={cn(
-                        'px-1.5 py-0.2 rounded-full text-[10px] font-bold',
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
-                      )}
-                    >
-                      {tab.count}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-0 sm:px-6 pt-0 sm:pt-6 pb-0 sm:pb-8 min-h-full">
+          {/* ═══ One Unified White Notification Card (Full Bleed on Mobile Responsive) ═══ */}
+          <div className="w-full min-h-full sm:min-h-0 bg-white dark:bg-[#181818] rounded-none sm:rounded-3xl border-0 border-b border-[#E2DED7] dark:border-white/10 sm:border sm:border-gray-200/80 dark:sm:border-white/10 shadow-none sm:shadow-sm p-4 sm:p-6 pb-24 sm:pb-6 overflow-hidden">
+            {/* Card Header: Label "Notification" & filter icon centered, no horizontal line */}
+            <div className="relative flex items-center justify-center pt-1 pb-3 mb-2">
+              <div className="flex items-center justify-center gap-2 relative">
+                <div className="flex items-center gap-2.5">
+                  <h1 className="font-fraunces font-bold text-2xl sm:text-3xl text-[#1A6B3C] dark:text-white tracking-tight text-center">
+                    Notification
+                  </h1>
+                  {unreadCount > 0 && (
+                    <span className="bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-extrabold text-[11px] px-2.5 py-0.5 rounded-full shadow-xs">
+                      {unreadCount}
                     </span>
+                  )}
+                </div>
+
+                {/* Borderless, circular icon with color matching notification label */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowFilterDropdown((prev) => !prev)}
+                    className="w-8 h-8 rounded-full border-0 bg-transparent flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400 hover:bg-[#1A6B3C]/10 dark:hover:bg-emerald-500/15 active:scale-95 transition-all cursor-pointer relative"
+                    title="Filter notifications"
+                    aria-label="Filter notifications"
+                  >
+                    <Filter size={17} className="text-[#1A6B3C] dark:text-emerald-400 stroke-[2.2]" />
+                    {activeFilter !== 'all' && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 ring-2 ring-white dark:ring-[#181818]" />
+                    )}
                   </button>
-                );
-              })}
+
+                  {/* Filter Dropdown */}
+                  {showFilterDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowFilterDropdown(false)}
+                      />
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-52 bg-white dark:bg-[#181818] border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-2xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                        <div className="px-3.5 py-1.5 border-b border-gray-100 dark:border-white/5 mb-1">
+                          <span className="text-[10px] font-jakarta font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                            Filter by
+                          </span>
+                        </div>
+                        {[
+                          { id: 'all', label: 'All', count: categoryCounts.all },
+                          { id: 'unread', label: 'Unread', count: categoryCounts.unread },
+                          { id: 'messages', label: 'Messages', count: categoryCounts.messages },
+                          { id: 'connections', label: 'Connections', count: categoryCounts.connections },
+                          { id: 'ally', label: 'Ally', count: categoryCounts.ally },
+                          { id: 'safety', label: 'Safety', count: categoryCounts.safety },
+                          { id: 'activity', label: 'Activity', count: categoryCounts.activity },
+                        ].map((item) => {
+                          const isSelected = activeFilter === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveFilter(item.id as FilterCategory);
+                                setShowFilterDropdown(false);
+                              }}
+                              className={cn(
+                                'w-full flex items-center justify-between px-3.5 py-2 text-xs font-jakarta transition-colors text-left cursor-pointer',
+                                isSelected
+                                  ? 'bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 font-bold'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 font-medium'
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isSelected ? (
+                                  <Check size={13} className="stroke-[2.5]" />
+                                ) : (
+                                  <div className="w-3.5" />
+                                )}
+                                <span>{item.label}</span>
+                              </div>
+                              <span
+                                className={cn(
+                                  'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                                  isSelected
+                                    ? 'bg-[#1A6B3C] text-white'
+                                    : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                                )}
+                              >
+                                {item.count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Right side: Alerts button & Read All button */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1.5 sm:gap-2">
+                {browserPerm !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
+                  <button
+                    type="button"
+                    onClick={handleEnableBrowserNotifications}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 font-jakarta font-semibold text-xs transition-colors cursor-pointer"
+                    title="Enable browser notifications for messages and alerts"
+                  >
+                    <Bell size={13} />
+                    <span className="hidden sm:inline">Alerts</span>
+                  </button>
+                )}
+
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllAsRead}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#1A6B3C]/10 hover:bg-[#1A6B3C]/15 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-[#1A6B3C] dark:text-emerald-400 font-jakarta font-bold text-xs transition-colors cursor-pointer active:scale-95"
+                  >
+                    <CheckCheck size={14} className="stroke-[2.5]" />
+                    <span className="hidden sm:inline">Read All</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Mobile Responsive Filter Dropdown (visible on mobile only) */}
-            <div className="sm:hidden relative">
-              <button
-                type="button"
-                onClick={() => setShowMobileFilterDropdown((prev) => !prev)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-[#181818] border border-gray-200 dark:border-white/10 shadow-xs text-xs font-jakarta font-bold text-gray-800 dark:text-white cursor-pointer active:scale-95 transition-all"
-              >
-                <Filter size={13} className="text-[#1A6B3C] dark:text-emerald-400" />
-                <span className="capitalize">
-                  {activeFilter}
-                </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400 font-bold">
-                  {categoryCounts[activeFilter]}
-                </span>
-                <ChevronDown
-                  size={13}
-                  className={cn(
-                    'text-gray-400 transition-transform duration-200',
-                    showMobileFilterDropdown && 'rotate-180'
-                  )}
-                />
-              </button>
-
-              {showMobileFilterDropdown && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowMobileFilterDropdown(false)}
-                  />
-                  <div className="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-[#181818] border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                    {[
-                      { id: 'all', label: 'All', count: categoryCounts.all },
-                      { id: 'unread', label: 'Unread', count: categoryCounts.unread },
-                      { id: 'messages', label: 'Messages', count: categoryCounts.messages },
-                      { id: 'connections', label: 'Connections', count: categoryCounts.connections },
-                      { id: 'ally', label: 'Ally', count: categoryCounts.ally },
-                      { id: 'safety', label: 'Safety', count: categoryCounts.safety },
-                      { id: 'activity', label: 'Activity', count: categoryCounts.activity },
-                    ].map((item) => {
-                      const isSelected = activeFilter === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveFilter(item.id as FilterCategory);
-                            setShowMobileFilterDropdown(false);
-                          }}
-                          className={cn(
-                            'w-full flex items-center justify-between px-3.5 py-2 text-xs font-jakarta transition-colors text-left cursor-pointer',
-                            isSelected
-                              ? 'bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 font-bold'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 font-medium'
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isSelected ? (
-                              <Check size={13} className="stroke-[2.5]" />
-                            ) : (
-                              <div className="w-3.5" />
-                            )}
-                            <span>{item.label}</span>
-                          </div>
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                              isSelected
-                                ? 'bg-[#1A6B3C] text-white'
-                                : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
-                            )}
-                          >
-                            {item.count}
-                          </span>
-                        </button>
-                      );
-                    })}
+            {/* ═══ Content List ═══ */}
+            <div className="w-full">
+              {loading ? (
+                <div className="divide-y divide-gray-100/80 dark:divide-white/5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-4 px-2 sm:px-3 py-4 animate-pulse">
+                      <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-white/10 flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-full w-2/5" />
+                        <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-full w-3/5" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredNotifications.length === 0 ? (
+                <div className="px-4 py-20 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/15 flex items-center justify-center mx-auto mb-4 text-[#1A6B3C] dark:text-emerald-400">
+                    <Bell size={28} />
                   </div>
-                </>
+                  <p className="font-fraunces font-semibold text-lg text-gray-800 dark:text-white mb-1">
+                    You're all caught up! 🎉
+                  </p>
+                  <p className="font-jakarta text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    New likes, comments, and connection requests will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {notificationSections.map((section) => (
+                    <div key={section.key}>
+                      {/* Horizontal divider line with centered date/historic label */}
+                      <div className="relative flex items-center justify-center my-6 px-1 sm:px-0" aria-label={section.label}>
+                        <div className="absolute inset-0 flex items-center px-1 sm:px-0" aria-hidden="true">
+                          <div className="w-full border-t border-gray-100 dark:border-white/10" />
+                        </div>
+                        <div className="relative bg-white dark:bg-[#181818] px-4 select-none">
+                          <span className="font-jakarta font-bold text-[11px] sm:text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                            {section.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="divide-y divide-gray-100/80 dark:divide-white/5">
+                        {section.items.map((n) => renderRow(n))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-
-            {/* "view all match request" Green Link */}
-            <button
-              type="button"
-              onClick={() => navigate('/requests')}
-              className="text-xs font-jakarta font-bold text-[#1A6B3C] dark:text-emerald-400 hover:text-[#155a33] dark:hover:text-emerald-300 hover:underline flex items-center gap-1 flex-shrink-0 cursor-pointer transition-colors py-1"
-            >
-              <span>view all match request</span>
-              <ChevronRight size={13} />
-            </button>
-          </div>
-
-          {/* ═══ Content List (Full-bleed on mobile, card on desktop) ═══ */}
-          <div className="bg-white dark:bg-[#111827] rounded-none sm:rounded-2xl border-y sm:border border-x-0 sm:border-x border-gray-200/80 dark:border-white/10 shadow-none sm:shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
-            {loading ? (
-              <div className="divide-y divide-gray-100/80 dark:divide-white/5">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
-                    <div className="w-11 h-11 rounded-2xl bg-gray-200 dark:bg-white/10 flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-full w-2/5" />
-                      <div className="h-3 bg-gray-100 dark:bg-white/5 rounded-full w-3/5" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredNotifications.length === 0 ? (
-              <div className="px-4 py-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/15 flex items-center justify-center mx-auto mb-4 text-[#1A6B3C] dark:text-emerald-400">
-                  <Bell size={28} />
-                </div>
-                <p className="font-fraunces font-semibold text-lg text-gray-800 dark:text-white mb-1">
-                  You're all caught up! 🎉
-                </p>
-                <p className="font-jakarta text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                  New likes, comments, and connection requests will appear here.
-                </p>
-              </div>
-            ) : (
-              <div>
-                {notificationSections.map((section, idx) => (
-                  <div key={section.key} className={cn(idx > 0 && "border-t border-gray-100 dark:border-white/10")}>
-                    <div className="bg-gray-50/80 dark:bg-white/[0.03] px-4 sm:px-5 py-2 border-b border-gray-100/80 dark:border-white/5 flex items-center justify-between">
-                      <span className="font-jakarta font-extrabold text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        {section.label}
-                      </span>
-                    </div>
-                    <div className="divide-y divide-gray-100/80 dark:divide-white/5">
-                      {section.items.map((n) => renderRow(n))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
-
-      {/* ═══ Clear All Confirmation Dialog ═══ */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-[#181818] rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-white/10 space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mx-auto">
-              <Trash2 size={24} />
-            </div>
-            <div className="text-center">
-              <h3 className="font-fraunces font-bold text-lg text-gray-900 dark:text-white">
-                Clear all notifications?
-              </h3>
-              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
-                This will remove all notifications from your list.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 font-jakarta font-semibold text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowClearConfirm(false);
-                  await clearAll();
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 font-jakarta font-semibold text-xs text-white transition-colors cursor-pointer shadow-xs"
-              >
-                Clear All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </PageTransition>
   );
 }

@@ -62,6 +62,10 @@ export interface ProfileRow {
   full_name?: string | null;
   username?: string | null;
   avatar_url?: string | null;
+  avatarKey?: string | null;
+  avatar_preset_id?: string | null;
+  is_ally?: boolean;
+  is_unrevealed_match?: boolean;
   bio?: string | null;
   department?: string | null;
   course?: string | null;
@@ -106,6 +110,7 @@ export interface UserPreferences {
   show_online_status: boolean;
   show_last_active: boolean;
   read_receipts_enabled: boolean;
+  account_privacy?: 'public' | 'private';
   profile_visibility: 'campus' | 'matches_only' | 'hidden';
   feed_post_audience: 'campus' | 'matches_only' | 'anonymous_only';
 
@@ -557,6 +562,8 @@ export interface ProfileRelationshipSummary {
   mutualAlliesCount: number;
   mutualFollowersCount: number;
   mutualFollowingCount: number;
+  /** Viewed account is private — only allies may see its posts. */
+  isPrivate?: boolean;
 }
 
 // ─── Admin ──────────────────────────────────────────────────────────────

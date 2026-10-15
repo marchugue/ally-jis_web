@@ -40,7 +40,7 @@ export function ReplyQuote({
         {previewText && (
           <p
             className={cn(
-              'font-jakarta text-xs truncate mt-0.5',
+              'font-jakarta text-xs mt-0.5 line-clamp-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere]',
               variant === 'compose' && 'text-gray-500',
               variant === 'bubble-me' && 'text-white/75',
               variant === 'bubble-them' && 'text-gray-500',

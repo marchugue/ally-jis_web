@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { X, Send, MessageCircle, Heart, Reply, UserCheck } from 'lucide-react';
+import { X, Send, MessageCircle, Reply, UserCheck } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
-import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
+import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import FeedPostCard from '@/components/feed/FeedPostCard';
 import type { FeedCommentWithReplies, FeedComment, FeedPost } from '@/types/feed';
 import type { Student } from '@/types/ally';
@@ -84,29 +85,29 @@ function CommentRow({
   };
 
   const handleAuthorClick = () => {
-    // Only allow navigating to profile if author is an ally or own profile
-    if (onAuthorClick && comment.author_id && isAlly) {
+    if (onAuthorClick && comment.author_id) {
       onAuthorClick(comment.author_id);
     }
   };
 
   return (
     <div className="flex items-start gap-2.5 sm:gap-3 group">
-      <div
-        className={onAuthorClick && comment.author_id && isAlly ? "cursor-pointer hover:opacity-85 transition-opacity flex-shrink-0" : "flex-shrink-0"}
-        onClick={handleAuthorClick}
-      >
-        {isAlly ? (
-          <AvatarDisplay src={author?.avatar_url} name={displayName} className="w-8 h-8 rounded-xl object-cover ring-1 ring-black/5 dark:ring-white/10 shadow-xs" />
-        ) : (
-          <AnonymousAvatar avatarKey={author?.avatarKey || 'fox'} size={32} className="rounded-xl shadow-xs" />
-        )}
-      </div>
+      <ClickableAvatar
+        userId={comment.author_id}
+        avatarUrl={author?.avatar_url}
+        avatarKey={author?.avatarKey}
+        name={displayName}
+        revealed={Boolean(isAlly)}
+        size={32}
+        className="w-8 h-8 rounded-xl ring-1 ring-black/5 dark:ring-white/10 shadow-xs"
+        wrapperClassName="rounded-xl"
+        onNavigate={onAuthorClick}
+      />
       <div className="flex-1 min-w-0">
         <div className="bg-gray-50/90 dark:bg-white/[0.04] hover:bg-gray-100/70 dark:hover:bg-white/[0.06] border border-gray-100/80 dark:border-white/10 rounded-2xl px-3.5 py-2.5 transition-colors">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <div
-              className={`flex items-center gap-1.5 ${onAuthorClick && comment.author_id && isAlly ? "cursor-pointer hover:underline" : ""}`}
+              className={`flex items-center gap-1.5 ${onAuthorClick && comment.author_id ? "cursor-pointer hover:underline" : ""}`}
               onClick={handleAuthorClick}
             >
               <p className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">{displayName}</p>
@@ -133,10 +134,10 @@ function CommentRow({
           <button
             onClick={handleLike}
             className={`font-jakarta text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer ${
-              comment.liked_by_me ? 'text-red-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+              comment.liked_by_me ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400'
             }`}
           >
-            <Heart size={12} className={comment.liked_by_me ? 'fill-red-500 text-red-500' : ''} />
+            <LordHeartIcon isLiked={comment.liked_by_me} size={13} />
             <span>{comment.likes_count > 0 ? comment.likes_count : 'Like'}</span>
           </button>
           {onReply && (

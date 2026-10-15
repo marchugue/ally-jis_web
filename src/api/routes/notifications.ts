@@ -38,3 +38,7 @@ export function getNotificationRedirection(id: string) {
 export function deleteAllNotifications(): Promise<void> {  // ← fixed typo + completed
   return request<void>('/notifications', { method: 'DELETE' });
 }
+
+export function deleteNotification(id: string): Promise<void> {
+  return request<void>(`/notifications/${id}`, { method: 'DELETE' });
+}

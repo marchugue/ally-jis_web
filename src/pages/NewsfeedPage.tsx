@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { AlertCircle, RefreshCw, Plus, Home, Users } from 'lucide-react';
+import { AlertCircle, RefreshCw, Plus, Home, Users, ArrowUp } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import FeedPostCard from '@/components/feed/FeedPostCard';
 import PostComposerTrigger from '@/components/ally/PostComposerTrigger';
 import PostComposerModal from '@/components/feed/PostComposerModal';
 import CommentsModal from '@/components/feed/CommentsModal';
+import PullToRefresh from '@/components/feed/PullToRefresh';
 import { useNewsfeed, FeedFilterTab } from '@/hooks/useNewsFeed';
 import { apiClient, isApiConfigured } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -24,14 +25,17 @@ export default function NewsfeedPage() {
     setActiveFilter,
     isLoading,
     isLoadingMore,
+    isRefreshing,
     hasMore,
     banner,
     setBanner,
     loadMore,
+    refreshFeed,
     createPost,
     toggleLike,
     toggleFollow,
     bumpCommentCount,
+    newPostsCount,
   } = useNewsfeed();
 
   const { user } = useAuth();
@@ -41,6 +45,7 @@ export default function NewsfeedPage() {
   const [activePost, setActivePost] = useState<FeedPost | null>(null);
   const [pendingReplyCommentId, setPendingReplyCommentId] = useState<string | null>(null);
   const handledDeepLinkRef = useRef<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Deep-link direct post scroll & auto open comments
   useEffect(() => {
@@ -110,6 +115,19 @@ export default function NewsfeedPage() {
     return () => observer.disconnect();
   }, [loadMore, hasMore, isLoadingMore]);
 
+  const handleToggleLike = useCallback((post: FeedPost) => {
+    toggleLike(post);
+    setActivePost((prev) =>
+      prev && prev.id === post.id
+        ? {
+            ...prev,
+            liked_by_me: !prev.liked_by_me,
+            likes_count: prev.likes_count + (prev.liked_by_me ? -1 : 1),
+          }
+        : prev
+    );
+  }, [toggleLike]);
+
   const handleDelete = useCallback(
     async (postId: string) => {
       if (!useBackend) return;
@@ -155,7 +173,7 @@ export default function NewsfeedPage() {
 
   return (
     <PageTransition>
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-8">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-24 md:pb-8">
         {/* ── Mobile Sticky Header Bar: Ally-jis Label on Left & Filter Pills on Right ── */}
         <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-b border-[#E2DED7] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
           <span className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-white tracking-tight">
@@ -190,12 +208,34 @@ export default function NewsfeedPage() {
           </div>
         </div>
 
-        {/* Contained column matching profile page stream width */}
-        <div className="max-w-4xl xl:max-w-[900px] mx-auto px-0 sm:px-4 lg:px-6 pt-0 sm:pt-5 pb-12">
+        <PullToRefresh
+          onRefresh={refreshFeed}
+          isRefreshing={isRefreshing}
+          scrollContainerRef={scrollContainerRef}
+        >
+          {/* Contained column matching profile page stream width */}
+          <div className="max-w-4xl xl:max-w-[900px] mx-auto px-0 sm:px-4 lg:px-6 pt-0 sm:pt-5 pb-12">
 
-          {/* Error banner */}
-          {banner && (
-            <div className="mb-3 mx-3 sm:mx-0 flex items-center gap-2 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl px-4 py-3">
+            {/* Floating New Posts Pill */}
+            {newPostsCount > 0 && (
+              <div className="sticky top-14 sm:top-4 z-30 flex justify-center mb-3 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    refreshFeed();
+                    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A6B3C] text-white font-jakarta text-xs sm:text-[13px] font-bold shadow-lg shadow-[#1A6B3C]/30 hover:bg-[#155730] active:scale-95 transition-all cursor-pointer"
+                >
+                  <ArrowUp size={14} className="animate-bounce" />
+                  <span>{newPostsCount} new {newPostsCount === 1 ? 'post' : 'posts'} • Scroll up to refresh</span>
+                </button>
+              </div>
+            )}
+
+            {/* Error banner */}
+            {banner && (
+              <div className="mb-3 mx-3 sm:mx-0 flex items-center gap-2 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl sm:rounded-2xl px-4 py-3">
               <AlertCircle size={15} className="flex-shrink-0" />
               <p className="font-jakarta text-sm flex-1">{banner}</p>
               <button
@@ -304,10 +344,9 @@ export default function NewsfeedPage() {
                   key={post.id}
                   post={post}
                   currentUser={currentUser}
-                  onToggleLike={toggleLike}
+                  onToggleLike={handleToggleLike}
                   onCommentClick={setActivePost}
                   onDelete={handleDelete}
-                  onAuthorClick={(authorId) => navigate(`/profile/${authorId}`)}
                   onToggleFollow={toggleFollow}
                   className="rounded-none sm:rounded-2xl border-0 border-b border-[#E2DED7] dark:border-white/10 sm:border sm:border-gray-200/80 dark:sm:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 shadow-none sm:shadow-2xs transition-colors"
                 />
@@ -330,6 +369,7 @@ export default function NewsfeedPage() {
             </div>
           )}
         </div>
+      </PullToRefresh>
 
         {/* ── Mobile Floating Action Button (FAB) ── */}
         <button
@@ -360,7 +400,7 @@ export default function NewsfeedPage() {
         loadComments={loadComments}
         onSubmitComment={submitComment}
         onToggleCommentLike={toggleCommentLike}
-        onTogglePostLike={toggleLike}
+        onTogglePostLike={handleToggleLike}
         onDeletePost={handleDelete}
         initialReplyCommentId={pendingReplyCommentId}
         onAuthorClick={(authorId) => {

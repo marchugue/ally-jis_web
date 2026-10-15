@@ -21,6 +21,10 @@ export interface Student {
   movieInterests?: string[];
   ageRange?: string | null;
   matchGenderPreference?: string | null;
+  avatarKey?: string | null;
+  avatarPresetId?: string | null;
+  isAlly?: boolean;
+  isUnrevealedMatch?: boolean;
 }
 
 export interface MessageReplyPreview {

@@ -266,8 +266,27 @@ export function ProfileSettingsDrawer({
   const [changingPassword, setChangingPassword] = useState(false);
 
   // Preference Toggles
+  const [privateAccount, setPrivateAccountState] = useState(false);
   const [readReceipts, setReadReceipts] = useState(true);
   const [activityStatus, setActivityStatus] = useState(true);
+
+  useEffect(() => {
+    if (!isApiConfigured) return;
+    apiClient
+      .getMyPreferences()
+      .then((prefs) => setPrivateAccountState(prefs?.account_privacy === 'private'))
+      .catch(() => {});
+  }, []);
+
+  const setPrivateAccount = (next: boolean) => {
+    setPrivateAccountState(next);
+    apiClient
+      .updateMyPreferences({ account_privacy: next ? 'private' : 'public' })
+      .catch(() => {
+        setPrivateAccountState(!next);
+        notify.error('Could not update privacy', 'Please try again.');
+      });
+  };
   const [matchAlerts, setMatchAlerts] = useState(true);
   const [emailDigest, setEmailDigest] = useState(false);
 
@@ -619,6 +638,13 @@ export function ProfileSettingsDrawer({
 
               {/* Toggles */}
               <div className="space-y-3">
+                <FlatToggleItem
+                  title="Private Account"
+                  description="Only allies can see your posts. Your profile stays reachable and anonymous."
+                  checked={privateAccount}
+                  onChange={setPrivateAccount}
+                  icon={Shield}
+                />
                 <FlatToggleItem
                   title="Read Receipts"
                   description="Allow chat partners to see when you have read their messages."

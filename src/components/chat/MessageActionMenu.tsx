@@ -245,8 +245,12 @@ export function MobileReactionPopup({
             className={cn(
               isEmojiOnly
                 ? cn('text-4xl leading-tight py-1', isMe ? 'text-right' : 'text-left')
-                : 'text-sm font-jakarta leading-snug whitespace-pre-wrap break-words'
+                : 'text-sm font-jakarta leading-snug whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]'
             )}
+            style={{
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+            }}
           >
             {msg.content}
           </p>

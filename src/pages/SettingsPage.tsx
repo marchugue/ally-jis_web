@@ -88,6 +88,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   show_online_status: true,
   show_last_active: true,
   read_receipts_enabled: true,
+  account_privacy: 'public',
   profile_visibility: 'campus',
   feed_post_audience: 'campus',
   typing_indicators_enabled: true,
@@ -688,6 +689,13 @@ export default function SettingsPage() {
 
                   {/* Presence Toggles Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <ToggleItem
+                      title="Private Account"
+                      description="Only allies can see your posts. Your profile page stays reachable and anonymous to everyone else."
+                      checked={preferences.account_privacy === 'private'}
+                      onChange={(val) => handleUpdatePref({ account_privacy: val ? 'private' : 'public' })}
+                      icon={Lock}
+                    />
                     <ToggleItem
                       title="Online Status"
                       description="Display the green active indicator when you are using the app."

@@ -275,6 +275,7 @@ export const apiClient = {
   markTargetNotificationsRead: notifications.markTargetNotificationsRead,
   markAllNotificationsRead: notifications.markAllNotificationsRead,
   deleteAllNotifications: notifications.deleteAllNotifications,
+  deleteNotification: notifications.deleteNotification,
 
   // ─── Media ───────────────────────────────────────────────────────────────────
   getPresetAvatars: media.getPresetAvatars,

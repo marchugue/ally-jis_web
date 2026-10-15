@@ -4,6 +4,8 @@ import { Conversation } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { RevealAvatar } from '@/components/match/RevealAvatar';
+import { getEffectiveAvatarReveal } from '@/lib/avatarRevealCache';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -59,6 +61,14 @@ const ConversationRow = memo(function ConversationRow({
       : (conv.streakActiveToday ?? conv.matchInfo?.streakActiveToday)
   );
 
+  const matchId = conv.matchInfo?.matchId;
+  const matchPoints = conv.matchInfo?.matchPoints ?? conv.matchInfo?.stagePoints ?? 0;
+  const revealData = isAnonymous
+    ? getEffectiveAvatarReveal(matchId, matchPoints, null, {
+        partnerAvatar: conv.matchInfo?.partnerAvatar || 'fox',
+      })
+    : null;
+
   return (
     <div className="relative group">
       <button
@@ -75,7 +85,15 @@ const ConversationRow = memo(function ConversationRow({
       >
         <div className="relative flex-shrink-0">
           {isAnonymous ? (
-            <AnonymousAvatar avatarKey={conv.matchInfo?.partnerAvatar} size={48} className="w-14 h-14 md:w-12 md:h-12 rounded-full" />
+            <RevealAvatar
+              reveal={revealData}
+              avatarKey={conv.matchInfo?.partnerAvatar || 'fox'}
+              size={48}
+              showRing={false}
+              showGainChip={false}
+              fallbackInitials={conv.participantName}
+              className="w-14 h-14 md:w-12 md:h-12 rounded-full"
+            />
           ) : (
             <AvatarDisplay src={conv.participantAvatar} className="w-14 h-14 md:w-12 md:h-12 rounded-full object-cover" textClassName="text-xl md:text-lg" />
           )}

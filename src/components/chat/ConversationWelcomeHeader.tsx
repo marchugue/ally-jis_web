@@ -1,7 +1,6 @@
 import React from 'react';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
-import { RevealAvatar } from '@/components/match/RevealAvatar';
 import type { AvatarRevealView } from '@/api/types';
 import { cn } from '@/lib/utils';
 
@@ -41,17 +40,11 @@ export const ConversationWelcomeHeader: React.FC<ConversationWelcomeHeaderProps>
     >
       {isAnonymous ? (
         <>
-          {partnerAvatar && (
-            <RevealAvatar
-              reveal={avatarReveal}
-              avatarKey={partnerAvatar}
-              size={72}
-              showRing={true}
-              showGainChip={false}
-              fallbackInitials={participantName}
-              className="rounded-full mb-3 shadow-xs"
-            />
-          )}
+          <AnonymousAvatar
+            avatarKey={partnerAvatar || participantAvatar || 'fox'}
+            size={72}
+            className="rounded-full mb-3 shadow-xs"
+          />
           <h3 className="font-jakarta font-bold text-lg sm:text-xl text-gray-900 dark:text-white tracking-tight">
             {participantName}
           </h3>

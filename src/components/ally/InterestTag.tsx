@@ -7,6 +7,7 @@ interface InterestTagProps {
   isSelected?: boolean;
   onClick?: () => void;
   size?: 'sm' | 'md';
+  className?: string;
 }
 
 const colorMap = {
@@ -47,13 +48,20 @@ const colorMap = {
   },
 };
 
-export default function InterestTag({ label, isShared, isSelected, onClick, size = 'md' }: InterestTagProps) {
+export default function InterestTag({
+  label,
+  isShared,
+  isSelected,
+  onClick,
+  size = 'md',
+  className: customClassName,
+}: InterestTagProps) {
   const color = (INTEREST_COLOR_MAP[label] || 'blue') as keyof typeof colorMap;
   const colors = colorMap[color] || colorMap.blue;
 
-  let className = colors.base;
-  if (isSelected) className = colors.selected;
-  else if (isShared) className = colors.shared;
+  let stateClass = colors.base;
+  if (isSelected) stateClass = colors.selected;
+  else if (isShared) stateClass = colors.shared;
 
   return (
     <span
@@ -61,7 +69,8 @@ export default function InterestTag({ label, isShared, isSelected, onClick, size
       className={cn(
         'inline-flex items-center rounded-full font-jakarta font-medium transition-all duration-150',
         size === 'sm' ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-sm',
-        className,
+        stateClass,
+        customClassName,
         onClick && 'cursor-pointer hover:opacity-80 active:scale-95',
         isSelected && 'ring-2 ring-offset-1 dark:ring-offset-gray-900',
       )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { getAnonymousAnimalAnimatedUrl } from '@/lib/fluentEmoji';
-import { AVATAR_EMOJI, DEFAULT_AVATAR_EMOJI } from '@/lib/matchOptions';
+import { getCrittersAvatarDataUri, getCrittersHttpUrl } from '@/lib/dicebearCritters';
+import { avatarColorFor } from '@/lib/matchOptions';
 import type { AvatarRevealView } from '@/api/types';
 
 export interface FloatingStatusBadgeProps {
@@ -83,10 +83,10 @@ export const FloatingStatusBadge: React.FC<FloatingStatusBadgeProps> = ({
   const targetPoints = profileUnlockTarget > 0 ? profileUnlockTarget : pointsPerStage;
   const progression = calculateStageProgression(stage, currentPoints, dayStreak, targetPoints);
   
-  // Prefer local downloaded asset in public/emojis/animals/, fallback to CDN
-  const localUrl = avatarKey ? `/emojis/animals/${avatarKey.toLowerCase().trim()}.png` : `/emojis/animals/default.png`;
-  const animatedUrl = imgError ? getAnonymousAnimalAnimatedUrl(avatarKey) : localUrl;
-  const fallbackEmoji = (avatarKey && AVATAR_EMOJI[avatarKey]) || DEFAULT_AVATAR_EMOJI;
+  const bg = avatarColorFor(avatarKey);
+  const avatarSrc = imgError
+    ? getCrittersHttpUrl(avatarKey, bg)
+    : getCrittersAvatarDataUri(avatarKey, bg, emojiSize);
 
   const tooltipText = progression.isProfileUnlocked
     ? `Profile Unlocked! • Stage ${progression.currentStage} (${dayStreak}d streak) • Click to view Roadmap`
@@ -104,15 +104,15 @@ export const FloatingStatusBadge: React.FC<FloatingStatusBadgeProps> = ({
       title={tooltipText}
       aria-label="Open Ally Roadmap & Progression"
     >
-      {/* 3D Animal with gentle float animation on hover */}
+      {/* Critters Avatar with gentle float animation on hover */}
       <div
-        className="flex items-center justify-center relative select-none group-hover:scale-110 transition-transform duration-300"
-        style={{ width: emojiSize, height: emojiSize }}
+        className="flex items-center justify-center relative select-none group-hover:scale-110 transition-transform duration-300 rounded-full overflow-hidden shadow-md"
+        style={{ width: emojiSize, height: emojiSize, border: `2px solid ${bg}` }}
       >
         <img
-          src={animatedUrl}
-          alt={fallbackEmoji}
-          className="w-full h-full object-contain drop-shadow-md pointer-events-none"
+          src={avatarSrc}
+          alt={avatarKey || 'Roadmap'}
+          className="w-full h-full object-cover pointer-events-none select-none"
           loading="eager"
           decoding="async"
           onError={() => setImgError(true)}

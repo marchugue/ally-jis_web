@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { AVATAR_EMOJI } from '@/lib/matchOptions';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 
 type AvatarDisplayProps = {
   src?: string | null;
@@ -37,14 +38,10 @@ export function AvatarDisplay({ src, name, alt, className, textClassName }: Avat
   const cleanSrc = src?.trim() || null;
 
   // Check if src is an animal key (e.g. 'fox', 'wolf', 'panda')
-  const animalEmoji = cleanSrc ? AVATAR_EMOJI[cleanSrc.toLowerCase()] : null;
+  const animalKey = cleanSrc && AVATAR_EMOJI[cleanSrc.toLowerCase()] ? cleanSrc.toLowerCase() : null;
 
-  if (animalEmoji) {
-    return (
-      <div className={cn('flex items-center justify-center bg-[#1A6B3C]/10 dark:bg-transparent text-[#1A6B3C] dark:text-white flex-shrink-0 overflow-hidden select-none', className)}>
-        <span className={cn('text-lg leading-none select-none', textClassName)}>{animalEmoji}</span>
-      </div>
-    );
+  if (animalKey) {
+    return <AnonymousAvatar avatarKey={animalKey} className={className} />;
   }
 
   // If it's an emoji string (not a URL/path)

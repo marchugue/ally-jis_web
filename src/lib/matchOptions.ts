@@ -21,6 +21,30 @@ export const AVATAR_EMOJI: Record<string, string> = {
   badger: '🦡',
 };
 
+export const ANIMAL_KEYS = [
+  'fox',
+  'wolf',
+  'whale',
+  'owl',
+  'panda',
+  'otter',
+  'falcon',
+  'koala',
+  'lynx',
+  'dolphin',
+  'raven',
+  'badger',
+];
+
+export function getDeterministicAnonymousAvatar(userId?: string | null): string {
+  if (!userId) return 'fox';
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return ANIMAL_KEYS[hash % ANIMAL_KEYS.length];
+}
+
 export const DEFAULT_AVATAR_EMOJI = '🎭';
 
 // Background color rotates by avatar key so the same alias always renders

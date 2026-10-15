@@ -131,31 +131,64 @@ export const CURRENT_USER: Student = {
 };
 
 export function calculateMatchPercentage(userA: Student, userB: Student): number {
-  const sharedInterests = userA.interests.filter(i => userB.interests.includes(i));
-  if (sharedInterests.length < 3) return 0;
-  const totalUnique = new Set([...userA.interests, ...userB.interests]).size;
-  const base = (sharedInterests.length / totalUnique) * 100;
-  const orgBonus = userA.organizations.filter(o => userB.organizations.includes(o)).length * 3;
-  return Math.min(Math.round(base + orgBonus), 100);
+  if (!userA || !userB) return 20;
+
+  const aInterests = Array.isArray(userA.interests) ? userA.interests : [];
+  const bInterests = Array.isArray(userB.interests) ? userB.interests : [];
+  const aOrgs = Array.isArray(userA.organizations) ? userA.organizations : [];
+  const bOrgs = Array.isArray(userB.organizations) ? userB.organizations : [];
+
+  const sharedInterests = aInterests.filter(i => bInterests.includes(i));
+  const sharedOrgs = aOrgs.filter(o => bOrgs.includes(o));
+
+  const sameDept = Boolean(userA.department && userB.department && userA.department.toLowerCase() === userB.department.toLowerCase());
+  const sameCourse = Boolean(userA.course && userB.course && userA.course.toLowerCase() === userB.course.toLowerCase());
+  const sameYear = Boolean(userA.yearLevel && userB.yearLevel && userA.yearLevel.toLowerCase() === userB.yearLevel.toLowerCase());
+
+  // Interest compatibility (up to 55 points)
+  const totalUnique = new Set([...aInterests, ...bInterests]).size;
+  let interestScore = 0;
+  if (totalUnique > 0 && sharedInterests.length > 0) {
+    interestScore = (sharedInterests.length / totalUnique) * 45 + Math.min(sharedInterests.length * 3, 10);
+  }
+
+  // Academic compatibility (up to 25 points)
+  let academicScore = 0;
+  if (sameCourse) academicScore += 15;
+  else if (sameDept) academicScore += 8;
+  if (sameYear) academicScore += 5;
+
+  // Organization bonus (up to 15 points)
+  const orgScore = Math.min(sharedOrgs.length * 5, 15);
+
+  // Baseline peer points for being a CHMSU student (15 points)
+  const baseScore = 15;
+
+  const total = Math.round(baseScore + interestScore + academicScore + orgScore);
+  return Math.min(Math.max(total, 15), 99);
 }
 
 export function getSharedInterests(userA: Student, userB: Student): string[] {
+  if (!userA?.interests || !userB?.interests) return [];
   return userA.interests.filter(i => userB.interests.includes(i));
 }
 
 export function getSharedOrgs(userA: Student, userB: Student): string[] {
+  if (!userA?.organizations || !userB?.organizations) return [];
   return userA.organizations.filter(o => userB.organizations.includes(o));
 }
 
 export function getMatchBadgeColor(percentage: number, sharedCount: number): string {
-  if (sharedCount >= 5 || percentage >= 85) return 'green';
-  if (sharedCount >= 4 || percentage >= 71) return 'orange';
-  if (sharedCount >= 3 || percentage >= 60) return 'yellow';
+  if (sharedCount >= 4 || percentage >= 80) return 'green';
+  if (sharedCount >= 2 || percentage >= 60) return 'orange';
+  if (sharedCount >= 1 || percentage >= 40) return 'yellow';
   return 'gray';
 }
 
 export function generateMatches(currentUser: Student, allStudents: Student[]): MatchCard[] {
+  if (!allStudents || allStudents.length === 0) return [];
   return allStudents
+    .filter(student => !currentUser || student.id !== currentUser.id)
     .map(student => {
       const sharedInterests = getSharedInterests(currentUser, student);
       const sharedOrgs = getSharedOrgs(currentUser, student);
@@ -168,7 +201,6 @@ export function generateMatches(currentUser: Student, allStudents: Student[]): M
         connectionStatus: 'none' as const,
       };
     })
-    .filter(m => m.sharedInterests.length >= 3)
     .sort((a, b) => b.matchPercentage - a.matchPercentage);
 }
 

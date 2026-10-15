@@ -147,12 +147,31 @@ export function useRealtimeNotifications(userId: string | null) {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, unreadCount: 0 })));
     };
 
+    const handleNotificationRemoved = (payload: any) => {
+      if (!payload) return;
+      const notifId = payload.id || payload.notificationId;
+      const targetId = payload.targetId || payload.fromUserId;
+      const type = payload.type;
+
+      setNotifications((prev) =>
+        prev.filter((n) => {
+          if (notifId && n.id === notifId) return false;
+          if (type && n.type === type && targetId && (n.fromUserId === targetId || n.targetId === targetId)) {
+            return false;
+          }
+          return true;
+        })
+      );
+    };
+
     socket.on('notification:new', handleNewOrUpdatedNotification);
     socket.on('notification:updated', handleNewOrUpdatedNotification);
     socket.on('notification', handleNewOrUpdatedNotification);
     socket.on('notification:read', handleNotificationRead);
     socket.on('notification:cleared', handleNotificationCleared);
     socket.on('notification:read_all', handleNotificationReadAll);
+    socket.on('notification:removed', handleNotificationRemoved);
+    socket.on('notification:deleted', handleNotificationRemoved);
     socket.on('connect', () => void loadNotifications(false));
 
     return () => {
@@ -162,6 +181,8 @@ export function useRealtimeNotifications(userId: string | null) {
       socket.off('notification:read', handleNotificationRead);
       socket.off('notification:cleared', handleNotificationCleared);
       socket.off('notification:read_all', handleNotificationReadAll);
+      socket.off('notification:removed', handleNotificationRemoved);
+      socket.off('notification:deleted', handleNotificationRemoved);
       socket.off('connect');
     };
   }, [userId, loadNotifications]);
@@ -200,6 +221,16 @@ export function useRealtimeNotifications(userId: string | null) {
     await notificationService.clearAll();
   };
 
+  const removeNotification = async (notificationId: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    if (!isApiConfigured) return;
+    try {
+      await notificationService.delete(notificationId);
+    } catch (err) {
+      console.warn('[notifications] Failed to delete notification on backend:', err);
+    }
+  };
+
   return {
     notifications,
     unreadCount,
@@ -208,5 +239,6 @@ export function useRealtimeNotifications(userId: string | null) {
     markTargetAsRead,
     markAllAsRead,
     clearAll,
+    removeNotification,
   };
 }

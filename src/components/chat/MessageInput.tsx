@@ -46,7 +46,7 @@ export function MessageInput({
   const [imagePreviews, setImagePreviews] = useState<{ file: File; url: string; isVideo: boolean }[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // Close the picker on outside click or Escape, same pattern as other
@@ -77,6 +77,13 @@ export function MessageInput({
     }
   }, [replyTo]);
 
+  const syncTextareaHeight = () => {
+    const el = textInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
   const handleSend = () => {
     if (!text.trim() && images.length === 0) return;
     onSend(text, images.length === 1 ? images[0] : images);
@@ -84,6 +91,10 @@ export function MessageInput({
     setImages([]);
     setImagePreviews([]);
     onTextChange?.('');
+    requestAnimationFrame(() => {
+      const el = textInputRef.current;
+      if (el) el.style.height = 'auto';
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,32 +206,31 @@ export function MessageInput({
       )}
 
       {/* Floating Chat Input Pill (Matches mobile native) */}
-      <div className="flex items-center gap-1.5 md:gap-2">
-        {/* Plus / Media action button */}
-        <button
-          type="button"
-          disabled={!canUploadImages}
-          onClick={() => fileInputRef.current?.click()}
-          title={!canUploadImages ? 'Image sharing unlocks at Stage 3 of the Ally Roadmap' : 'Attach image or video'}
-          className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-xs border ${
-            !canUploadImages
-              ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60'
-              : 'bg-white/95 dark:bg-[#0D131F]/95 border-[#E2DED7] dark:border-white/10 text-[#1A6B3C] dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10 hover:border-[#1A6B3C]/50 active:scale-95'
-          }`}
-        >
-          <ImageIcon size={19} />
-        </button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          className="hidden"
-          accept="image/*,video/mp4,video/webm,video/quicktime"
-          multiple
-          onChange={handleImageChange}
-        />
+      <div className="flex items-end gap-1.5 md:gap-2">
+        {/* Plus / Media action button - only rendered when media sharing is unlocked */}
+        {canUploadImages && (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach image or video"
+              className="w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-xs border bg-white/95 dark:bg-[#0D131F]/95 border-[#E2DED7] dark:border-white/10 text-[#1A6B3C] dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10 hover:border-[#1A6B3C]/50 active:scale-95 cursor-pointer"
+            >
+              <ImageIcon size={19} />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
+              multiple
+              onChange={handleImageChange}
+            />
+          </>
+        )}
 
         {/* Input capsule container containing emoji, text, and send pill */}
-        <div className="flex-1 flex items-center bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md rounded-full border border-[#E2DED7] dark:border-white/10 shadow-sm pl-2 pr-1.5 py-1 md:py-1.5 gap-1 transition-all focus-within:ring-2 focus-within:ring-[#1A6B3C]/20 dark:focus-within:ring-emerald-500/20 focus-within:border-[#1A6B3C]/40">
+        <div className="flex-1 flex items-end bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md rounded-[22px] md:rounded-[24px] border border-[#E2DED7] dark:border-white/10 shadow-sm pl-2 pr-1.5 py-1 md:py-1.5 gap-1 min-w-0 transition-all focus-within:ring-2 focus-within:ring-[#1A6B3C]/20 dark:focus-within:ring-emerald-500/20 focus-within:border-[#1A6B3C]/40">
           <div className="relative flex-shrink-0" ref={emojiPickerRef}>
             <button
               onClick={() => setShowEmojiPicker((prev) => !prev)}
@@ -276,22 +286,29 @@ export function MessageInput({
             </AnimatePresence>
           </div>
 
-          <input
-            type="text"
+          <textarea
             ref={textInputRef}
+            rows={1}
             value={text}
             onChange={(e) => {
               setText(e.target.value);
               onTextChange?.(e.target.value);
+              syncTextareaHeight();
             }}
             onFocus={() => {
+              syncTextareaHeight();
               if (typeof window !== 'undefined') {
                 window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
               }
             }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder={replyTo ? 'Write a reply…' : 'Write a message...'}
-            className="flex-1 min-w-0 bg-transparent border-none py-1.5 px-2 text-sm md:text-[15px] font-jakarta text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
+            className="flex-1 min-w-0 w-full bg-transparent border-none py-1.5 px-2 text-sm md:text-[15px] font-jakarta text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none resize-none overflow-y-auto max-h-40 leading-relaxed break-words [field-sizing:content]"
             disabled={disabled}
           />
 
@@ -300,7 +317,7 @@ export function MessageInput({
             onClick={handleSend}
             disabled={disabled || (!text.trim() && images.length === 0)}
             aria-label="Send message"
-            className="flex-shrink-0 w-12 md:w-14 h-8 md:h-9 flex items-center justify-center rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#A7D0B8] dark:disabled:bg-white/10 disabled:text-white/70 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="flex-shrink-0 w-12 md:w-14 h-8 md:h-9 flex items-center justify-center rounded-full bg-[#1A6B3C] dark:bg-emerald-600 text-white hover:bg-[#155a33] dark:hover:bg-emerald-700 disabled:bg-[#A7D0B8] dark:disabled:bg-white/10 disabled:text-white/70 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-xs active:scale-95 cursor-pointer mb-0.5"
           >
             <Send size={15} />
           </button>

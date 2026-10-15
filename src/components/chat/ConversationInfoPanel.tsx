@@ -4,7 +4,6 @@ import { Conversation, BlockStatus } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
-import { RevealAvatar } from '@/components/match/RevealAvatar';
 import type { AvatarRevealView } from '@/api/types';
 import { ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
@@ -197,13 +196,9 @@ function ConversationInfoContent({
       {/* ── Profile header ── */}
       <div className="flex flex-col items-center text-center border-b border-gray-100 dark:border-white/10 p-6">
         {isAnonymous ? (
-          <RevealAvatar
-            reveal={avatarReveal}
-            avatarKey={conversation.matchInfo?.partnerAvatar}
+          <AnonymousAvatar
+            avatarKey={conversation.matchInfo?.partnerAvatar || conversation.participantAvatar || 'fox'}
             size={avatarSize === 'lg' ? 88 : 72}
-            showRing={true}
-            showGainChip={false}
-            fallbackInitials={conversation.participantName}
             className="rounded-full mb-3"
           />
         ) : (

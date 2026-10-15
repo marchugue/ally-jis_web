@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Home, Compass, MessageCircle, User, ChevronDown, LogOut, Settings, Sun, Moon } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, Sun, Moon, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationsContext';
@@ -11,6 +11,7 @@ import { profileService } from '@/lib/services/profileService';
 
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
+import { LordNavIcon } from '@/components/ally/LordNavIcon';
 
 interface TopNavProps {
   onNotificationClick?: () => void;
@@ -28,6 +29,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
   const [profile, setProfile] = useState<{ name: string; avatarUrl: string | null; course: string | null } | null>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
 
   const { unreadCount } = useNotifications();
 
@@ -40,12 +42,54 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
   const shouldHideBottomNav = hideBottomNav || shouldHideForChatFocus || (isMessagesPage && isMobile && isInputFocused);
   const shouldHideTopNav = shouldHideForChatFocus;
 
+  const isLinkActive = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
   const navLinks = [
-    { path: '/dashboard', label: 'Dashboard', icon: Home },
-    { path: '/discover', label: 'Discover', icon: Compass },
-    { path: '/messages', label: 'Messages', icon: MessageCircle },
-    { path: '/notifications', label: 'Notifications', icon: Bell },
-    { path: '/profile', label: 'Profile', icon: User },
+    {
+      path: '/dashboard',
+      label: 'Home',
+      outlineSrc: '/icons/lordicon/home-outline.json', // ID 63 outline static
+      solidSrc: '/icons/lordicon/home-solid.json',     // ID 63 solid in-reveal / hover-pinch
+      activeState: 'in-reveal',
+      hoverState: 'hover-pinch',
+    },
+    {
+      path: '/discover',
+      label: 'Discover',
+      outlineSrc: '/icons/lordicon/compass-outline.json', // ID 86 compass
+      solidSrc: '/icons/lordicon/compass-solid.json',
+      activeState: 'in-reveal',
+      hoverState: 'hover-pinch',
+    },
+    {
+      path: '/messages',
+      label: 'Messages',
+      outlineSrc: '/icons/lordicon/chat-outline.json', // ID 3114 chat
+      solidSrc: '/icons/lordicon/chat-solid.json',
+      activeState: 'in-reveal',
+      hoverState: 'hover-pinch',
+    },
+    {
+      path: '/notifications',
+      label: 'Notifications',
+      outlineSrc: '/icons/lordicon/bell-outline.json', // ID 193 bell
+      solidSrc: '/icons/lordicon/bell-solid.json',
+      activeState: 'in-reveal',
+      hoverState: 'hover-pinch',
+    },
+    {
+      path: '/profile',
+      label: 'Profile',
+      outlineSrc: '/icons/lordicon/user-outline.json', // ID 21 avatar
+      solidSrc: '/icons/lordicon/user-solid.json',
+      activeState: 'in-reveal',
+      hoverState: 'hover-pinch',
+    },
   ];
 
   useEffect(() => {
@@ -135,38 +179,55 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
               </Link>
             </div>
 
-            {/* Middle panel: desktop nav links — centred against the full nav width (No background fill, active green) */}
-            <div className="hidden md:flex items-center justify-center gap-1">
-              {navLinks.map(({ path, label, icon: Icon }) => {
-                const isActive = location.pathname === path;
+            {/* Middle panel: desktop nav links — spacious, borderless, no bg pill, active label underneath, 129px responsive icon containers */}
+            <div className="hidden md:flex items-center justify-between w-full md:max-w-[480px] lg:max-w-[740px] xl:max-w-[860px] 2xl:max-w-[920px] mx-auto px-2">
+              {navLinks.map(({ path, label, outlineSrc, solidSrc, activeState, hoverState }) => {
+                const isActive = isLinkActive(path);
+                const isHovered = hoveredLink === path;
+
                 return (
                   <Link
                     key={path}
                     to={path}
+                    aria-label={label}
+                    onClick={() => {
+                      if (path === '/messages') {
+                        window.dispatchEvent(new CustomEvent('reset-messages-page'));
+                      }
+                    }}
+                    onMouseEnter={() => setHoveredLink(path)}
+                    onMouseLeave={() => setHoveredLink(null)}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 font-jakarta text-sm transition-all relative group',
+                      'relative flex flex-col items-center justify-start h-12 pt-1 transition-colors duration-150 outline-none select-none group',
+                      'w-[84px] md:w-[88px] lg:w-[115px] xl:w-[129px] shrink-0',
                       isActive
-                        ? 'text-[#1A6B3C] dark:text-emerald-400 font-bold'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-[#1A6B3C] dark:hover:text-white font-medium'
+                        ? 'text-[#1A6B3C] dark:text-emerald-400'
+                        : 'text-gray-400 dark:text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400'
                     )}
                   >
-                    <Icon
-                      size={16}
-                      className={cn(
-                        'transition-colors',
-                        isActive
-                          ? 'text-[#1A6B3C] dark:text-emerald-400'
-                          : 'text-gray-400 dark:text-gray-400 group-hover:text-[#1A6B3C] dark:group-hover:text-white'
+                    <div className="relative flex items-center justify-center w-7 h-7">
+                      <LordNavIcon
+                        outlineSrc={outlineSrc}
+                        solidSrc={solidSrc}
+                        isActive={isActive}
+                        isHovered={isHovered}
+                        activeState={activeState}
+                        hoverState={hoverState}
+                        size={26}
+                        stroke="regular"
+                      />
+
+                      {label === 'Notifications' && unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-2 min-w-[17px] h-[17px] px-1 rounded-full text-[10px] font-extrabold bg-[#E8A838] text-white flex items-center justify-center leading-none shadow-sm ring-2 ring-white dark:ring-[#121212] animate-in zoom-in-75">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
                       )}
-                    />
-                    <span>{label}</span>
-                    {label === 'Notifications' && unreadCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#E8A838] text-white leading-none shadow-xs">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
+                    </div>
+
                     {isActive && (
-                      <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#1A6B3C] dark:bg-emerald-400 rounded-full" />
+                      <span className="font-jakarta text-[11px] font-semibold text-[#1A6B3C] dark:text-emerald-400 tracking-tight leading-none mt-1 animate-in fade-in duration-150 select-none whitespace-nowrap">
+                        {label}
+                      </span>
                     )}
                   </Link>
                 );
@@ -255,38 +316,50 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
         </nav>
       )}
 
-      {/* ── Bottom mobile nav: full width, evenly spread ── */}
+      {/* ── Bottom mobile nav: full width, space-between layout with exact old padding and gap ── */}
       {!shouldHideBottomNav && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-t border-[#1A6B3C]/10 dark:border-white/10 z-50 px-4 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between py-3">
-            {navLinks.map(({ path, label, icon: Icon }) => {
-              const isActive = location.pathname === path;
+            {navLinks.map(({ path, label, outlineSrc, solidSrc, activeState, hoverState }) => {
+              const isActive = isLinkActive(path);
+              const isHovered = hoveredLink === path;
+
               return (
                 <Link
                   key={path}
                   to={path}
-                  className={cn(
-                    'flex flex-col items-center gap-1 transition-all relative flex-1',
-                    isActive ? 'text-[#1A6B3C] dark:text-emerald-400 font-bold' : 'text-gray-400 dark:text-gray-400 hover:dark:text-gray-200'
-                  )}
+                  aria-label={label}
+                  onClick={() => {
+                    if (path === '/messages') {
+                      window.dispatchEvent(new CustomEvent('reset-messages-page'));
+                    }
+                  }}
+                  onTouchStart={() => setHoveredLink(path)}
+                  onTouchEnd={() => setHoveredLink(null)}
+                  className="flex flex-col items-center gap-1 transition-all relative flex-1"
                 >
-                  <div className={cn(
-                    "p-1.5 rounded-xl transition-all relative",
-                    isActive && "scale-110"
-                  )}>
-                    <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-[#1A6B3C] dark:text-emerald-400" : "text-gray-400 dark:text-gray-400"} />
+                  <div
+                    className={cn(
+                      'p-1.5 rounded-xl transition-all relative flex items-center justify-center',
+                      isActive && 'scale-110 bg-[#1A6B3C]/10 dark:bg-emerald-400/15 text-[#1A6B3C] dark:text-emerald-400 ring-1 ring-[#1A6B3C]/20 dark:ring-emerald-400/25'
+                    )}
+                  >
+                    <LordNavIcon
+                      outlineSrc={outlineSrc}
+                      solidSrc={solidSrc}
+                      isActive={isActive}
+                      isHovered={isHovered}
+                      activeState={activeState}
+                      hoverState={hoverState}
+                      size={26}
+                      stroke="regular"
+                    />
                     {label === 'Notifications' && unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                      <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white dark:ring-[#121212]">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
                   </div>
-                  <span className={cn(
-                    "font-jakarta text-[10px] tracking-wide transition-all",
-                    isActive ? "opacity-100 font-extrabold text-[#1A6B3C] dark:text-emerald-400" : "opacity-75 text-gray-500 dark:text-gray-400"
-                  )}>
-                    {label}
-                  </span>
                 </Link>
               );
             })}

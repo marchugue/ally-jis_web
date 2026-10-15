@@ -8,7 +8,7 @@ export const profileMapper = (row: ProfileRow): Student => {
 
   return {
     id: row.id,
-    name: row.username ?? row.full_name ?? 'Student',
+    name: row.full_name || (row.username ? `@${row.username}` : 'Student'),
     username: row.username ?? null,
     email,
     course: row.course ?? 'Unknown Course',
@@ -16,6 +16,10 @@ export const profileMapper = (row: ProfileRow): Student => {
     department: row.department ?? 'Unknown Department',
     bio: row.bio ?? '',
     avatar: row.avatar_url || '',
+    avatarKey: (row as any).avatarKey || (row as any).avatar_preset_id || null,
+    avatarPresetId: (row as any).avatar_preset_id || (row as any).avatarKey || null,
+    isAlly: Boolean((row as any).is_ally),
+    isUnrevealedMatch: Boolean((row as any).is_unrevealed_match),
     interests: row.interests ?? [],
     organizations: row.organizations ?? [],
     isVerified,

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Heart, MessageCircle, Maximize2, Globe2, Users } from 'lucide-react';
+import { MessageCircle, Maximize2, Globe2, Users } from 'lucide-react';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
+import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import type { FeedPost } from '@/types/feed';
 
 interface PostCardProps {
@@ -69,7 +71,10 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 export default function PostCard({ post, onToggleLike, onOpenComments, onExpand }: PostCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const author = post.author;
-  const displayName = author?.full_name || author?.username || 'Ally member';
+  const isAlly = Boolean(author?.is_ally);
+  const displayName = isAlly
+    ? (author?.full_name || author?.username || 'Ally member')
+    : 'Anonymous Peer';
 
   const handleLikeClick = async () => {
     if (isLiking) return;
@@ -85,15 +90,25 @@ export default function PostCard({ post, onToggleLike, onOpenComments, onExpand 
     <div className="bg-white dark:bg-[#111827] rounded-2xl border border-[#1A6B3C]/6 dark:border-white/10 card-shadow hover:card-shadow-hover transition-shadow overflow-hidden">
       {/* Header */}
       <div className="flex items-start gap-3 p-4">
-        <Link to={`/profile/${post.author_id}`} className="flex-shrink-0">
-          <AvatarDisplay
-            src={author?.avatar_url}
-            name={displayName}
-            className="w-11 h-11 rounded-xl object-cover"
-          />
-        </Link>
+        <ClickableAvatar
+          userId={post.author_id}
+          avatarUrl={author?.avatar_url}
+          avatarKey={(author as any)?.avatarKey}
+          name={displayName}
+          revealed={Boolean(isAlly && author?.avatar_url)}
+          size={44}
+          className="w-11 h-11 rounded-xl object-cover"
+        />
         <div className="flex-1 min-w-0">
-          <Link to={`/profile/${post.author_id}`} className="font-jakarta font-bold text-gray-900 dark:text-white text-sm hover:underline">
+          <Link
+            to={`/profile/${post.author_id}`}
+            state={{
+              avatarUrl: author?.avatar_url,
+              avatarKey: (author as any)?.avatarKey,
+              name: displayName,
+            }}
+            className="font-jakarta font-bold text-gray-900 dark:text-white text-sm hover:underline"
+          >
             {displayName}
           </Link>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -132,28 +147,23 @@ export default function PostCard({ post, onToggleLike, onOpenComments, onExpand 
           type="button"
           onClick={handleLikeClick}
           disabled={isLiking}
-          className={`flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-all active:scale-95 group cursor-pointer ${
+          className={`flex items-center gap-1.5 py-1 px-1 -ml-1 rounded-lg font-jakarta text-xs sm:text-[13px] font-medium transition-colors active:scale-95 group cursor-pointer ${
             post.liked_by_me
               ? 'text-[#1A6B3C] dark:text-emerald-400'
               : 'text-gray-400 dark:text-gray-500 hover:text-[#1A6B3C] dark:hover:text-emerald-400'
           }`}
           aria-label={post.liked_by_me ? 'Unlike post' : 'Like post'}
         >
-          <Heart
+          <LordHeartIcon
+            isLiked={post.liked_by_me}
             size={18}
-            className={`transition-transform duration-150 group-hover:scale-110 ${
-              post.liked_by_me
-                ? 'fill-[#1A6B3C] text-[#1A6B3C] dark:fill-emerald-400 dark:text-emerald-400'
-                : 'text-gray-400 dark:text-gray-500 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400'
-            }`}
-            strokeWidth={post.liked_by_me ? 2.5 : 2}
           />
           {post.likes_count > 0 && (
             <span
               className={`font-medium text-xs sm:text-[13px] ${
                 post.liked_by_me
                   ? 'text-[#1A6B3C] dark:text-emerald-400'
-                  : 'text-gray-600 dark:text-gray-400'
+                  : 'text-gray-600 dark:text-gray-400 group-hover:text-[#1A6B3C] dark:group-hover:text-emerald-400'
               }`}
             >
               {post.likes_count}

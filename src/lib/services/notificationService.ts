@@ -153,4 +153,8 @@ export const notificationService = {
   async clearAll() {
     await apiClient.deleteAllNotifications();
   },
+
+  async delete(notificationId: string) {
+    await apiClient.deleteNotification(notificationId);
+  },
 };

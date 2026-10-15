@@ -15,7 +15,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { AVATAR_EMOJI, DEFAULT_AVATAR_EMOJI, avatarColorFor } from '@/lib/matchOptions';
-import { getAnonymousAnimalAnimatedUrl } from '@/lib/fluentEmoji';
+import { getCrittersAvatarDataUri, getCrittersHttpUrl } from '@/lib/dicebearCritters';
 import { computeRevealVisual } from '@/lib/avatarReveal';
 import type { AvatarRevealView } from '@/api/types';
 
@@ -37,25 +37,18 @@ const RING_GAP = 3.5;
 
 function PetGraphic({ avatarKey, px }: { avatarKey?: string | null; px: number }) {
   const [failed, setFailed] = useState(false);
-  const [cdnFailed, setCdnFailed] = useState(false);
-  const key = avatarKey?.toLowerCase().trim();
-  const src = failed ? getAnonymousAnimalAnimatedUrl(avatarKey) : `/emojis/animals/${key || 'default'}.png`;
-  const emoji = (key && AVATAR_EMOJI[key]) || DEFAULT_AVATAR_EMOJI;
+  const bg = avatarColorFor(avatarKey);
+  const src = failed
+    ? getCrittersHttpUrl(avatarKey, bg)
+    : getCrittersAvatarDataUri(avatarKey, bg, px);
 
-  if (cdnFailed) {
-    return (
-      <span className="leading-none select-none drop-shadow-sm" style={{ fontSize: px * 0.72 }}>
-        {emoji}
-      </span>
-    );
-  }
   return (
     <img
       src={src}
-      alt=""
+      alt={avatarKey || 'Pet'}
       draggable={false}
-      onError={() => (failed ? setCdnFailed(true) : setFailed(true))}
-      className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md"
+      onError={() => setFailed(true)}
+      className="w-full h-full object-cover rounded-full pointer-events-none select-none drop-shadow-md"
     />
   );
 }

@@ -183,23 +183,34 @@ export function useMatchmaking(): UseMatchmakingResult {
   const joinQueue = useCallback(async (preferences?: MatchmakingPreferences) => {
     setError(null);
     setActivePreferences(preferences ?? null);
+    // Optimistic entry so isInQueue becomes true immediately with 0ms lag
+    setQueueEntry((prev) => prev ?? {
+      id: 'optimistic',
+      user_id: '',
+      status: 'searching',
+      joined_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
     try {
       const entry = await apiClient.joinMatchQueue(preferences);
       setQueueEntry(entry);
     } catch (err) {
+      setQueueEntry(null);
       // Refresh status even on error — a pre-existing pending match should
       // still open the overlay (e.g. if the server returned a non-fatal error).
       void refreshStatus();
-      setError(err instanceof Error ? err.message : 'Could not join the queue');
+      const msg = err instanceof Error ? err.message : 'Could not join the queue';
+      setError(msg);
+      throw err;
     }
   }, [refreshStatus]);
 
   const leaveQueue = useCallback(async () => {
     setError(null);
     setActivePreferences(null);
+    setQueueEntry(null);
     try {
       await apiClient.leaveMatchQueue();
-      setQueueEntry(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not leave the queue');
     }
