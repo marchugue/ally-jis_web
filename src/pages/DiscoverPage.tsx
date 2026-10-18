@@ -389,49 +389,51 @@ export default function DiscoverPage() {
             onClick={isInQueue ? () => void leaveQueue() : handleFindMatch}
             disabled={!canMatch && !isInQueue}
             className={cn(
-              'group relative flex flex-row items-center justify-center gap-3 sm:gap-4 p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
+              'group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
               isInQueue || matchPhase === 'searching'
                 ? 'bg-gradient-to-r from-amber-500/25 via-amber-600/25 to-yellow-500/25 border-amber-400/50 shadow-amber-500/15'
                 : 'bg-gradient-to-r from-[#1A6B3C]/25 via-emerald-600/25 to-[#38C185]/25 dark:from-[#1A6B3C]/25 dark:via-emerald-500/25 dark:to-[#38C185]/20 border-emerald-500/30 dark:border-emerald-400/30 hover:border-emerald-500/60 dark:hover:border-[#38C185]/60'
             )}
           >
-            {/* Solid Gradient Message Icon */}
-            {isInQueue || matchPhase === 'searching' ? (
-              <Loader2 size={36} className="text-amber-500 animate-spin shrink-0" />
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
-              >
-                <defs>
-                  <linearGradient id="anon-msg-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#38C185" />
-                    <stop offset="100%" stopColor="#1A6B3C" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"
-                  fill="url(#anon-msg-solid-grad)"
-                />
-                <circle cx="8" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
-                <circle cx="12" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
-                <circle cx="16" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
-              </svg>
-            )}
-
-            {/* Anonymous text block */}
-            <div className="flex flex-col text-left min-w-0">
-              <h3 className="font-fraunces text-base sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
-                {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
-              </h3>
-              <p className="mt-0.5 text-xs sm:text-sm font-jakarta font-medium text-emerald-800/80 dark:text-emerald-200/90 truncate">
-                {isInQueue || matchPhase === 'searching'
-                  ? 'Peer search · Cancel'
-                  : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
-              </p>
+            {/* Solid Gradient Message Icon on the top */}
+            <div className="mb-2.5 sm:mb-3 transition-transform duration-300 group-hover:scale-110">
+              {isInQueue || matchPhase === 'searching' ? (
+                <Loader2 size={38} className="text-amber-500 animate-spin" />
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-10 h-10 sm:w-12 sm:h-12 drop-shadow-xs"
+                >
+                  <defs>
+                    <linearGradient id="anon-msg-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#38C185" />
+                      <stop offset="100%" stopColor="#1A6B3C" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"
+                    fill="url(#anon-msg-solid-grad)"
+                  />
+                  <circle cx="8" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+                  <circle cx="12" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+                  <circle cx="16" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+                </svg>
+              )}
             </div>
+
+            {/* Anonymous Title in the center */}
+            <h3 className="font-fraunces text-base sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+              {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
+            </h3>
+
+            {/* Attempts Left on the bottom */}
+            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-jakarta font-medium text-emerald-800/80 dark:text-emerald-200/90">
+              {isInQueue || matchPhase === 'searching'
+                ? 'Peer search · Cancel'
+                : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
+            </p>
           </button>
 
           {/* Card 2: Games */}
@@ -441,49 +443,51 @@ export default function DiscoverPage() {
               window.open('http://localhost:5174', '_blank');
               toast.success('Opening ALLY-JIS Game Portal!');
             }}
-            className="group relative flex flex-row items-center justify-center gap-3 sm:gap-4 p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
+            className="group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
           >
-            {/* Solid Gradient Game Icon */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
-            >
-              <defs>
-                <linearGradient id="game-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FBBF24" />
-                  <stop offset="50%" stopColor="#F59E0B" />
-                  <stop offset="100%" stopColor="#EA580C" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M7 6H17C19.2 6 21 7.8 21 10V14C21 17.3 18.3 20 15 20C13.8 20 12.7 19.5 12 18.7C11.3 19.5 10.2 20 9 20C5.7 20 3 17.3 3 14V10C3 7.8 4.8 6 7 6Z"
-                fill="url(#game-solid-grad)"
-              />
-              <path
-                d="M7 11V15M5 13H9"
-                stroke="white"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="15.5" cy="11.5" r="1.1" fill="white" />
-              <circle cx="18" cy="13.5" r="1.1" fill="white" />
-              <circle cx="15.5" cy="15.5" r="1.1" fill="white" />
-              <circle cx="13" cy="13.5" r="1.1" fill="white" />
-            </svg>
-
-            {/* Games text block */}
-            <div className="flex flex-col text-left min-w-0">
-              <h3 className="font-fraunces text-base sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
-                Games
-              </h3>
-              <p className="mt-0.5 text-xs sm:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center gap-1.5 truncate">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
-                <span className="truncate">4 players online</span>
-              </p>
+            {/* Solid Gradient Game Icon on the top */}
+            <div className="mb-2.5 sm:mb-3 transition-transform duration-300 group-hover:scale-110">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-10 h-10 sm:w-12 sm:h-12 drop-shadow-xs"
+              >
+                <defs>
+                  <linearGradient id="game-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FBBF24" />
+                    <stop offset="50%" stopColor="#F59E0B" />
+                    <stop offset="100%" stopColor="#EA580C" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M7 6H17C19.2 6 21 7.8 21 10V14C21 17.3 18.3 20 15 20C13.8 20 12.7 19.5 12 18.7C11.3 19.5 10.2 20 9 20C5.7 20 3 17.3 3 14V10C3 7.8 4.8 6 7 6Z"
+                  fill="url(#game-solid-grad)"
+                />
+                <path
+                  d="M7 11V15M5 13H9"
+                  stroke="white"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="15.5" cy="11.5" r="1.1" fill="white" />
+                <circle cx="18" cy="13.5" r="1.1" fill="white" />
+                <circle cx="15.5" cy="15.5" r="1.1" fill="white" />
+                <circle cx="13" cy="13.5" r="1.1" fill="white" />
+              </svg>
             </div>
+
+            {/* Games Title in the center */}
+            <h3 className="font-fraunces text-base sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+              Games
+            </h3>
+
+            {/* Players Online on the bottom */}
+            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center justify-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
+              <span>4 players online</span>
+            </p>
           </button>
         </div>
 
