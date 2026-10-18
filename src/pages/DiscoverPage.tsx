@@ -51,7 +51,7 @@ function getAnonymousName(student: Student, avatarKey: string): string {
 
 export default function DiscoverPage() {
   const { user } = useAuth();
-  const { isOnline } = usePresence();
+  const { isOnline, gameOnlineCount } = usePresence();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
   const { departments, coursesByDept, yearLevels } = useLookupOptions();
@@ -440,7 +440,19 @@ export default function DiscoverPage() {
           <button
             type="button"
             onClick={() => {
-              window.open('http://localhost:5174', '_blank');
+              const isProd =
+                window.location.hostname.endsWith('ally-jis.com') ||
+                window.location.hostname.endsWith('ally-jis.xyz') ||
+                import.meta.env.PROD;
+              const baseGameUrl = isProd
+                ? 'https://game.ally-jis.com'
+                : (import.meta.env.VITE_GAME_URL as string || 'http://localhost:5174');
+              const token = apiClient.getAccessToken();
+              const fullUrl = token
+                ? `${baseGameUrl}?token=${encodeURIComponent(token)}`
+                : baseGameUrl;
+
+              window.open(fullUrl, '_blank');
               toast.success('Opening ALLY-JIS Game Portal!');
             }}
             className="group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
@@ -486,7 +498,9 @@ export default function DiscoverPage() {
             {/* Players Online on the bottom */}
             <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center justify-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
-              <span>4 players online</span>
+              <span>
+                {gameOnlineCount} {gameOnlineCount === 1 ? 'player' : 'players'} online
+              </span>
             </p>
           </button>
         </div>
@@ -775,7 +789,7 @@ export default function DiscoverPage() {
                 >
                   {/* Top Row: Anonymous Avatar on Top Left, Compatibility Badge & X Button on Top Right */}
                   <div>
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
                       {/* Top Left: Anonymous Avatar */}
                       <div className="relative shrink-0">
                         <AnonymousAvatar
@@ -793,12 +807,6 @@ export default function DiscoverPage() {
 
                       {/* Top Right: Compatibility Badge & Dismiss X Button */}
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <MatchBadge
-                          percentage={match.matchPercentage}
-                          sharedCount={match.sharedInterests.length}
-                          animate={false}
-                          size="sm"
-                        />
                         <button
                           type="button"
                           onClick={(e) => {
@@ -907,7 +915,7 @@ export default function DiscoverPage() {
                             <span>Connect</span>
                           </>
                         ) : (
-                          <span>⏳ Request Sent</span>
+                          <span>Request Sent</span>
                         )}
                       </button>
                     )}

@@ -59,11 +59,13 @@ const ROADMAP_STAGES: RoadmapStage[] = [
     tag: 'STAGE 1 • 0 DAYS',
     title: 'Anonymous Chat',
     subtitle: '1× Point Multiplier',
-    description: 'Chat anonymously and break the ice. Both users sending a message starts your streak and earns daily points toward unlocking profiles!',
+    description: 'Chat, play mini-games, and share media anonymously. Both users sending a message starts your streak and earns daily points toward unlocking profiles!',
     thresholdDays: 0,
     multiplier: 1,
     tasks: [
       { id: 'send_message', label: 'Send 1 message each', basePts: 1 },
+      { id: 'play_game', label: 'Play game ≥5 min together', basePts: 2 },
+      { id: 'send_photo', label: 'Share 1 photo each', basePts: 3 },
     ],
     icon: MessageCircle,
     color: 'blue',
@@ -71,14 +73,15 @@ const ROADMAP_STAGES: RoadmapStage[] = [
   {
     id: 2,
     tag: 'STAGE 2 • 3-DAY STREAK',
-    title: 'Play Together',
+    title: 'Play & Connect',
     subtitle: '2× Point Multiplier',
-    description: 'Play mini-games together (5+ min) and unlock partner clues (age range, zodiac, department). Multiplier doubles all task rewards!',
+    description: '3-day streak active! Multiplier doubles all daily task points (2×), accelerating points accumulation towards the 250-pt profile unlock.',
     thresholdDays: 3,
     multiplier: 2,
     tasks: [
       { id: 'send_message', label: 'Send 1 message each', basePts: 1 },
       { id: 'play_game', label: 'Play game ≥5 min together', basePts: 2 },
+      { id: 'send_photo', label: 'Share 1 photo each', basePts: 3 },
     ],
     icon: Gamepad2,
     color: 'purple',
@@ -86,9 +89,9 @@ const ROADMAP_STAGES: RoadmapStage[] = [
   {
     id: 3,
     tag: 'STAGE 3 • 7-DAY STREAK',
-    title: 'Media Sharing',
+    title: 'Deep Bond',
     subtitle: '3× Point Multiplier',
-    description: 'Unlocks photo sharing in chat and partner hobby clues. Earn 3× points on all daily tasks to fast-track your 250-pt profile unlock!',
+    description: '7-day streak active! Multiplier triples all daily task points (3×) to fast-track your 250-pt mutual identity reveal.',
     thresholdDays: 7,
     multiplier: 3,
     tasks: [
@@ -104,7 +107,7 @@ const ROADMAP_STAGES: RoadmapStage[] = [
     tag: 'STAGE 4 • 10-DAY STREAK',
     title: 'Campus Allies',
     subtitle: '4× Point Multiplier • Feed Unlocked',
-    description: "Your feeds are now visible to each other in the Allies newsfeed filter (still anonymous). Real names & profiles unlock when you reach 250 total points!",
+    description: "10-day streak milestone! Max 4× point multiplier and feeds are visible in Allies filter. Real profiles unlock at 250 total points!",
     thresholdDays: 10,
     multiplier: 4,
     tasks: [

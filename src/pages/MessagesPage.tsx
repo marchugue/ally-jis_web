@@ -88,9 +88,8 @@ export default function MessagesPage() {
     isLoadingOlder,
   } = useRealtimeMessages(activeConversation?.id ?? null, user?.id ?? null);
   const isAnonymousConversation = activeConversation?.variant && activeConversation.variant !== 'regular';
-  // Media is locked for anonymous matches below Lv.3 — including when a streak
-  // ended and the level dropped back. Previously shared photos render blurred.
-  const mediaLocked = Boolean(isAnonymousConversation && (activeConversation?.matchInfo?.stage ?? 1) < 3);
+  // Media sharing is always unlocked (streak is used as point multiplier only)
+  const mediaLocked = false;
   const reveal = useMatchReveal(
     isAnonymousConversation ? activeConversation!.matchInfo?.matchId ?? null : null,
     activeConversation?.matchInfo?.stage ?? 0,

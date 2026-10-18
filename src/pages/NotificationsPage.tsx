@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -31,6 +31,7 @@ import { PageTransition } from '@/components/PageTransition';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import type { Notification } from '@/types/ally';
+import type { ConversationRow } from '@/api/types';
 
 type FilterCategory = 'all' | 'unread' | 'messages' | 'connections' | 'ally' | 'safety' | 'activity';
 type DateGroupKey = 'today' | 'earlier' | 'last_month' | 'last_year';
@@ -252,6 +253,56 @@ export function isReplyableNotification(type?: string): boolean {
   );
 }
 
+function checkConversationStatus(
+  convs: ConversationRow[],
+  targetConvId?: string | null,
+  targetUserId?: string | null
+): { exists: boolean; isEnded: boolean; conversation?: ConversationRow } {
+  if (!convs || convs.length === 0) {
+    return { exists: false, isEnded: false };
+  }
+
+  let matched: ConversationRow | undefined;
+
+  // 1. Match by conversation ID
+  if (targetConvId) {
+    matched = convs.find(
+      (c) => String(c.id).toLowerCase() === String(targetConvId).toLowerCase()
+    );
+  }
+
+  // 2. Match by anonymous matchInfo ID
+  if (!matched && (targetUserId || targetConvId)) {
+    const searchId = String(targetUserId || targetConvId).toLowerCase();
+    matched = convs.find((c) => {
+      const matchId = (c.matchInfo as any)?.id || (c.matchInfo as any)?.matchId;
+      return matchId && String(matchId).toLowerCase() === searchId;
+    });
+  }
+
+  // 3. Match by conversation member ID
+  if (!matched && targetUserId) {
+    const searchUserId = String(targetUserId).toLowerCase();
+    matched = convs.find((c) => {
+      const members = (c.conversation_members || []) as any[];
+      return members.some((m: any) => {
+        const p = Array.isArray(m.profiles) ? m.profiles[0] : (m.profiles || m);
+        const uid = m.user_id || p?.id || p?.user_id;
+        return uid && String(uid).toLowerCase() === searchUserId;
+      });
+    });
+  }
+
+  if (!matched) {
+    return { exists: false, isEnded: false };
+  }
+
+  const isEnded =
+    matched.variant === 'anonymous_ended' || Boolean(matched.matchInfo?.ended);
+
+  return { exists: true, isEnded, conversation: matched };
+}
+
 function getNotificationContent(notif: Notification) {
   const isMatchReq = notif.type === 'friend_request' || notif.type === 'connection_request';
   const anonInfo = getAnonymousInfo(notif);
@@ -454,6 +505,26 @@ export default function NotificationsPage() {
     return 'denied';
   });
 
+  const [userConversations, setUserConversations] = useState<ConversationRow[]>([]);
+  const [hasLoadedConvs, setHasLoadedConvs] = useState(false);
+
+  const loadUserConversations = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await apiClient.listConversations();
+      const rows: ConversationRow[] = Array.isArray(res) ? res : (res as any)?.conversations || [];
+      setUserConversations(rows);
+      setHasLoadedConvs(true);
+    } catch (err) {
+      console.warn('[NotificationsPage] Failed to load conversations:', err);
+      setHasLoadedConvs(true);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void loadUserConversations();
+  }, [loadUserConversations]);
+
   const handleEnableBrowserNotifications = async () => {
     const { requestBrowserNotificationPermission } = await import('@/lib/browserNotifications');
     const perm = await requestBrowserNotificationPermission();
@@ -466,6 +537,7 @@ export default function NotificationsPage() {
   };
 
   // If user is already followed back, remove/do not show the notification
+  // If message/chat/streak notification and conversation ended or does not exist, remove/do not show
   const visibleNotifications = useMemo(() => {
     return notifications.filter((n) => {
       if (n.type === 'new_follower') {
@@ -474,9 +546,27 @@ export default function NotificationsPage() {
           return false;
         }
       }
+
+      if (
+        hasLoadedConvs &&
+        (n.type === 'message' ||
+          n.type === 'anon_match' ||
+          n.type === 'streak_reminder')
+      ) {
+        const convStatus = checkConversationStatus(
+          userConversations,
+          n.targetId || (n.redirection?.params as any)?.conversationId || (n as any).postId,
+          n.fromUserId
+        );
+        if (!convStatus.exists || convStatus.isEnded) {
+          void removeNotification(n.id);
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [notifications, followStatusMap]);
+  }, [notifications, followStatusMap, hasLoadedConvs, userConversations, removeNotification]);
 
   const categoryCounts = useMemo(() => {
     return {
@@ -520,6 +610,47 @@ export default function NotificationsPage() {
 
   const handleClick = async (notif: Notification, isReplyAction = false) => {
     await markAsRead(notif.id);
+
+    // 0. Auto-redirect to conversation & check if conversation exists and is active
+    if (
+      notif.type === 'anon_match' ||
+      notif.type === 'message' ||
+      notif.type === 'streak_reminder' ||
+      notif.type === 'accepted' ||
+      notif.type === 'connection_accepted'
+    ) {
+      let convs = userConversations;
+      if (!hasLoadedConvs || convs.length === 0) {
+        try {
+          const res = await apiClient.listConversations();
+          convs = Array.isArray(res) ? res : (res as any)?.conversations || [];
+          setUserConversations(convs);
+          setHasLoadedConvs(true);
+        } catch {
+          // ignore
+        }
+      }
+
+      const convStatus = checkConversationStatus(
+        convs,
+        notif.targetId || (notif.redirection?.params as any)?.conversationId || (notif as any).postId,
+        notif.fromUserId
+      );
+
+      // If that person is not existing on the chatlistwindow or they don't have conversation or ended, remove that notification
+      if (!convStatus.exists || convStatus.isEnded) {
+        await removeNotification(notif.id);
+        toast.error(
+          convStatus.isEnded
+            ? 'This conversation has ended and has been removed.'
+            : 'No active conversation was found with this user.'
+        );
+        return;
+      }
+
+      navigate(`/messages?conversationId=${convStatus.conversation!.id}`);
+      return;
+    }
 
     // 1. If backend already provided webUrl in redirection that doesn't loop back to notifications, navigate directly (no stack logic)
     if (notif.redirection?.webUrl && !notif.redirection.webUrl.startsWith('/notifications')) {
@@ -669,6 +800,23 @@ export default function NotificationsPage() {
         if (!convId && notif.fromUserId) {
           const res = await apiClient.findConversationWithUser(notif.fromUserId).catch(() => ({ conversationId: null }));
           convId = res?.conversationId;
+        }
+
+        const convStatus = checkConversationStatus(userConversations, convId, notif.fromUserId);
+        if (!convStatus.exists || convStatus.isEnded) {
+          await removeNotification(notif.id);
+          toast.error(
+            convStatus.isEnded
+              ? 'This conversation has ended and is read-only.'
+              : 'No active conversation was found with this user.'
+          );
+          setReplyingNotifId(null);
+          setReplyDraft('');
+          return;
+        }
+
+        if (!convId && convStatus.conversation) {
+          convId = convStatus.conversation.id;
         }
 
         if (!convId) {

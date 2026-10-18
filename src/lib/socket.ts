@@ -12,6 +12,7 @@ import {
   isLocalUrl,
   switchToProductionFallback,
   BACKEND_SWITCHED_EVENT,
+  AUTH_UNAUTHORIZED_EVENT,
 } from '@/api/http';
 
 let socket: Socket | null = null;
@@ -41,6 +42,13 @@ export function getSocket(): Socket | null {
     autoConnect: true,
     reconnection: true,
     timeout: 6000,
+  });
+
+  socket.on('auth:revoked', (payload: any) => {
+    console.warn('[Socket] Session revoked by server:', payload);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+    }
   });
 
   socket.on('connect_error', (err) => {

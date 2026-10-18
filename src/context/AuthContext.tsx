@@ -99,6 +99,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, [handleUnauthorized]);
 
+  // ── Cross-portal & Cross-tab Sync (Web <-> Game Portal <-> Backend) ────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      if ('BroadcastChannel' in window) {
+        channel = new BroadcastChannel('ally_auth_channel');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'LOGOUT') {
+            console.info('[AuthSync] Received remote LOGOUT broadcast. Clearing session.');
+            handleUnauthorized();
+          } else if (event.data?.type === 'LOGIN' && event.data?.session) {
+            console.info('[AuthSync] Received remote LOGIN broadcast. Mirroring session.');
+            setSession(event.data.session);
+            setVerified(true);
+            initSocket();
+          }
+        };
+      }
+    } catch {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'allyjis-auth-token') {
+        if (!e.newValue && session) {
+          console.info('[AuthSync] Auth token removed from storage. Signing out.');
+          handleUnauthorized();
+        } else if (e.newValue && !session) {
+          apiClient.getSession().then((nextSession) => {
+            if (nextSession?.user) {
+              setSession(nextSession);
+              setVerified(true);
+              initSocket();
+            }
+          }).catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [session, handleUnauthorized]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: mockUser || session?.user || null,
@@ -131,6 +178,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setVerified(isVerified);
         // Socket must be alive before MessagesPage mounts and tries to subscribe.
         initSocket();
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            new BroadcastChannel('ally_auth_channel').postMessage({
+              type: 'LOGIN',
+              session: newSession,
+              token: newSession.accessToken,
+            });
+          }
+        } catch {}
       },
 
       signOut: async () => {
@@ -139,6 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setVerified(false);
         disconnectSocket();
         clearRolePromptFlag();
+
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            new BroadcastChannel('ally_auth_channel').postMessage({ type: 'LOGOUT' });
+          }
+        } catch {}
 
         try {
           localStorage.removeItem('ally-theme');

@@ -2,10 +2,17 @@
 
 import { request } from '../http';
 
-export function sendPresenceHeartbeat() {
-  return request<void>('/presence/heartbeat', { method: 'POST' });
+export function sendPresenceHeartbeat(platform: string = 'web') {
+  return request<void>('/presence/heartbeat', {
+    method: 'POST',
+    body: { platform },
+  });
 }
 
 export function getOnlineUsers() {
-  return request<{ userIds: string[] }>('/presence/online');
+  return request<{
+    userIds: string[];
+    gameUserIds?: string[];
+    gameCount?: number;
+  }>('/presence/online');
 }

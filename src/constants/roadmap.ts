@@ -54,14 +54,14 @@ export const MASTER_DAILY_TASKS: RoadmapTaskDef[] = [
     label: 'Play a game together',
     description: 'Play a campus mini-game together (5+ min)',
     basePoints: 2,
-    unlockedAtStage: 2,
+    unlockedAtStage: 1,
   },
   {
     taskId: 'send_photo',
     label: 'Share a photo',
     description: 'Each of you share at least 1 photo in chat',
     basePoints: 3,
-    unlockedAtStage: 3,
+    unlockedAtStage: 1,
   },
 ];
 

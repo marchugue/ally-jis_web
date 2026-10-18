@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, ArrowLeft, Shield, Sparkles } from 'lucide-react';
@@ -15,6 +15,45 @@ export default function LoginPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
 
+  const redirectTarget = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const searchParams = new URLSearchParams(window.location.search);
+    return searchParams.get('redirect') || searchParams.get('returnUrl');
+  }, []);
+
+  const handlePostLoginRedirect = useCallback((accessToken?: string) => {
+    if (redirectTarget) {
+      try {
+        if (redirectTarget.startsWith('http://') || redirectTarget.startsWith('https://')) {
+          const parsed = new URL(redirectTarget);
+          if (
+            parsed.hostname.endsWith('ally-jis.com') ||
+            parsed.hostname.endsWith('ally-jis.xyz') ||
+            parsed.hostname === 'localhost' ||
+            parsed.hostname === '127.0.0.1'
+          ) {
+            if (accessToken) {
+              parsed.searchParams.set('token', accessToken);
+            }
+            window.location.href = parsed.toString();
+            return;
+          }
+        } else if (redirectTarget.startsWith('/')) {
+          navigate(redirectTarget, { replace: true });
+          return;
+        }
+      } catch { }
+    }
+
+    if (needsOnboarding) {
+      navigate('/onboarding', { replace: true });
+    } else if (isPendingApproval) {
+      navigate('/pending-approval', { replace: true });
+    } else {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [redirectTarget, needsOnboarding, isPendingApproval, navigate]);
+
   // Login page is strictly light-mode only — ensure dark class is removed on mount
   useEffect(() => {
     const root = document.documentElement;
@@ -24,15 +63,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (needsOnboarding) {
-        navigate('/onboarding', { replace: true });
-      } else if (isPendingApproval) {
-        navigate('/pending-approval', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      handlePostLoginRedirect(apiClient.getAccessToken() || undefined);
     }
-  }, [user, loading, needsOnboarding, isPendingApproval, navigate]);
+  }, [user, loading, handlePostLoginRedirect]);
 
   const handleDemoLogin = () => {
     setMockUser({
@@ -76,7 +109,7 @@ export default function LoginPage() {
       } else if (isPending) {
         navigate('/pending-approval', { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        handlePostLoginRedirect(session.accessToken);
       }
 
     } catch (err: any) {
@@ -123,9 +156,6 @@ export default function LoginPage() {
               <span className="font-fraunces font-bold text-2xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
                 Ally<span className="text-[#E8A838]">-jis</span>
               </span>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-300 pt-0.5">
-                CHMSU Alijis
-              </span>
             </div>
           </Link>
 
@@ -152,11 +182,6 @@ export default function LoginPage() {
             className="hidden lg:block lg:col-span-6 space-y-8"
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/70">
-                <span className="w-2 h-2 rounded-full bg-[#E8A838]" />
-                <span>Student Secure Access</span>
-              </div>
-
               <h1 className="font-fraunces text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-[#1A6B3C] dark:text-white leading-[0.95]">
                 Welcome <br />
                 back to <br />
@@ -168,16 +193,6 @@ export default function LoginPage() {
               Sign in to access your student network, check real-time campus match affinity, and chat securely with peers.
             </p>
 
-            <div className="space-y-3 pt-2 font-mono text-xs text-[#1A6B3C]/80 dark:text-emerald-400/80">
-              <div className="flex items-center gap-2.5">
-                <Shield size={15} className="text-[#E8A838]" />
-                <span>Protected with end-to-end encrypted session tokens</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Sparkles size={15} className="text-[#E8A838]" />
-                <span>Exclusive to Carlos Hilado Memorial State University</span>
-              </div>
-            </div>
           </motion.div>
 
           {/* Right Column: High-Legibility, High-Contrast Form Workspace */}
@@ -190,9 +205,6 @@ export default function LoginPage() {
             <div className="bg-[#EDE7DB] dark:bg-[#111827] dark:border dark:border-white/10 p-6 sm:p-12 rounded-3xl sm:rounded-[36px] shadow-sm space-y-6 sm:space-y-8 border-none">
 
               <div className="space-y-1.5 border-b border-[#1A6B3C]/15 dark:border-white/10 pb-6">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-[#1A6B3C]/70 dark:text-emerald-400/70">
-                  Authentication
-                </span>
                 <h2 className="font-fraunces text-3xl font-bold text-[#1A6B3C] dark:text-white">
                   Sign In with Credentials
                 </h2>
