@@ -389,7 +389,7 @@ export default function DiscoverPage() {
             onClick={isInQueue ? () => void leaveQueue() : handleFindMatch}
             disabled={!canMatch && !isInQueue}
             className={cn(
-              'group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-3.5 sm:p-5 sm:px-7 rounded-full border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
+              'group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
               isInQueue || matchPhase === 'searching'
                 ? 'bg-gradient-to-r from-amber-500/25 via-amber-600/25 to-yellow-500/25 border-amber-400/50 shadow-amber-500/15'
                 : 'bg-gradient-to-r from-[#1A6B3C]/25 via-emerald-600/25 to-[#38C185]/25 dark:from-[#1A6B3C]/25 dark:via-emerald-500/25 dark:to-[#38C185]/20 border-emerald-500/30 dark:border-emerald-400/30 hover:border-emerald-500/60 dark:hover:border-[#38C185]/60'
@@ -441,7 +441,7 @@ export default function DiscoverPage() {
               window.open('http://localhost:5174', '_blank');
               toast.success('Opening ALLY-JIS Game Portal!');
             }}
-            className="group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-3.5 sm:p-5 sm:px-7 rounded-full border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
+            className="group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
           >
             {/* Solid Gradient Game Icon */}
             <svg
