@@ -103,26 +103,6 @@ export default function DiscoverPage() {
     decline: declineMatch,
   } = useMatchmaking();
 
-  // Interactive Hero Rectangle Card Carousel State ('findmatch' | 'games')
-  const [heroCardState, setHeroCardState] = useState<'findmatch' | 'games'>('findmatch');
-  const [isHoveringHeroCard, setIsHoveringHeroCard] = useState(false);
-
-  // Auto-switch to findmatch state if user is actively in queue
-  useEffect(() => {
-    if (isInQueue || matchPhase === 'searching') {
-      setHeroCardState('findmatch');
-    }
-  }, [isInQueue, matchPhase]);
-
-  // Gentle auto-rotation between findmatch and games states when idle
-  useEffect(() => {
-    if (isInQueue || matchPhase === 'searching' || isHoveringHeroCard) return;
-    const interval = setInterval(() => {
-      setHeroCardState((cur) => (cur === 'findmatch' ? 'games' : 'findmatch'));
-    }, 7000);
-    return () => clearInterval(interval);
-  }, [isInQueue, matchPhase, isHoveringHeroCard]);
-
   // Auto-navigate to conversation room ONLY when a match is freshly connected in this session
   useEffect(() => {
     if (roomReady?.conversationId) {
@@ -398,253 +378,67 @@ export default function DiscoverPage() {
           </div>
         )}
 
-        {/* ═══ Prominent Find Match CTA Hero Card ═══ */}
-        <div className="relative rounded-3xl overflow-hidden mb-8 border border-[#1A6B3C]/30 dark:border-emerald-500/25 bg-gradient-to-br from-[#1A6B3C] via-[#165a32] to-[#0d3b20] dark:from-[#0d2818] dark:via-[#091d12] dark:to-[#05110a] text-white shadow-xl shadow-[#1A6B3C]/10 dark:shadow-emerald-950/30">
-          {/* Ambient Background Decorative Glow */}
-          <div className="absolute -top-24 -right-24 w-80 h-80 bg-emerald-400/20 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-teal-400/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-1/2 right-4 -translate-y-1/2 opacity-10 pointer-events-none text-white select-none hidden lg:block">
-            <Compass size={240} className="stroke-[1.1]" />
-          </div>
-
-          <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="max-w-2xl space-y-3">
-
-              <h1 className="font-fraunces text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                Find Your Next Campus Ally
-              </h1>
-
-              <p className="font-jakarta text-xs sm:text-sm lg:text-base text-emerald-50/90 leading-relaxed max-w-xl">
-                Match anonymously with fellow CHMSU students based on shared interests and academic vibe. Chat safely in Stage 1, complete roadmap prompts, and reveal your true identities together!
-              </p>
-
-              {/* Status Chips Row */}
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-jakarta">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 backdrop-blur-md text-emerald-200 border border-white/10 font-medium">
-                  <Zap size={13} className="text-amber-400 fill-amber-400" />
-                  <span><strong>{Math.max(0, DAILY_LIMIT - dailyMatchCount)}/{DAILY_LIMIT}</strong> matches left today</span>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 backdrop-blur-md text-emerald-200 border border-white/10 font-medium">
-                  <Users size={13} />
-                  <span><strong>{matches.length}</strong> peers in directory</span>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 backdrop-blur-md text-emerald-200 border border-white/10 font-medium">
-                  <ShieldCheck size={13} className="text-emerald-300" />
-                  <span>Anonymous & Safe</span>
-                </div>
-              </div>
+        {/* ═══ Top Quick Action Cards: Anonymous & Games ═══ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+          {/* Card 1: Anonymous */}
+          <button
+            type="button"
+            onClick={isInQueue ? () => void leaveQueue() : handleFindMatch}
+            disabled={!canMatch && !isInQueue}
+            className={cn(
+              'group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98]',
+              isInQueue || matchPhase === 'searching'
+                ? 'bg-amber-500/10 dark:bg-amber-500/10 border-amber-400 dark:border-amber-500/50 shadow-amber-500/10'
+                : 'bg-white dark:bg-[#1A1A1A] border-gray-200/80 dark:border-[#262626] hover:border-[#1A6B3C]/50 dark:hover:border-[#38C185]/60 hover:-translate-y-1'
+            )}
+          >
+            {/* Icon on the top */}
+            <div className="mb-3 transition-transform duration-300 group-hover:scale-110">
+              {isInQueue || matchPhase === 'searching' ? (
+                <Loader2 size={36} className="text-amber-500 animate-spin" />
+              ) : (
+                <Sparkles size={36} className="text-[#1A6B3C] dark:text-[#38C185]" />
+              )}
             </div>
 
-            {/* ═══ Interactive Hero Rectangle Card (Find Match / Games Carousel) ═══ */}
-            <div
-              onMouseEnter={() => setIsHoveringHeroCard(true)}
-              onMouseLeave={() => setIsHoveringHeroCard(false)}
-              className="w-full sm:w-[330px] lg:w-[360px] shrink-0 rounded-2xl border border-white/20 bg-black/40 backdrop-blur-xl shadow-2xl relative overflow-hidden p-5 flex flex-col justify-between min-h-[190px] transition-all duration-300 hover:border-white/30 hover:shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
-            >
-              {/* Background Graphic - Cross-fading */}
-              <AnimatePresence mode="wait">
-                {heroCardState === 'findmatch' ? (
-                  <motion.div
-                    key="graphic-match"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute inset-0 pointer-events-none overflow-hidden"
-                  >
-                    <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-emerald-400/20 blur-2xl" />
-                    <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-teal-500/15 blur-2xl" />
-                    {/* Compass Radar Graphic */}
-                    <svg className="absolute -right-8 -bottom-8 w-56 h-56 opacity-20 text-white" viewBox="0 0 200 200" fill="none">
-                      <circle cx="100" cy="100" r="30" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" />
-                      <circle cx="100" cy="100" r="60" stroke="currentColor" strokeWidth="1.5" />
-                      <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
-                      <path d="M100 10v180M10 100h180" stroke="currentColor" strokeWidth="1" strokeOpacity="0.4" />
-                      <circle cx="140" cy="65" r="4" fill="#38C185" />
-                      <circle cx="65" cy="135" r="3" fill="#F0B247" />
-                    </svg>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="graphic-games"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute inset-0 pointer-events-none overflow-hidden"
-                  >
-                    <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-amber-400/20 blur-2xl" />
-                    <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-emerald-500/20 blur-2xl" />
-                    {/* Mini-Games Isometric Tiles Graphic */}
-                    <svg className="absolute -right-6 -bottom-6 w-56 h-56 opacity-25 text-amber-200" viewBox="0 0 200 200" fill="none">
-                      <rect x="42" y="32" width="34" height="34" rx="8" fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeWidth="1.5" />
-                      <text x="59" y="55" textAnchor="middle" fontSize="15" fontWeight="bold" fill="white">2</text>
-                      <rect x="84" y="32" width="34" height="34" rx="8" fill="currentColor" fillOpacity="0.5" stroke="currentColor" strokeWidth="1.5" />
-                      <text x="101" y="55" textAnchor="middle" fontSize="15" fontWeight="bold" fill="white">4</text>
-                      <rect x="126" y="32" width="34" height="34" rx="8" fill="#38C185" fillOpacity="0.85" stroke="#38C185" strokeWidth="1.5" />
-                      <text x="143" y="55" textAnchor="middle" fontSize="15" fontWeight="bold" fill="#081B12">8</text>
-                      <path d="M45 110l26 26M71 110l-26 26" stroke="#F0B247" strokeWidth="3" strokeLinecap="round" />
-                      <circle cx="125" cy="122" r="14" stroke="#38C185" strokeWidth="3" />
-                    </svg>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* Anonymous on the center */}
+            <h3 className="font-fraunces text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+              {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
+            </h3>
 
-              {/* Top Section: Category & Animated Carousel Indicators + Description */}
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  {heroCardState === 'findmatch' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-jakarta tracking-wide uppercase bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
-                      <Sparkles size={11} className="text-emerald-300 animate-pulse" />
-                      Instant Match
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-jakarta tracking-wide uppercase bg-amber-400/20 text-amber-200 border border-amber-300/30">
-                      <Gamepad2 size={12} className="text-amber-300" />
-                      Mini-Games
-                    </span>
-                  )}
+            {/* 5 attempts left on the bottom */}
+            <p className="mt-2 text-xs sm:text-sm font-jakarta font-medium text-gray-500 dark:text-gray-400">
+              {isInQueue || matchPhase === 'searching'
+                ? 'Looking for a peer · Click to cancel'
+                : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
+            </p>
+          </button>
 
-                  {/* Carousel Indicator Dots: animates between rounded rectangle pill when active and circular dot when inactive */}
-                  <div className="flex items-center gap-1.5 p-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 select-none">
-                    <button
-                      type="button"
-                      onClick={() => setHeroCardState('findmatch')}
-                      aria-label="State 1: Find Match"
-                      title="Find Match Anonymously"
-                      className={cn(
-                        'h-2 transition-all duration-300 ease-out rounded-full cursor-pointer',
-                        heroCardState === 'findmatch'
-                          ? 'w-6 bg-white ring-1 ring-white/60 shadow-sm'
-                          : 'w-2 bg-white/40 hover:bg-white/70'
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setHeroCardState('games')}
-                      aria-label="State 2: Games"
-                      title="Campus Mini-Games"
-                      className={cn(
-                        'h-2 transition-all duration-300 ease-out rounded-full cursor-pointer',
-                        heroCardState === 'games'
-                          ? 'w-6 bg-white ring-1 ring-white/60 shadow-sm'
-                          : 'w-2 bg-white/40 hover:bg-white/70'
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Description on top */}
-                <AnimatePresence mode="wait">
-                  {heroCardState === 'findmatch' ? (
-                    <motion.div
-                      key="desc-match"
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <h4 className="font-fraunces text-base sm:text-lg font-bold text-white leading-snug">
-                        Match Anonymously
-                      </h4>
-                      <p className="font-jakarta text-xs text-emerald-100/80 leading-relaxed mt-0.5 line-clamp-2">
-                        Match with fellow CHMSU students based on shared interests & study vibes.
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="desc-games"
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <h4 className="font-fraunces text-base sm:text-lg font-bold text-white leading-snug">
-                        1v1 Campus Mini-Games
-                      </h4>
-                      <p className="font-jakarta text-xs text-amber-100/80 leading-relaxed mt-0.5 line-clamp-2">
-                        Challenge your peers to quick duels: Number Merge, Tic-Tac-Toe & Secret Clue!
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Bottom Section: Rounded Button inside the card */}
-              <div className="relative z-10 mt-4">
-                <AnimatePresence mode="wait">
-                  {heroCardState === 'findmatch' ? (
-                    <motion.div
-                      key="btn-match"
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex flex-col gap-1.5"
-                    >
-                      <button
-                        type="button"
-                        onClick={handleFindMatch}
-                        disabled={!canMatch && !isInQueue}
-                        className={cn(
-                          'w-full flex items-center justify-center gap-2 py-3 px-5 rounded-full font-jakarta text-sm font-bold shadow-lg transition-all duration-200 active:scale-95 cursor-pointer select-none',
-                          isInQueue || matchPhase === 'searching'
-                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30 animate-pulse'
-                            : canMatch
-                              ? 'bg-white text-[#1A6B3C] hover:bg-emerald-50 shadow-white/20 hover:shadow-xl hover:-translate-y-0.5'
-                              : 'bg-white/30 text-white/70 cursor-not-allowed shadow-none'
-                        )}
-                      >
-                        {isInQueue || matchPhase === 'searching' ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin text-white" />
-                            <span>Searching for an Ally...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={16} className="text-[#1A6B3C] animate-pulse" />
-                            <span>Find Match Anonymously</span>
-                            <ArrowRight size={15} className="ml-0.5" />
-                          </>
-                        )}
-                      </button>
-
-                      {isInQueue && (
-                        <button
-                          type="button"
-                          onClick={() => void leaveQueue()}
-                          className="text-xs font-jakarta text-white/80 hover:text-white underline cursor-pointer text-center"
-                        >
-                          Cancel searching
-                        </button>
-                      )}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="btn-games"
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          window.open('http://localhost:5174', '_blank');
-                          toast.success('Opening ALLY-JIS Game Portal!');
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-full font-jakarta text-sm font-extrabold bg-gradient-to-r from-[#38C185] via-emerald-400 to-[#38C185] text-[#081B12] hover:brightness-110 shadow-lg shadow-[#38C185]/35 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 active:scale-95 cursor-pointer select-none"
-                      >
-                        <Gamepad2 size={17} className="text-[#081B12]" />
-                        <span>Play Mini-Games</span>
-                        <ArrowRight size={15} className="ml-0.5" />
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+          {/* Card 2: Games */}
+          <button
+            type="button"
+            onClick={() => {
+              window.open('http://localhost:5174', '_blank');
+              toast.success('Opening ALLY-JIS Game Portal!');
+            }}
+            className="group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border bg-white dark:bg-[#1A1A1A] border-gray-200/80 dark:border-[#262626] hover:border-[#F0B247]/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-1 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98]"
+          >
+            {/* Icon on the top */}
+            <div className="mb-3 transition-transform duration-300 group-hover:scale-110">
+              <Gamepad2 size={36} className="text-[#E8A838] dark:text-[#F0B247]" />
             </div>
-          </div>
+
+            {/* Games on the center */}
+            <h3 className="font-fraunces text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+              Games
+            </h3>
+
+            {/* players online on the bottom */}
+            <p className="mt-2 text-xs sm:text-sm font-jakarta font-medium text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-[#38C185] inline-block animate-pulse" />
+              <span>4 players online</span>
+            </p>
+          </button>
         </div>
 
         {/* Setup Profile Prompt if user has not set interests yet */}
@@ -1066,9 +860,9 @@ export default function DiscoverPage() {
                         className={cn(
                           'w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-jakarta text-xs sm:text-sm font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs',
                           status === 'none' &&
-                            'bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white',
+                          'bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#155a33] dark:hover:bg-emerald-500 text-white',
                           status === 'pending' &&
-                            'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-default'
+                          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-default'
                         )}
                       >
                         {status === 'none' ? (
