@@ -389,7 +389,7 @@ export default function DiscoverPage() {
             onClick={isInQueue ? () => void leaveQueue() : handleFindMatch}
             disabled={!canMatch && !isInQueue}
             className={cn(
-              'group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
+              'group relative flex flex-row items-center justify-center gap-3 sm:gap-4 p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
               isInQueue || matchPhase === 'searching'
                 ? 'bg-gradient-to-r from-amber-500/25 via-amber-600/25 to-yellow-500/25 border-amber-400/50 shadow-amber-500/15'
                 : 'bg-gradient-to-r from-[#1A6B3C]/25 via-emerald-600/25 to-[#38C185]/25 dark:from-[#1A6B3C]/25 dark:via-emerald-500/25 dark:to-[#38C185]/20 border-emerald-500/30 dark:border-emerald-400/30 hover:border-emerald-500/60 dark:hover:border-[#38C185]/60'
@@ -397,13 +397,13 @@ export default function DiscoverPage() {
           >
             {/* Solid Gradient Message Icon */}
             {isInQueue || matchPhase === 'searching' ? (
-              <Loader2 size={32} className="text-amber-500 animate-spin shrink-0" />
+              <Loader2 size={36} className="text-amber-500 animate-spin shrink-0" />
             ) : (
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
+                className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
               >
                 <defs>
                   <linearGradient id="anon-msg-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -423,10 +423,10 @@ export default function DiscoverPage() {
 
             {/* Anonymous text block */}
             <div className="flex flex-col text-left min-w-0">
-              <h3 className="font-fraunces text-sm sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
+              <h3 className="font-fraunces text-base sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
                 {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
               </h3>
-              <p className="mt-0.5 text-[11px] sm:text-xs md:text-sm font-jakarta font-medium text-emerald-800/80 dark:text-emerald-200/90 truncate">
+              <p className="mt-0.5 text-xs sm:text-sm font-jakarta font-medium text-emerald-800/80 dark:text-emerald-200/90 truncate">
                 {isInQueue || matchPhase === 'searching'
                   ? 'Peer search · Cancel'
                   : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
@@ -441,14 +441,14 @@ export default function DiscoverPage() {
               window.open('http://localhost:5174', '_blank');
               toast.success('Opening ALLY-JIS Game Portal!');
             }}
-            className="group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
+            className="group relative flex flex-row items-center justify-center gap-3 sm:gap-4 p-7 sm:p-9 rounded-3xl border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
           >
             {/* Solid Gradient Game Icon */}
             <svg
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
+              className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
             >
               <defs>
                 <linearGradient id="game-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -476,10 +476,10 @@ export default function DiscoverPage() {
 
             {/* Games text block */}
             <div className="flex flex-col text-left min-w-0">
-              <h3 className="font-fraunces text-sm sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
+              <h3 className="font-fraunces text-base sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
                 Games
               </h3>
-              <p className="mt-0.5 text-[11px] sm:text-xs md:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center gap-1.5 truncate">
+              <p className="mt-0.5 text-xs sm:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center gap-1.5 truncate">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
                 <span className="truncate">4 players online</span>
               </p>
