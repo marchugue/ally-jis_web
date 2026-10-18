@@ -364,6 +364,8 @@ export default function DiscoverPage() {
         )}
       </AnimatePresence>
 
+
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-32 md:pb-12 w-full">
         {banner && (
           <div className="mb-4 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-jakarta text-amber-800 dark:text-amber-300 flex items-center justify-between">
@@ -378,40 +380,58 @@ export default function DiscoverPage() {
           </div>
         )}
 
+
         {/* ═══ Top Quick Action Cards: Anonymous & Games ═══ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-8">
           {/* Card 1: Anonymous */}
           <button
             type="button"
             onClick={isInQueue ? () => void leaveQueue() : handleFindMatch}
             disabled={!canMatch && !isInQueue}
             className={cn(
-              'group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98]',
+              'group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-3.5 sm:p-5 sm:px-7 rounded-full border transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] hover:-translate-y-0.5 backdrop-blur-md',
               isInQueue || matchPhase === 'searching'
-                ? 'bg-amber-500/10 dark:bg-amber-500/10 border-amber-400 dark:border-amber-500/50 shadow-amber-500/10'
-                : 'bg-white dark:bg-[#1A1A1A] border-gray-200/80 dark:border-[#262626] hover:border-[#1A6B3C]/50 dark:hover:border-[#38C185]/60 hover:-translate-y-1'
+                ? 'bg-gradient-to-r from-amber-500/25 via-amber-600/25 to-yellow-500/25 border-amber-400/50 shadow-amber-500/15'
+                : 'bg-gradient-to-r from-[#1A6B3C]/25 via-emerald-600/25 to-[#38C185]/25 dark:from-[#1A6B3C]/25 dark:via-emerald-500/25 dark:to-[#38C185]/20 border-emerald-500/30 dark:border-emerald-400/30 hover:border-emerald-500/60 dark:hover:border-[#38C185]/60'
             )}
           >
-            {/* Icon on the top */}
-            <div className="mb-3 transition-transform duration-300 group-hover:scale-110">
-              {isInQueue || matchPhase === 'searching' ? (
-                <Loader2 size={36} className="text-amber-500 animate-spin" />
-              ) : (
-                <Sparkles size={36} className="text-[#1A6B3C] dark:text-[#38C185]" />
-              )}
+            {/* Solid Gradient Message Icon */}
+            {isInQueue || matchPhase === 'searching' ? (
+              <Loader2 size={32} className="text-amber-500 animate-spin shrink-0" />
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
+              >
+                <defs>
+                  <linearGradient id="anon-msg-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#38C185" />
+                    <stop offset="100%" stopColor="#1A6B3C" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"
+                  fill="url(#anon-msg-solid-grad)"
+                />
+                <circle cx="8" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+                <circle cx="12" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+                <circle cx="16" cy="10" r="1.25" fill="white" fillOpacity="0.9" />
+              </svg>
+            )}
+
+            {/* Anonymous text block */}
+            <div className="flex flex-col text-left min-w-0">
+              <h3 className="font-fraunces text-sm sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
+                {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
+              </h3>
+              <p className="mt-0.5 text-[11px] sm:text-xs md:text-sm font-jakarta font-medium text-emerald-800/80 dark:text-emerald-200/90 truncate">
+                {isInQueue || matchPhase === 'searching'
+                  ? 'Peer search · Cancel'
+                  : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
+              </p>
             </div>
-
-            {/* Anonymous on the center */}
-            <h3 className="font-fraunces text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
-              {isInQueue || matchPhase === 'searching' ? 'Searching...' : 'Anonymous'}
-            </h3>
-
-            {/* 5 attempts left on the bottom */}
-            <p className="mt-2 text-xs sm:text-sm font-jakarta font-medium text-gray-500 dark:text-gray-400">
-              {isInQueue || matchPhase === 'searching'
-                ? 'Looking for a peer · Click to cancel'
-                : `${Math.max(0, DAILY_LIMIT - dailyMatchCount)} attempts left`}
-            </p>
           </button>
 
           {/* Card 2: Games */}
@@ -421,23 +441,49 @@ export default function DiscoverPage() {
               window.open('http://localhost:5174', '_blank');
               toast.success('Opening ALLY-JIS Game Portal!');
             }}
-            className="group relative flex flex-col items-center justify-center text-center p-7 sm:p-9 rounded-3xl border bg-white dark:bg-[#1A1A1A] border-gray-200/80 dark:border-[#262626] hover:border-[#F0B247]/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-1 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98]"
+            className="group relative flex flex-row items-center justify-center sm:justify-start gap-2.5 sm:gap-4 p-3.5 sm:p-5 sm:px-7 rounded-full border bg-gradient-to-r from-[#E8A838]/25 via-amber-500/25 to-[#F0B247]/25 dark:from-[#E8A838]/25 dark:via-amber-500/25 dark:to-[#F0B247]/20 border-amber-400/30 dark:border-amber-400/30 hover:border-amber-400/60 dark:hover:border-[#F0B247]/60 hover:-translate-y-0.5 transition-all duration-300 select-none overflow-hidden cursor-pointer shadow-xs hover:shadow-xl active:scale-[0.98] backdrop-blur-md"
           >
-            {/* Icon on the top */}
-            <div className="mb-3 transition-transform duration-300 group-hover:scale-110">
-              <Gamepad2 size={36} className="text-[#E8A838] dark:text-[#F0B247]" />
+            {/* Solid Gradient Game Icon */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 transition-transform duration-300 group-hover:scale-110 drop-shadow-xs"
+            >
+              <defs>
+                <linearGradient id="game-solid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FBBF24" />
+                  <stop offset="50%" stopColor="#F59E0B" />
+                  <stop offset="100%" stopColor="#EA580C" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M7 6H17C19.2 6 21 7.8 21 10V14C21 17.3 18.3 20 15 20C13.8 20 12.7 19.5 12 18.7C11.3 19.5 10.2 20 9 20C5.7 20 3 17.3 3 14V10C3 7.8 4.8 6 7 6Z"
+                fill="url(#game-solid-grad)"
+              />
+              <path
+                d="M7 11V15M5 13H9"
+                stroke="white"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="15.5" cy="11.5" r="1.1" fill="white" />
+              <circle cx="18" cy="13.5" r="1.1" fill="white" />
+              <circle cx="15.5" cy="15.5" r="1.1" fill="white" />
+              <circle cx="13" cy="13.5" r="1.1" fill="white" />
+            </svg>
+
+            {/* Games text block */}
+            <div className="flex flex-col text-left min-w-0">
+              <h3 className="font-fraunces text-sm sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight truncate">
+                Games
+              </h3>
+              <p className="mt-0.5 text-[11px] sm:text-xs md:text-sm font-jakarta font-medium text-amber-800/80 dark:text-amber-200/90 flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
+                <span className="truncate">4 players online</span>
+              </p>
             </div>
-
-            {/* Games on the center */}
-            <h3 className="font-fraunces text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
-              Games
-            </h3>
-
-            {/* players online on the bottom */}
-            <p className="mt-2 text-xs sm:text-sm font-jakarta font-medium text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-[#38C185] inline-block animate-pulse" />
-              <span>4 players online</span>
-            </p>
           </button>
         </div>
 
@@ -467,21 +513,7 @@ export default function DiscoverPage() {
           </div>
         )}
 
-        {/* Directory Controls Header */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-          <div>
-            <h2 className="font-fraunces text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span>Campus Students Directory</span>
-              <span className="text-xs font-jakarta font-bold px-2 py-0.5 rounded-full bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400">
-                {filtered.length}
-              </span>
-            </h2>
-            <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Every CHMSU peer is discoverable. Highest compatibility points are prioritized at the top.
-            </p>
-          </div>
 
-        </div>
 
         {/* ═══ Search & Controls Bar ═══ */}
         <div className="bg-white dark:bg-[#181818] rounded-2xl p-3 sm:p-4 mb-4 border border-gray-200/80 dark:border-white/10 shadow-xs space-y-3">
