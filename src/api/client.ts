@@ -42,6 +42,7 @@ export type {
   ConversationRow,
   ConversationVariant,
   ConversationMatchInfo,
+  GameInvitePayload,
   NotificationRow,
   MediaUploadResponse,
   PostMediaUploadResponse,
@@ -132,6 +133,7 @@ import * as match from './routes/match';
 import * as follow from './routes/follow';
 import * as activityLogs from './routes/activityLogs';
 import * as admin from './routes/admin';
+import * as games from './routes/games';
 import type { ListUsersQuery, ListReportsQuery } from './routes/admin';
 import { getMaintenanceStatus } from './http';
 export type { ListUsersQuery, ListReportsQuery };
@@ -324,6 +326,14 @@ export const apiClient = {
   listActivityLogs: activityLogs.listActivityLogs,
   deleteActivityLog: activityLogs.deleteActivityLog,
   clearActivityLogs: activityLogs.clearActivityLogs,
+
+  // ─── Games ──────────────────────────────────────────────────────────────
+  inviteToGame: games.inviteToGame,
+  acceptGameInvite: games.acceptGameInvite,
+  declineGameInvite: games.declineGameInvite,
+  cancelGameInvite: games.cancelGameInvite,
+  getGameSession: games.getGameSession,
+  getGameLeaderboard: games.getGameLeaderboard,
 
   // ─── System / Maintenance ────────────────────────────────────────────────
   getMaintenanceStatus,

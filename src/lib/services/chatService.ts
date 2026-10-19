@@ -30,6 +30,7 @@ export function mapMessageRow(msg: MessageRow): Message {
     })),
     // Global tombstone — set when the sender deleted for everyone.
     isDeleted: msg.is_deleted ?? false,
+    game_invite: msg.game_invite ?? (msg as any).game_invite ?? null,
   };
 }
 

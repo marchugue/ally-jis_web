@@ -41,15 +41,7 @@ import { profileService } from '@/lib/services/profileService';
 import { useLookupOptions } from '@/hooks/useLookupOptions';
 import { notify } from '@/components/ui/sonner';
 import { useAuth } from '@/context/AuthContext';
-import {
-  EmailSelectIllustration,
-  BasicInfoIllustration,
-  IdUploadIllustration,
-  OtpIllustration,
-  AcademicIllustration,
-  InterestsIllustration,
-  AvatarIllustration,
-} from '@/components/OnboardingIllustrations';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 
 // ── Preset Options ──────────────────────────────────────────────────────────
 
@@ -290,8 +282,8 @@ export default function RegisterPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (enlargedImage) setEnlargedImage(null);
-        if (activeModal) setActiveModal(null);
+        if (enlargedImage) closeEnlargedImage();
+        if (activeModal) closeModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -572,6 +564,7 @@ export default function RegisterPage() {
 
     if (emailType === 'external') {
       // Navigate into Student ID upload sub-flow
+      pushHistory();
       setIdSubStep('front');
       return;
     }
@@ -591,6 +584,7 @@ export default function RegisterPage() {
       pendingUserIdRef.current = result.userId;
       isOtpVerifiedRef.current = false;
       formEmailRef.current = form.email.trim().toLowerCase();
+      pushHistory();
       setShowOtpView(true);
       notify.success('Verification code sent!', `Check your inbox at ${form.email}`);
     } catch (err: any) {
@@ -646,6 +640,7 @@ export default function RegisterPage() {
 
       // 4. Move to OTP view
       setIdSubStep('none');
+      pushHistory();
       setShowOtpView(true);
       notify.success('Account created & code sent!', `We sent a 6-digit code to ${form.email}`);
     } catch (err: any) {
@@ -668,6 +663,7 @@ export default function RegisterPage() {
       setShowOtpView(false);
       saveWebRegisterCache({ showOtpView: false, step: 2 });
       notify.success('Email confirmed!', "Your email is verified. Let's finish your academic profile.");
+      pushHistory();
       setStep(2);
     } catch (err: any) {
       setOtpError(err?.message || 'Incorrect verification code. Please check and try again.');
@@ -779,44 +775,136 @@ export default function RegisterPage() {
     }
   };
 
-  // ── Back Navigation ───────────────────────────────────────────────────────
-  const handleBack = () => {
-    if (phase === 'select-email') {
-      navigate('/');
-      return;
-    }
+  // ── History & Phone Navigation Synchronization ─────────────────────────────
+  const phaseRef = useRef(phase);
+  const stepRef = useRef(step);
+  const idSubStepRef = useRef(idSubStep);
+  const showOtpViewRef = useRef(showOtpView);
+  const activeModalRef = useRef(activeModal);
+  const enlargedImageRef = useRef(enlargedImage);
+  const sessionRef = useRef(session);
+  const historyDepthRef = useRef<number>(0);
+  const isNavigatingBackRef = useRef<boolean>(false);
 
-    if (idSubStep === 'front') {
-      setIdSubStep('none');
-      return;
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { stepRef.current = step; }, [step]);
+  useEffect(() => { idSubStepRef.current = idSubStep; }, [idSubStep]);
+  useEffect(() => { showOtpViewRef.current = showOtpView; }, [showOtpView]);
+  useEffect(() => { activeModalRef.current = activeModal; }, [activeModal]);
+  useEffect(() => { enlargedImageRef.current = enlargedImage; }, [enlargedImage]);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+
+  const pushHistory = () => {
+    if (isNavigatingBackRef.current) return;
+    try {
+      historyDepthRef.current += 1;
+      window.history.pushState({ allyRegister: true, depth: historyDepthRef.current }, '');
+    } catch {}
+  };
+
+  const executeBackStep = () => {
+    if (enlargedImageRef.current) {
+      setEnlargedImage(null);
+      return true;
     }
-    if (idSubStep === 'back') {
-      setIdSubStep('front');
-      return;
+    if (activeModalRef.current) {
+      setActiveModal(null);
+      return true;
     }
-    if (idSubStep === 'review') {
+    if (idSubStepRef.current === 'review') {
       setIdSubStep('back');
-      return;
+      return true;
     }
-
-    if (step === 1 && showOtpView) {
+    if (idSubStepRef.current === 'back') {
+      setIdSubStep('front');
+      return true;
+    }
+    if (idSubStepRef.current === 'front') {
+      setIdSubStep('none');
+      return true;
+    }
+    if (stepRef.current === 1 && showOtpViewRef.current) {
       setShowOtpView(false);
       saveWebRegisterCache({ showOtpView: false });
-      return;
+      return true;
     }
-
-    if (step === 1) {
-      setPhase('select-email');
-      return;
-    }
-
-    if (step === 2 && session?.user) {
+    if (stepRef.current === 2 && sessionRef.current?.user) {
       notify.info('Account Verified', 'Your account is verified. Please complete your academic details.');
-      return;
+      return false;
     }
+    if (stepRef.current > 1) {
+      setStep(stepRef.current - 1);
+      return true;
+    }
+    if (stepRef.current === 1 && phaseRef.current === 'form') {
+      setPhase('select-email');
+      return true;
+    }
+    if (phaseRef.current === 'select-email') {
+      navigate('/');
+      return true;
+    }
+    return false;
+  };
 
-    if (step > 1) {
-      setStep(step - 1);
+  // Intercept phone back navigation (hardware back button / edge swipe / browser back)
+  useEffect(() => {
+    try {
+      if (!window.history.state?.allyRegisterRoot) {
+        window.history.replaceState({ allyRegisterRoot: true }, '');
+      }
+    } catch {}
+
+    const handlePopState = () => {
+      if (historyDepthRef.current > 0) {
+        historyDepthRef.current -= 1;
+      }
+      isNavigatingBackRef.current = true;
+      executeBackStep();
+      requestAnimationFrame(() => {
+        isNavigatingBackRef.current = false;
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate]);
+
+  const handleBack = () => {
+    if (historyDepthRef.current > 0) {
+      window.history.back();
+    } else {
+      executeBackStep();
+    }
+  };
+
+  const openModal = (m: 'terms' | 'privacy') => {
+    pushHistory();
+    setActiveModal(m);
+  };
+
+  const closeModal = () => {
+    if (activeModalRef.current) {
+      if (historyDepthRef.current > 0) {
+        window.history.back();
+      } else {
+        setActiveModal(null);
+      }
+    }
+  };
+
+  const openEnlargedImage = (img: { src: string; title: string; rotation: number }) => {
+    pushHistory();
+    setEnlargedImage(img);
+  };
+
+  const closeEnlargedImage = () => {
+    if (enlargedImageRef.current) {
+      if (historyDepthRef.current > 0) {
+        window.history.back();
+      } else {
+        setEnlargedImage(null);
+      }
     }
   };
 
@@ -964,18 +1052,15 @@ export default function RegisterPage() {
         {/* Main Content */}
         <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-8 md:py-10 flex items-center justify-center">
           <div className="w-full max-w-5xl xl:max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 xl:gap-20 items-center">
-            {/* Left Column: Illustration & Title (Centered) */}
+            {/* Left Column: Header (Centered) */}
             <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto">
               <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-4 sm:mb-6 relative flex justify-center"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center mb-4 sm:mb-6 shadow-sm"
               >
-                <div className="absolute -inset-4 bg-gradient-to-tr from-[#1A6B3C]/15 via-emerald-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-                <div className="relative">
-                  <EmailSelectIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                </div>
+                <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10" />
               </motion.div>
 
               <motion.h1
@@ -1093,6 +1178,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    pushHistory();
                     setPhase('form');
                     setStep(1);
                   }}
@@ -1138,7 +1224,10 @@ export default function RegisterPage() {
           {idSubStep === 'back' ? (
             <button
               type="button"
-              onClick={() => setIdSubStep('review')}
+              onClick={() => {
+                pushHistory();
+                setIdSubStep('review');
+              }}
               className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
             >
               Skip
@@ -1152,33 +1241,28 @@ export default function RegisterPage() {
       {/* ── BODY CONTAINER ── */}
       <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-7 md:py-8 lg:py-10 flex flex-col justify-center">
         <div className="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 xl:gap-16 items-start w-full max-w-5xl xl:max-w-6xl mx-auto">
-          {/* ── LEFT COLUMN: STEP ILLUSTRATION & CONTEXT (Centered) ── */}
+          {/* ── LEFT COLUMN: STEP CONTEXT (Centered) ── */}
           <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto md:sticky md:top-20 lg:top-24">
             <motion.div
-              key={`ill-${step}-${idSubStep}-${showOtpView}`}
-              initial={{ scale: 0.88, opacity: 0 }}
+              key={`badge-${step}-${idSubStep}-${showOtpView}`}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 24 }}
-              className="relative mb-3 sm:mb-5 flex justify-center"
+              transition={{ duration: 0.3 }}
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center mb-3 sm:mb-5 shadow-sm"
             >
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-tr from-[#1A6B3C]/15 via-emerald-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-                <div className="relative">
-                  {showOtpView ? (
-                    <OtpIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  ) : idSubStep !== 'none' ? (
-                    <IdUploadIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  ) : step === 1 ? (
-                    <BasicInfoIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  ) : step === 2 ? (
-                    <AcademicIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  ) : step === 3 ? (
-                    <InterestsIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  ) : (
-                    <AvatarIllustration className="w-28 h-28 sm:w-36 sm:h-36 md:w-36 md:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52" />
-                  )}
-                </div>
-              </div>
+              {showOtpView ? (
+                <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
+              ) : idSubStep !== 'none' ? (
+                <Upload className="w-7 h-7 sm:w-8 sm:h-8" />
+              ) : step === 1 ? (
+                <GraduationCap className="w-7 h-7 sm:w-8 sm:h-8" />
+              ) : step === 2 ? (
+                <GraduationCap className="w-7 h-7 sm:w-8 sm:h-8" />
+              ) : step === 3 ? (
+                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8" />
+              ) : (
+                <FileText className="w-7 h-7 sm:w-8 sm:h-8" />
+              )}
             </motion.div>
 
             <h1 className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight text-center">
@@ -1375,7 +1459,7 @@ export default function RegisterPage() {
                       {isImageFile(frontFile) ? (
                         <div
                           onClick={() =>
-                            setEnlargedImage({
+                            openEnlargedImage({
                               src: frontPreview,
                               title: 'Front ID Preview',
                               rotation: frontRotation,
@@ -1411,7 +1495,7 @@ export default function RegisterPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEnlargedImage({
+                                openEnlargedImage({
                                   src: frontPreview,
                                   title: 'Front ID Preview',
                                   rotation: frontRotation,
@@ -1562,7 +1646,7 @@ export default function RegisterPage() {
                   <div className="flex items-center gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => setIdSubStep('none')}
+                      onClick={handleBack}
                       className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       Back
@@ -1570,7 +1654,10 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       disabled={!frontFile}
-                      onClick={() => setIdSubStep('back')}
+                      onClick={() => {
+                        pushHistory();
+                        setIdSubStep('back');
+                      }}
                       className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                     >
                       <span>Next: Back Side</span>
@@ -1591,7 +1678,10 @@ export default function RegisterPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setIdSubStep('review')}
+                      onClick={() => {
+                        pushHistory();
+                        setIdSubStep('review');
+                      }}
                       className="text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
                     >
                       Skip this step →
@@ -1617,7 +1707,7 @@ export default function RegisterPage() {
                       {isImageFile(backFile) ? (
                         <div
                           onClick={() =>
-                            setEnlargedImage({
+                            openEnlargedImage({
                               src: backPreview,
                               title: 'Back ID Preview',
                               rotation: backRotation,
@@ -1653,7 +1743,7 @@ export default function RegisterPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEnlargedImage({
+                                openEnlargedImage({
                                   src: backPreview,
                                   title: 'Back ID Preview',
                                   rotation: backRotation,
@@ -1793,14 +1883,17 @@ export default function RegisterPage() {
                   <div className="flex items-center gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => setIdSubStep('front')}
+                      onClick={handleBack}
                       className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIdSubStep('review')}
+                      onClick={() => {
+                        pushHistory();
+                        setIdSubStep('review');
+                      }}
                       className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span>{backFile ? 'Next: Review ID' : 'Skip & Review'}</span>
@@ -1844,7 +1937,7 @@ export default function RegisterPage() {
                             if (isPdfFile(frontFile)) {
                               window.open(frontPreview, '_blank');
                             } else {
-                              setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                              openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
                             }
                           }}
                           className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
@@ -1878,7 +1971,7 @@ export default function RegisterPage() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                                  openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
                                 }}
                                 className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
                                 title="Zoom / Inspect"
@@ -1909,7 +2002,7 @@ export default function RegisterPage() {
                             if (isPdfFile(backFile)) {
                               window.open(backPreview, '_blank');
                             } else {
-                              setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                              openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
                             }
                           }}
                           className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
@@ -1943,7 +2036,7 @@ export default function RegisterPage() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                                  openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
                                 }}
                                 className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
                                 title="Zoom / Inspect"
@@ -1978,7 +2071,7 @@ export default function RegisterPage() {
                   <div className="flex items-center gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => setIdSubStep('back')}
+                      onClick={handleBack}
                       className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       Back
@@ -2024,7 +2117,7 @@ export default function RegisterPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setPhase('select-email')}
+                      onClick={handleBack}
                       className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
                     >
                       Change
@@ -2113,48 +2206,8 @@ export default function RegisterPage() {
                       </div>
                       {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
 
-                      {/* ── Dynamic Password Strength Validator ────────────── */}
-                      {form.password.length > 0 && (() => {
-                        const rules = [
-                          { key: 'length',  label: 'At least 8 characters',         test: (p: string) => p.length >= 8 },
-                          { key: 'upper',   label: 'One uppercase letter (A–Z)',     test: (p: string) => /[A-Z]/.test(p) },
-                          { key: 'lower',   label: 'One lowercase letter (a–z)',     test: (p: string) => /[a-z]/.test(p) },
-                          { key: 'digit',   label: 'One number (0–9)',               test: (p: string) => /[0-9]/.test(p) },
-                          { key: 'special', label: 'One special character (!@#…)',   test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-                        ];
-                        const passed = rules.filter(r => r.test(form.password)).length;
-                        const pct = Math.round((passed / rules.length) * 100);
-                        const barColor = pct <= 20 ? '#EF4444' : pct <= 40 ? '#F97316' : pct <= 60 ? '#EAB308' : pct <= 80 ? '#84CC16' : '#22C55E';
-                        const strengthLabel = pct <= 20 ? 'Very weak' : pct <= 40 ? 'Weak' : pct <= 60 ? 'Fair' : pct <= 80 ? 'Strong' : 'Very strong';
-                        return (
-                          <div className="mt-2.5 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
-                                <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-                              </div>
-                              <span className="text-[11px] font-bold font-jakarta" style={{ color: barColor }}>{strengthLabel}</span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-y-1">
-                              {rules.map(rule => {
-                                const ok = rule.test(form.password);
-                                return (
-                                  <div key={rule.key} className="flex items-center gap-1.5">
-                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${ok ? 'bg-green-500' : 'bg-gray-200 dark:bg-white/10'}`}>
-                                      {ok
-                                        ? <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                        : <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 2L6 6M6 2L2 6" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                                      }
-                                    </div>
-                                    <span className={`text-[11px] font-jakarta transition-colors ${ok ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
-                                      {rule.label}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      {/* ── Dynamic Password Strength Validator (5 Horizontal Bars) ────────────── */}
+                      <PasswordStrengthIndicator password={form.password} />
                     </div>
 
                     <div>
@@ -2352,7 +2405,10 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (validateStep2()) setStep(3);
+                      if (validateStep2()) {
+                        pushHistory();
+                        setStep(3);
+                      }
                     }}
                     className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
@@ -2508,7 +2564,10 @@ export default function RegisterPage() {
                     type="button"
                     disabled={form.interests.length < 3}
                     onClick={() => {
-                      if (validateStep3()) setStep(4);
+                      if (validateStep3()) {
+                        pushHistory();
+                        setStep(4);
+                      }
                     }}
                     className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
@@ -2689,7 +2748,7 @@ export default function RegisterPage() {
                           <div className="flex items-center gap-4 p-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
                             <div
                               onClick={() =>
-                                setEnlargedImage({
+                                openEnlargedImage({
                                   src: customAvatarPreview,
                                   title: 'Profile Photo Preview',
                                   rotation: 0,
@@ -2859,7 +2918,7 @@ export default function RegisterPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActiveModal('terms');
+                            openModal('terms');
                           }}
                           className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
                         >
@@ -2885,7 +2944,7 @@ export default function RegisterPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActiveModal('privacy');
+                            openModal('privacy');
                           }}
                           className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
                         >
@@ -2923,7 +2982,7 @@ export default function RegisterPage() {
       <AnimatePresence>
         {enlargedImage && (
           <div
-            onClick={() => setEnlargedImage(null)}
+            onClick={closeEnlargedImage}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
           >
             <motion.div
@@ -2961,7 +3020,7 @@ export default function RegisterPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEnlargedImage(null)}
+                    onClick={closeEnlargedImage}
                     className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-colors"
                     title="Close preview (Esc)"
                   >
@@ -2984,7 +3043,7 @@ export default function RegisterPage() {
                 <span>Tip: Click outside or press Esc to close</span>
                 <button
                   type="button"
-                  onClick={() => setEnlargedImage(null)}
+                  onClick={closeEnlargedImage}
                   className="text-white hover:text-emerald-400 font-semibold cursor-pointer"
                 >
                   Close preview ✕
@@ -2998,12 +3057,16 @@ export default function RegisterPage() {
       {/* ── LEGAL POLICY MODALS ── */}
       <AnimatePresence>
         {activeModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div
+            onClick={closeModal}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          >
             <motion.div
+              onClick={(e) => e.stopPropagation()}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-lg w-full bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-2xl flex flex-col max-h-[80vh]"
+              className="relative max-w-lg w-full bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-2xl flex flex-col max-h-[80vh] cursor-default"
             >
               <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/10">
                 <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
@@ -3011,7 +3074,7 @@ export default function RegisterPage() {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setActiveModal(null)}
+                  onClick={closeModal}
                   className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 cursor-pointer"
                 >
                   <X size={18} />
@@ -3025,7 +3088,7 @@ export default function RegisterPage() {
               <div className="pt-4 border-t border-gray-100 dark:border-white/10">
                 <button
                   type="button"
-                  onClick={() => setActiveModal(null)}
+                  onClick={closeModal}
                   className="w-full py-3 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold rounded-full hover:bg-[#14532D] cursor-pointer"
                 >
                   Close & Continue

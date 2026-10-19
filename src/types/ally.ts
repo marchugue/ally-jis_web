@@ -40,6 +40,15 @@ export interface MessageReaction {
   emoji: string;
 }
 
+export interface GameInvitePayload {
+  sessionId: string;
+  gameId: 'merge' | 'ttt' | 'clue';
+  status: 'pending' | 'active' | 'finished' | 'declined' | 'expired';
+  hostId: string;
+  guestId: string;
+  expiresAt: string | null;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -55,6 +64,7 @@ export interface Message {
   reactions?: MessageReaction[];
   isDeleted?: boolean;
   deletedForMe?: boolean;
+  game_invite?: GameInvitePayload | null;
 }
 
 export type BlockStatus = 'none' | 'blockedByMe' | 'blockedByOther' | 'mutual';

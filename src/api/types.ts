@@ -190,6 +190,15 @@ export interface MessageReactionRow {
   emoji: string;
 }
 
+export interface GameInvitePayload {
+  sessionId: string;
+  gameId: 'merge' | 'ttt' | 'clue';
+  status: 'pending' | 'active' | 'finished' | 'declined' | 'expired';
+  hostId: string;
+  guestId: string;
+  expiresAt: string | null;
+}
+
 export interface MessageRow {
   id: string;
   conversation_id: string;
@@ -204,6 +213,7 @@ export interface MessageRow {
   status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   /** True when the sender deleted this message for everyone (global tombstone). */
   is_deleted?: boolean;
+  game_invite?: GameInvitePayload | null;
 }
 
 export interface ConversationMemberRow {

@@ -24,6 +24,7 @@ import { notify } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal';
 import { ActivityLogSection } from '@/components/settings/ActivityLogSection';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 
 type SettingsTab =
   | 'account'
@@ -604,14 +605,19 @@ export default function SettingsPage() {
                         show={showPasswords}
                         onToggleShow={() => setShowPasswords((v) => !v)}
                       />
-                      <PasswordField
-                        label="New Password"
-                        value={newPassword}
-                        onChange={setNewPassword}
-                        show={showPasswords}
-                        onToggleShow={() => setShowPasswords((v) => !v)}
-                        placeholder="Min. 8 characters"
-                      />
+                      <div>
+                        <PasswordField
+                          label="New Password"
+                          value={newPassword}
+                          onChange={setNewPassword}
+                          show={showPasswords}
+                          onToggleShow={() => setShowPasswords((v) => !v)}
+                          placeholder="Min. 8 characters"
+                        />
+                        {newPassword.length > 0 && (
+                          <PasswordStrengthIndicator password={newPassword} />
+                        )}
+                      </div>
                     </div>
 
                     <PasswordField

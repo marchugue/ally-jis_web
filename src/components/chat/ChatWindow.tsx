@@ -21,6 +21,7 @@ import { ChatSkeleton } from './ChatSkeleton';
 import { dedupeMessages } from '@/hooks/useRealtimeMessages';
 import { RevealAvatar } from '@/components/match/RevealAvatar';
 import type { AvatarRevealView } from '@/api/types';
+import { GameInviteCard } from '@/components/chat/GameInviteCard';
 
 interface ChatWindowProps {
   messages: Message[];
@@ -267,6 +268,7 @@ const MessageBubble = memo(function MessageBubble({
   const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
   const isMediaLocked = Boolean(imagesLocked && hasMedia);
   const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
+  const isGameInvite = Boolean(msg.game_invite);
   const isMobile = useIsMobile();
 
   const openActionMenu = useCallback(() => {
@@ -420,14 +422,14 @@ const MessageBubble = memo(function MessageBubble({
             e.stopPropagation();
             return;
           }
-          if (!isImageOnly && !isEmojiOnly) {
+          if (!isImageOnly && !isEmojiOnly && !isGameInvite) {
             onToggleTime?.();
           }
         }}
-        style={isImageOnly || isEmojiOnly ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
+        style={isImageOnly || isEmojiOnly || isGameInvite ? undefined : getBubbleBorderRadii(isMe, groupPosition)}
         className={cn(
           'w-fit max-w-full text-sm font-jakarta transition-opacity h-auto min-w-0',
-          isImageOnly || isEmojiOnly
+          isImageOnly || isEmojiOnly || isGameInvite
             ? 'p-0 bg-transparent dark:bg-transparent shadow-none border-none'
             : cn(
                 'px-4 py-2 cursor-pointer break-words [overflow-wrap:anywhere] [word-break:break-word]',
@@ -562,7 +564,15 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           </div>
         )}
-        {msg.content && (
+        {isGameInvite && msg.game_invite && (
+          <GameInviteCard
+            invite={msg.game_invite}
+            isMe={isMe}
+            currentUserId={currentUserId}
+          />
+        )}
+
+        {!isGameInvite && msg.content && (
           <p
             className={cn(
               isImageOnly ? 'hidden' : undefined,
@@ -586,7 +596,7 @@ const MessageBubble = memo(function MessageBubble({
             className={cn(
               'text-[10px] flex items-center gap-1 mt-1',
               isMe ? 'text-white/60' : 'text-gray-400',
-              isImageOnly && 'px-2 py-0.5 rounded-md bg-black/60 text-white/90 self-end backdrop-blur-sm shadow',
+              (isImageOnly || isGameInvite) && 'px-2 py-0.5 rounded-md bg-black/60 text-white/90 self-end backdrop-blur-sm shadow',
             )}
           >
             {isSending && <Clock size={10} className="animate-pulse" />}

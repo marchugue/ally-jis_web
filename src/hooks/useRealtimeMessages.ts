@@ -405,6 +405,35 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
       });
     };
 
+    const onGameInviteUpdated = (payload: {
+      sessionId: string;
+      messageId?: string;
+      conversationId?: string;
+      status: 'pending' | 'active' | 'finished' | 'declined' | 'expired';
+      game_invite?: any;
+    }) => {
+      if (!payload?.sessionId) return;
+      setMessages((prev) => {
+        const updated = prev.map((m) => {
+          const matchBySession = m.game_invite?.sessionId === payload.sessionId;
+          const matchByMsg = payload.messageId && m.id === payload.messageId;
+          if (matchBySession || matchByMsg) {
+            return {
+              ...m,
+              game_invite: {
+                ...(m.game_invite || {}),
+                ...(payload.game_invite || {}),
+                sessionId: payload.sessionId,
+                status: payload.status,
+              },
+            };
+          }
+          return m;
+        });
+        return updated;
+      });
+    };
+
     // Reconnect (e.g. after a dropped connection) can miss events —
     // reconcile once rather than polling continuously in the steady state.
     const onConnect = () => void loadMessages(true);
@@ -412,6 +441,7 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
     socket.on('conversation:message_new', onMessageNew);
     socket.on('conversation:message_deleted', onMessageDeleted);
     socket.on('conversation:typing', onTyping);
+    socket.on('game:invite_updated', onGameInviteUpdated);
     socket.on('connect', onConnect);
 
     // If the socket is already connected, fire an initial silent load
@@ -425,6 +455,7 @@ export function useRealtimeMessages(conversationId: string | null, userId?: stri
       socket.off('conversation:message_new', onMessageNew);
       socket.off('conversation:message_deleted', onMessageDeleted);
       socket.off('conversation:typing', onTyping);
+      socket.off('game:invite_updated', onGameInviteUpdated);
       socket.off('connect', onConnect);
       if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
     };
