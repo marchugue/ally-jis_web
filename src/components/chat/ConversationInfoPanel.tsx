@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, ShieldAlert, Trash2, X, Bell, BellOff } from 'lucide-react';
+import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, ShieldAlert, Trash2, X, Bell } from 'lucide-react';
 import { Conversation, BlockStatus } from '@/types/ally';
-import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import type { AvatarRevealView } from '@/api/types';
-import { ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { ReportModal } from '@/components/chat/ReportModal';
 import { BlockModal } from '@/components/chat/BlockModal';
@@ -60,15 +58,15 @@ export function ConversationInfoPanel({
   if (variant === 'mobile') {
     return (
       <div className="md:hidden fixed inset-0 z-[70] bg-white dark:bg-[#0D131F] flex flex-col animate-in slide-in-from-right duration-200">
-        <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center gap-3 flex-shrink-0">
+        <div className="p-4 border-b border-gray-200/80 dark:border-white/10 flex items-center gap-3 flex-shrink-0">
           <button
             onClick={onClose}
-            className="p-2 -ml-2 text-gray-400 hover:text-[#1A6B3C] dark:hover:text-emerald-400"
+            className="p-2 -ml-2 text-black dark:text-white hover:text-gray-600 transition-colors"
             aria-label="Close conversation info"
           >
             <ArrowLeft size={20} />
           </button>
-          <h3 className="font-jakarta font-bold text-gray-900 dark:text-white">Conversation Info</h3>
+          <h3 className="font-jakarta font-bold text-base text-black dark:text-white">Conversation Info</h3>
         </div>
         <div className="flex-1 overflow-y-auto">
           <ConversationInfoContent
@@ -93,24 +91,17 @@ export function ConversationInfoPanel({
 
   return (
     <div
-      className={cn(
-        'hidden md:flex w-[370px] h-full bg-white dark:bg-[#0D131F] flex-col overflow-y-auto flex-shrink-0',
-        'rounded-tl-[28px] rounded-bl-[28px] rounded-tr-none rounded-br-none',
-        'border-l border-black/[0.08] dark:border-white/10',
-        'z-20',
-        'shadow-[-10px_0px_24px_rgba(0,0,0,0.08)] dark:shadow-[-10px_0px_24px_rgba(0,0,0,0.35)]',
-        'animate-in slide-in-from-right-4 duration-200 custom-scrollbar'
-      )}
+      className="hidden md:flex w-[350px] h-full bg-white dark:bg-[#0D131F] flex-col overflow-y-auto flex-shrink-0 border-l border-gray-200/80 dark:border-white/10 select-none custom-scrollbar"
     >
-      {/* Desktop Header with close button */}
-      <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between gap-3 flex-shrink-0 bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md sticky top-0 z-10 rounded-tl-[28px]">
-        <h3 className="font-jakarta font-bold text-sm text-gray-900 dark:text-white leading-tight">
+      {/* Desktop Header - flat, seamless with conversation and chat list windows */}
+      <div className="p-4 border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between gap-3 flex-shrink-0 bg-white dark:bg-[#0D131F] sticky top-0 z-10">
+        <h3 className="font-jakarta font-bold text-sm text-black dark:text-white leading-tight">
           Conversation Info
         </h3>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           aria-label="Close conversation info"
           title="Close info panel"
         >
@@ -226,7 +217,6 @@ function ConversationInfoContent({
     }
   };
 
-  // ── Unblock flow ──────────────────────────────────────────────────────────
   const handleUnblock = async () => {
     setUnblockingState('loading');
     try {
@@ -240,9 +230,9 @@ function ConversationInfoContent({
   };
 
   return (
-    <div className="flex flex-col">
-      {/* ── Profile header ── */}
-      <div className="flex flex-col items-center text-center border-b border-gray-100 dark:border-white/10 p-6">
+    <div className="flex flex-col py-3">
+      {/* ── 1. Profile header (centered, no anonymous badge) ── */}
+      <div className="flex flex-col items-center text-center px-6 pt-3 pb-4">
         {isAnonymous ? (
           <AnonymousAvatar
             avatarKey={conversation.matchInfo?.partnerAvatar || conversation.participantAvatar || 'fox'}
@@ -253,22 +243,13 @@ function ConversationInfoContent({
           <AvatarDisplay
             src={conversation.participantAvatar}
             name={conversation.participantName}
-            className={cn(
-              'rounded-full object-cover mb-3',
-              avatarSize === 'lg' ? 'w-24 h-24' : 'w-20 h-20',
-            )}
+            className={avatarSize === 'lg' ? 'w-24 h-24 rounded-full object-cover mb-3' : 'w-20 h-20 rounded-full object-cover mb-3'}
           />
         )}
         <div className="flex items-center justify-center gap-1.5 min-w-0 flex-wrap">
-          <h3 className={cn(
-            'font-jakarta font-bold text-gray-900 dark:text-white',
-            avatarSize === 'lg' && 'text-lg',
-          )}>
+          <h3 className={`font-jakarta font-bold text-black dark:text-white ${avatarSize === 'lg' ? 'text-lg' : 'text-base'}`}>
             {conversation.participantName}
           </h3>
-          {isAnonymous && conversation.variant !== 'anonymous_ended' && (
-            <ActiveAllyBadge size={avatarSize === 'lg' ? 18 : 16} />
-          )}
           {(conversation.dayStreak ?? conversation.matchInfo?.dayStreak ?? 0) > 0 && (
             <ChatStreakBadge
               dayStreak={conversation.dayStreak ?? conversation.matchInfo?.dayStreak ?? 0}
@@ -277,31 +258,24 @@ function ConversationInfoContent({
             />
           )}
         </div>
-        {isAnonymous ? (
-          <span className="mt-1 text-xs font-jakarta font-medium px-2.5 py-0.5 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400">
-            {conversation.variant === 'anonymous_ended' ? 'Match ended' : 'Anonymous match'}
-          </span>
-        ) : (
-          <span className={cn(
-            'mt-1 text-xs font-jakarta font-medium px-2.5 py-0.5 rounded-full',
-            isOnline ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500',
-          )}>
+        {!isAnonymous && (
+          <span className="mt-1 text-xs font-jakarta font-medium text-gray-500 dark:text-gray-400">
             {isOnline ? 'Online' : 'Offline'}
           </span>
         )}
       </div>
 
-      {/* ── Shared interests ── */}
+      {/* ── 2. Shared interests (centered, no divider) ── */}
       {sharedInterests.length > 0 && (
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10">
-          <h4 className="font-jakarta text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2.5">
+        <div className="px-6 py-2 flex flex-col items-center text-center">
+          <h4 className="font-jakarta text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 text-center">
             Shared Interests
           </h4>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
             {sharedInterests.map((interest) => (
               <span
                 key={interest}
-                className="text-xs font-jakarta bg-[#1A6B3C]/8 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-300 px-2.5 py-1 rounded-full"
+                className="text-xs font-jakarta bg-gray-100 dark:bg-white/10 text-black dark:text-white px-3 py-1 rounded-full font-medium"
               >
                 {interest}
               </span>
@@ -310,190 +284,169 @@ function ConversationInfoContent({
         </div>
       )}
 
-      {/* ── Icebreaker toggle ── */}
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#1A6B3C]/8 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-          <Lightbulb size={18} className="text-[#1A6B3C] dark:text-emerald-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white">
-            Icebreaker suggestions
-          </p>
-          <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">
-            Show conversation starters
-          </p>
-        </div>
-        <button
-          onClick={() => onIcebreakersToggle(!icebreakersEnabled)}
-          disabled={icebreakersLoading}
-          role="switch"
-          aria-checked={icebreakersEnabled}
-          className={cn(
-            'w-11 h-6 rounded-full flex-shrink-0 relative transition-colors',
-            icebreakersEnabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700',
-            icebreakersLoading && 'opacity-50 cursor-not-allowed',
-          )}
-        >
-          <span
-            className={cn(
-              'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform',
-              icebreakersEnabled && 'translate-x-5',
-            )}
-          />
-        </button>
-      </div>
-
-      {/* ── Mute Notifications Toggle ── */}
-      <div className="mx-6 p-3 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-between gap-4 mt-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300">
-            {isMuted ? <BellOff size={16} /> : <Bell size={16} />}
-          </div>
-          <div className="min-w-0">
-            <p className="font-jakarta font-semibold text-xs text-gray-900 dark:text-white">
-              Mute notifications
-            </p>
-            <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 truncate">
-              {isMuted ? 'Silenced' : 'Alert on new messages'}
-            </p>
-          </div>
-        </div>
-        <button
+      {/* ── 3. Chat Controls & Settings (flat rows, black text, solid icons, no containers, no dividers) ── */}
+      <div className="pt-2 flex flex-col">
+        {/* Mute notifications */}
+        <div
           onClick={handleToggleMute}
-          disabled={muteLoading}
-          role="switch"
-          aria-checked={isMuted}
-          className={cn(
-            'w-11 h-6 rounded-full flex-shrink-0 relative transition-colors',
-            isMuted ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700',
-            muteLoading && 'opacity-50 cursor-not-allowed',
-          )}
+          className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors cursor-pointer select-none"
         >
-          <span
-            className={cn(
-              'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform',
-              isMuted && 'translate-x-5',
-            )}
-          />
-        </button>
-      </div>
-
-      {/* ── Block / Delete / Report / End Match ── */}
-      <div className="px-6 pt-4 pb-2 space-y-1">
-        {isBlockedByMe ? (
-          <>
-            {unblockingState === 'idle' && (
-              <button
-                onClick={handleUnblock}
-                className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors px-2 -mx-2"
-              >
-                <ShieldOff size={17} className="text-emerald-500 flex-shrink-0" />
-                <span className="font-jakarta text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                  Unblock {conversation.participantName}
-                </span>
-              </button>
-            )}
-
-            {unblockingState === 'loading' && (
-              <div className="flex items-center gap-3 py-2.5 px-2 -mx-2">
-                <ShieldOff size={17} className="text-emerald-300 flex-shrink-0" />
-                <span className="font-jakarta text-sm text-emerald-300 font-medium">
-                  Unblocking…
-                </span>
-              </div>
-            )}
-
-            {unblockingState === 'error' && (
-              <div className="rounded-xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/40 p-3 mb-1">
-                <p className="font-jakarta text-xs text-red-600 dark:text-red-300 mb-2">
-                  Something went wrong. Please try again.
-                </p>
-                <button
-                  onClick={handleUnblock}
-                  className="w-full py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 font-jakarta text-xs text-white font-semibold transition-colors"
-                >
-                  Retry unblock
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <button
-            onClick={() => setShowBlockModal(true)}
-            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
-          >
-            <ShieldOff size={17} className="text-red-400 flex-shrink-0" />
-            <span className="font-jakarta text-sm text-red-500 font-medium">
-              Block {conversation.participantName}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <Bell size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+              Mute notifications
             </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isMuted}
+            disabled={muteLoading}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleMute();
+            }}
+            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${
+              isMuted ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+            } ${muteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                isMuted ? 'translate-x-5' : ''
+              }`}
+            />
           </button>
-        )}
+        </div>
+
+        {/* Icebreaker suggestions */}
+        <div
+          onClick={() => onIcebreakersToggle(!icebreakersEnabled)}
+          className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <Lightbulb size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+              Icebreaker suggestions
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={icebreakersEnabled}
+            disabled={icebreakersLoading}
+            onClick={(e) => {
+              e.stopPropagation();
+              onIcebreakersToggle(!icebreakersEnabled);
+            }}
+            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${
+              icebreakersEnabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+            } ${icebreakersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                icebreakersEnabled ? 'translate-x-5' : ''
+              }`}
+            />
+          </button>
+        </div>
 
         {/* Restrict action */}
         {isRestrictedByMe ? (
           <button
+            type="button"
             onClick={handleUnrestrict}
             disabled={unrestrictingState === 'loading'}
-            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors px-2 -mx-2"
+            className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
           >
-            <ShieldAlert size={17} className="text-amber-500 flex-shrink-0" />
-            <span className="font-jakarta text-sm text-amber-600 dark:text-amber-400 font-medium">
+            <ShieldAlert size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
               {unrestrictingState === 'loading' ? 'Unrestricting…' : `Unrestrict ${conversation.participantName}`}
             </span>
           </button>
         ) : (
           <button
+            type="button"
             onClick={() => setShowRestrictModal(true)}
-            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors px-2 -mx-2"
+            className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
           >
-            <ShieldAlert size={17} className="text-amber-500 flex-shrink-0" />
-            <span className="font-jakarta text-sm text-amber-600 dark:text-amber-400 font-medium">
+            <ShieldAlert size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
               Restrict {conversation.participantName}
             </span>
           </button>
         )}
 
-        {/* End Match (for active anonymous conversations) */}
+        {/* Block action */}
+        {isBlockedByMe ? (
+          <button
+            type="button"
+            onClick={handleUnblock}
+            disabled={unblockingState === 'loading'}
+            className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
+          >
+            <ShieldOff size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+              {unblockingState === 'loading' ? 'Unblocking…' : `Unblock ${conversation.participantName}`}
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowBlockModal(true)}
+            className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
+          >
+            <ShieldOff size={18} className="text-black dark:text-white fill-current shrink-0" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+              Block {conversation.participantName}
+            </span>
+          </button>
+        )}
+
+        {/* Report action */}
+        <button
+          type="button"
+          onClick={() => setShowReportModal(true)}
+          className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
+        >
+          <Flag size={18} className="text-black dark:text-white fill-current shrink-0" />
+          <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+            Report {conversation.participantName}
+          </span>
+        </button>
+
+        {/* End match action (for active anonymous conversations) */}
         {isAnonymous && conversation.variant !== 'anonymous_ended' && (
           <button
+            type="button"
             onClick={() => setShowEndMatchDialog(true)}
-            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
+            className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
           >
-            <LogOut size={17} className="text-red-400 flex-shrink-0" />
-            <span className="font-jakarta text-sm text-red-500 font-medium">
+            <LogOut size={18} className="text-black dark:text-white shrink-0 stroke-[2.2]" />
+            <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
               End match
             </span>
           </button>
         )}
 
-        {/* Delete Conversation (available for both regular and anonymous conversations) */}
+        {/* Delete conversation */}
         <button
+          type="button"
           onClick={() => setShowDeleteModal(true)}
-          className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
+          className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
         >
-          <Trash2 size={17} className="text-red-400 flex-shrink-0" />
-          <span className="font-jakarta text-sm text-red-500 font-medium">
+          <Trash2 size={18} className="text-black dark:text-white fill-current shrink-0" />
+          <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
             Delete conversation
-          </span>
-        </button>
-
-        {/* Report — always available */}
-        <button
-          onClick={() => setShowReportModal(true)}
-          className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors px-2 -mx-2"
-        >
-          <Flag size={17} className="text-red-400 flex-shrink-0" />
-          <span className="font-jakarta text-sm text-red-500 font-medium">
-            Report {conversation.participantName}
           </span>
         </button>
       </div>
 
-      {/* ── Modals ── */}
+      {/* ── Modals & Dialogs ── */}
       {showBlockModal && (
         <BlockModal
           participantName={conversation.participantName}
           participantId={conversation.participantId}
+          participantAvatar={conversation.participantAvatar}
           onClose={() => setShowBlockModal(false)}
           onBlockSuccess={onBlockChange}
         />
@@ -503,6 +456,7 @@ function ConversationInfoContent({
         <RestrictModal
           participantName={conversation.participantName}
           participantId={conversation.participantId}
+          participantAvatar={conversation.participantAvatar}
           onClose={() => setShowRestrictModal(false)}
           onRestrictSuccess={() => {
             setIsRestrictedByMe(true);
@@ -535,17 +489,21 @@ function ConversationInfoContent({
 
       {/* End Match Confirmation Alert */}
       <AlertDialog open={showEndMatchDialog} onOpenChange={setShowEndMatchDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl max-w-md p-6 bg-white dark:bg-[#111827] border border-gray-100 dark:border-white/10 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>End this match?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="font-jakarta text-lg font-bold text-gray-900 dark:text-white">
+              End this match?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-jakarta text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
               Ending this match will close the conversation and disable messaging for both you and your match. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-2 mt-6">
+            <AlertDialogCancel className="rounded-xl px-4 py-2 font-jakarta font-semibold text-sm border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl px-5 py-2 font-jakarta font-semibold text-sm transition-colors shadow-sm"
               onClick={() => {
                 setShowEndMatchDialog(false);
                 onEndMatch?.();
