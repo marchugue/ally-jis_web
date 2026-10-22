@@ -446,6 +446,7 @@ export interface ReportUserPayload {
   violationId: string;
   conversationId?: string;
   postId?: string;
+  messageId?: string;
   notes?: string;
 }
 
@@ -471,6 +472,49 @@ export interface BlockedUserRow {
 export interface UnblockUserResponse {
   success: true;
 }
+
+export interface RestrictUserPayload {
+  restrictedUserId: string;
+}
+
+export interface RestrictUserResponse {
+  success: boolean;
+  restrictedAt: string;
+}
+
+export interface UnrestrictUserResponse {
+  success: true;
+}
+
+export interface RestrictedUserRow {
+  id: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  restrictedAt: string;
+}
+
+export interface MuteUserPayload {
+  mutedUserId: string;
+}
+
+export interface MuteUserResponse {
+  success: boolean;
+  mutedAt: string;
+}
+
+export interface UnmuteUserResponse {
+  success: true;
+}
+
+export interface MutedUserRow {
+  id: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  mutedAt: string;
+}
+
 
 export interface UpdateIcebreakersPayload { // NEW
   enabled: boolean;
@@ -642,6 +686,13 @@ export interface AdminActivityLogRow {
   metadata: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
+  admin_username?: string | null;
+  admin_name?: string | null;
+  admin_email?: string | null;
+  target_username?: string | null;
+  target_full_name?: string | null;
+  target_email?: string | null;
+  target_avatar?: string | null;
 }
 
 export interface PaginatedActivityLog {
@@ -737,12 +788,37 @@ export interface AdminReportPost {
   is_deleted?: boolean;
 }
 
+export interface AdminReportMessage {
+  id: string;
+  conversation_id: string | null;
+  sender_id: string | null;
+  sender_username?: string | null;
+  sender_name?: string | null;
+  sender_avatar?: string | null;
+  content: string;
+  image_url?: string | null;
+  created_at: string;
+  is_deleted?: boolean;
+  is_reported?: boolean;
+}
+
+export interface AdminReportMessageDetail extends AdminReportMessage {
+  /** Messages around the reported one (oldest -> newest), including itself. */
+  context: AdminReportMessage[];
+}
+
 export interface AdminReportListItem {
   id: string;
   reporter_id: string | null;
   reporter_username: string | null;
+  reporter_name?: string | null;
+  reporter_email?: string | null;
+  reporter_avatar?: string | null;
   reported_user_id: string | null;
   reported_username: string | null;
+  reported_name?: string | null;
+  reported_email?: string | null;
+  reported_avatar?: string | null;
   violation_id: string;
   violation_label: string;
   category_id: string;
@@ -750,6 +826,8 @@ export interface AdminReportListItem {
   conversation_id: string | null;
   post_id?: string | null;
   post?: AdminReportPost | null;
+  message_id?: string | null;
+  message?: AdminReportMessageDetail | null;
   status: ReportStatus;
   internal_notes: string | null;
   created_at: string;
@@ -761,7 +839,7 @@ export interface ListReportsParams {
   categoryId?: string;
   cursor?: string | null;
   limit?: number;
-  targetType?: 'all' | 'post' | 'user';
+  targetType?: 'all' | 'post' | 'user' | 'message';
 }
 
 export interface PaginatedReportList {
@@ -776,7 +854,7 @@ export type ReportStatusCounts = Record<ReportStatus, number>;
 
 export interface GlobalSearchResult {
   users: { id: string; username: string | null; full_name: string | null; email: string }[];
-  reports: { id: string; reported_username: string | null; violation_label: string; status: string }[];
+  reports: { id: string; reported_username: string | null; reported_name?: string | null; violation_label: string; status: string }[];
   admins: { id: string; username: string | null; full_name: string | null; role: string }[];
 }
 

@@ -1,6 +1,7 @@
 // src/pages/admin/AdminReportsPage.tsx
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Loader2,
   Ban,
@@ -24,7 +25,7 @@ import { apiClient } from '@/api/client';
 import type { AdminReportListItem, ReportStatus, ReportStatusCounts } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 
 const STATUS_TABS: { value: ReportStatus | 'all'; label: string }[] = [
@@ -35,11 +36,27 @@ const STATUS_TABS: { value: ReportStatus | 'all'; label: string }[] = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
-const TARGET_FILTERS: { value: 'all' | 'post' | 'user'; label: string; icon: any }[] = [
+type TargetFilter = 'all' | 'post' | 'user' | 'message';
+
+const TARGET_FILTERS: { value: TargetFilter; label: string; icon: any }[] = [
   { value: 'all', label: 'All Types', icon: ListFilter },
   { value: 'post', label: 'Post Reports', icon: FileText },
+  { value: 'message', label: 'Message Reports', icon: MessageSquare },
   { value: 'user', label: 'User Reports', icon: User },
 ];
+
+type ReportKind = 'post' | 'message' | 'user';
+
+function getReportKind(r: AdminReportListItem): ReportKind {
+  if (r.message_id || r.message) return 'message';
+  if (r.post_id || r.post) return 'post';
+  return 'user';
+}
+
+/** Strips the internal `[POST:..]` / `[MSG:..]` reference tag so only the human text remains. */
+function stripReferenceTag(notes: string | null | undefined): string {
+  return (notes ?? '').replace(/^\s*\[(?:POST|MSG):[a-f0-9-]+\]\s*/i, '');
+}
 
 const STATUS_COLORS: Record<ReportStatus, string> = {
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-amber-300 dark:border-amber-500/30',
@@ -55,9 +72,35 @@ const WARNING_TEMPLATES = [
   'Your post was flagged for spam or misleading information.',
 ];
 
+function getReportedDisplayName(r: AdminReportListItem): string {
+  if (r.reported_name && r.reported_name.toLowerCase() !== 'anonymous' && r.reported_name.toLowerCase() !== 'anonymous peer') {
+    return r.reported_name;
+  }
+  if (r.reported_username && r.reported_username.toLowerCase() !== 'anonymous') {
+    return `@${r.reported_username}`;
+  }
+  if (r.reported_email) {
+    return r.reported_email.split('@')[0];
+  }
+  return 'Reported Account';
+}
+
+function getReporterDisplayName(r: AdminReportListItem): string {
+  if (r.reporter_name && r.reporter_name.toLowerCase() !== 'anonymous' && r.reporter_name.toLowerCase() !== 'anonymous peer') {
+    return r.reporter_name;
+  }
+  if (r.reporter_username && r.reporter_username.toLowerCase() !== 'anonymous') {
+    return `@${r.reporter_username}`;
+  }
+  if (r.reporter_email) {
+    return r.reporter_email.split('@')[0];
+  }
+  return 'Student Reporter';
+}
+
 export default function AdminReportsPage() {
   const [status, setStatus] = useState<ReportStatus | 'all'>('pending');
-  const [targetType, setTargetType] = useState<'all' | 'post' | 'user'>('all');
+  const [targetType, setTargetType] = useState<TargetFilter>('all');
   const [reports, setReports] = useState<AdminReportListItem[] | null>(null);
   const [counts, setCounts] = useState<ReportStatusCounts | null>(null);
   const [selected, setSelected] = useState<AdminReportListItem | null>(null);
@@ -167,7 +210,9 @@ export default function AdminReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {reports.map((r) => {
-                    const isPostReport = Boolean(r.post_id || r.post);
+                    const kind = getReportKind(r);
+                    const isPostReport = kind === 'post';
+                    const isMessageReport = kind === 'message';
                     return (
                       <tr
                         key={r.id}
@@ -180,6 +225,10 @@ export default function AdminReportsPage() {
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
                               <FileText size={11} /> Post
                             </span>
+                          ) : isMessageReport ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                              <MessageSquare size={11} /> Message
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
                               <User size={11} /> Account
@@ -189,27 +238,71 @@ export default function AdminReportsPage() {
 
                         {/* Target Info */}
                         <td className="px-5 py-3.5">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            {r.reported_username ? `@${r.reported_username}` : 'Unknown Profile'}
-                          </p>
-                          {isPostReport && (
-                            <p className="text-[11px] text-gray-400 dark:text-white/40 truncate max-w-xs mt-0.5">
-                              {r.post?.is_deleted ? (
-                                <span className="text-red-500 dark:text-red-400 font-medium">[Post Deleted]</span>
-                              ) : r.post?.content ? (
-                                `"${r.post.content}"`
-                              ) : r.post?.media && r.post.media.length > 0 ? (
-                                `[Post with ${r.post.media.length} image(s)]`
-                              ) : (
-                                'Reported Post Content'
+                          <div className="flex items-center gap-2.5">
+                            <AvatarDisplay
+                              src={r.reported_avatar}
+                              name={getReportedDisplayName(r)}
+                              className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900 dark:text-white truncate">
+                                {getReportedDisplayName(r)}
+                                {r.reported_username && r.reported_username.toLowerCase() !== 'anonymous' && (
+                                  <span className="text-xs text-gray-400 font-normal ml-1">@{r.reported_username}</span>
+                                )}
+                              </p>
+                              {r.reported_email && (
+                                <p className="text-[11px] text-gray-400 dark:text-white/40 truncate">{r.reported_email}</p>
                               )}
-                            </p>
-                          )}
+                              {isPostReport && (
+                                <p className="text-[11px] text-gray-400 dark:text-white/40 truncate max-w-xs mt-0.5">
+                                  {r.post?.is_deleted ? (
+                                    <span className="text-red-500 dark:text-red-400 font-medium">[Post Deleted]</span>
+                                  ) : r.post?.content ? (
+                                    `"${r.post.content}"`
+                                  ) : r.post?.media && r.post.media.length > 0 ? (
+                                    `[Post with ${r.post.media.length} image(s)]`
+                                  ) : (
+                                    'Reported Post Content'
+                                  )}
+                                </p>
+                              )}
+                              {isMessageReport && (
+                                <p className="text-[11px] text-gray-400 dark:text-white/40 truncate max-w-xs mt-0.5">
+                                  {r.message?.is_deleted ? (
+                                    <span className="text-red-500 dark:text-red-400 font-medium">[Message Deleted]</span>
+                                  ) : r.message?.content ? (
+                                    `"${r.message.content}"`
+                                  ) : r.message?.image_url ? (
+                                    '[Image message]'
+                                  ) : (
+                                    'Reported Message'
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </td>
 
                         {/* Reporter */}
-                        <td className="px-5 py-3.5 text-gray-500 dark:text-white/60">
-                          {r.reporter_username ? `@${r.reporter_username}` : 'Anonymous'}
+                        <td className="px-5 py-3.5 text-gray-700 dark:text-white/80">
+                          <div className="flex items-center gap-2">
+                            <AvatarDisplay
+                              src={r.reporter_avatar}
+                              name={getReporterDisplayName(r)}
+                              className="w-7 h-7 rounded-full border border-gray-200 dark:border-white/10 shrink-0 text-xs"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate text-gray-900 dark:text-white">
+                                {getReporterDisplayName(r)}
+                              </p>
+                              {r.reporter_email ? (
+                                <p className="text-[10px] text-gray-400 dark:text-white/40 truncate">{r.reporter_email}</p>
+                              ) : r.reporter_username && r.reporter_username.toLowerCase() !== 'anonymous' ? (
+                                <p className="text-[10px] text-gray-400 dark:text-white/40">@{r.reporter_username}</p>
+                              ) : null}
+                            </div>
+                          </div>
                         </td>
 
                         {/* Violation */}
@@ -239,7 +332,9 @@ export default function AdminReportsPage() {
             {/* Mobile Cards View */}
             <div className="block sm:hidden divide-y divide-gray-100 dark:divide-white/5">
               {reports.map((r) => {
-                const isPostReport = Boolean(r.post_id || r.post);
+                const kind = getReportKind(r);
+                const isPostReport = kind === 'post';
+                const isMessageReport = kind === 'message';
                 return (
                   <div
                     key={r.id}
@@ -247,21 +342,30 @@ export default function AdminReportsPage() {
                     className="p-4 space-y-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isPostReport ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 shrink-0">
                             <FileText size={10} /> Post
                           </span>
+                        ) : isMessageReport ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 shrink-0">
+                            <MessageSquare size={10} /> Message
+                          </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 shrink-0">
                             <User size={10} /> User
                           </span>
                         )}
-                        <span className="font-bold text-sm text-gray-900 dark:text-white">
-                          {r.reported_username ? `@${r.reported_username}` : 'Unknown Profile'}
+                        <AvatarDisplay
+                          src={r.reported_avatar}
+                          name={getReportedDisplayName(r)}
+                          className="w-6 h-6 rounded-full shrink-0"
+                        />
+                        <span className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                          {getReportedDisplayName(r)}
                         </span>
                       </div>
-                      <Badge className={`border text-[10px] capitalize ${STATUS_COLORS[r.status]}`}>
+                      <Badge className={`border text-[10px] capitalize shrink-0 ${STATUS_COLORS[r.status]}`}>
                         {r.status}
                       </Badge>
                     </div>
@@ -269,6 +373,12 @@ export default function AdminReportsPage() {
                     {isPostReport && r.post?.content && (
                       <p className="text-xs text-gray-600 dark:text-white/70 italic line-clamp-2 bg-gray-50 dark:bg-white/5 p-2 rounded-xl">
                         "{r.post.content}"
+                      </p>
+                    )}
+
+                    {isMessageReport && r.message && (
+                      <p className="text-xs text-gray-600 dark:text-white/70 italic line-clamp-2 bg-gray-50 dark:bg-white/5 p-2 rounded-xl">
+                        {r.message.is_deleted ? '[Message deleted]' : r.message.content ? `"${r.message.content}"` : '[Image message]'}
                       </p>
                     )}
 
@@ -284,12 +394,12 @@ export default function AdminReportsPage() {
         )}
       </div>
 
-      <ReportDetailSheet report={selected} onClose={() => setSelected(null)} onChanged={load} />
+      <ReportDetailModal report={selected} onClose={() => setSelected(null)} onChanged={load} />
     </div>
   );
 }
 
-function ReportDetailSheet({
+function ReportDetailModal({
   report,
   onClose,
   onChanged,
@@ -298,7 +408,7 @@ function ReportDetailSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [notes, setNotes] = useState(report?.internal_notes ?? '');
+  const [notes, setNotes] = useState(stripReferenceTag(report?.internal_notes));
   const [warnMessage, setWarnMessage] = useState('');
   const [suspendDays, setSuspendDays] = useState('7');
   const [busy, setBusy] = useState(false);
@@ -307,12 +417,17 @@ function ReportDetailSheet({
   useEffect(() => {
     setNotes(report?.internal_notes ?? '');
     setWarnMessage('');
+    setPreviewImage(null);
   }, [report]);
 
   if (!report) return null;
 
-  const isPostReport = Boolean(report.post_id || report.post);
+  const kind = getReportKind(report);
+  const isPostReport = kind === 'post';
+  const isMessageReport = kind === 'message';
   const post = report.post;
+  const message = report.message;
+  const reporterDetails = stripReferenceTag(report.internal_notes);
 
   const ensurePointerEvents = () => {
     setTimeout(() => {
@@ -388,16 +503,20 @@ function ReportDetailSheet({
   };
 
   return (
-    <Sheet open={!!report} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto bg-white dark:bg-[#161D19] p-4 sm:p-6 border-l border-gray-200 dark:border-white/10">
-        <SheetHeader className="pb-3 border-b border-gray-100 dark:border-white/5">
+    <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#161D19] p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
+        <DialogHeader className="pb-3 border-b border-gray-100 dark:border-white/5">
           <div className="flex items-center justify-between">
-            <SheetTitle className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
+            <DialogTitle className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
               Report Investigation
-            </SheetTitle>
+            </DialogTitle>
             {isPostReport ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
                 <FileText size={12} /> Post Report
+              </span>
+            ) : isMessageReport ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                <MessageSquare size={12} /> Message Report
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
@@ -405,22 +524,55 @@ function ReportDetailSheet({
               </span>
             )}
           </div>
-        </SheetHeader>
+          <DialogDescription className="text-xs text-gray-400 dark:text-white/40 text-left">
+            Review report details, examine flagged content, and take moderation action.
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="mt-4 space-y-5 text-sm">
           {/* Header Summary Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-0.5">Reported Account</p>
-              <p className="font-bold text-gray-900 dark:text-white truncate">
-                {report.reported_username ? `@${report.reported_username}` : '—'}
-              </p>
+              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-1.5">Reported Account</p>
+              <div className="flex items-center gap-2">
+                <AvatarDisplay
+                  src={report.reported_avatar}
+                  name={getReportedDisplayName(report)}
+                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 dark:text-white text-xs truncate">
+                    {getReportedDisplayName(report)}
+                  </p>
+                  {report.reported_username && report.reported_username.toLowerCase() !== 'anonymous' && (
+                    <p className="text-[10px] text-gray-400 truncate">@{report.reported_username}</p>
+                  )}
+                  {report.reported_email && (
+                    <p className="text-[10px] text-gray-400 truncate">{report.reported_email}</p>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-0.5">Submitted By</p>
-              <p className="font-bold text-gray-900 dark:text-white truncate">
-                {report.reporter_username ? `@${report.reporter_username}` : 'Anonymous'}
-              </p>
+              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-1.5">Submitted By</p>
+              <div className="flex items-center gap-2">
+                <AvatarDisplay
+                  src={report.reporter_avatar}
+                  name={getReporterDisplayName(report)}
+                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 dark:text-white text-xs truncate">
+                    {getReporterDisplayName(report)}
+                  </p>
+                  {report.reporter_username && report.reporter_username.toLowerCase() !== 'anonymous' && (
+                    <p className="text-[10px] text-gray-400 truncate">@{report.reporter_username}</p>
+                  )}
+                  {report.reporter_email && (
+                    <p className="text-[10px] text-gray-400 truncate">{report.reporter_email}</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -431,7 +583,146 @@ function ReportDetailSheet({
             <p className="text-xs text-gray-500 dark:text-white/60">
               {report.category_label} · Submitted {new Date(report.created_at).toLocaleString()}
             </p>
+            {reporterDetails && (
+              <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-white/5">
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
+                  Reporter Description / Details
+                </p>
+                <p className="text-xs text-gray-700 dark:text-white/80 mt-0.5 whitespace-pre-wrap">
+                  "{reporterDetails}"
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* REPORTED MESSAGE REVIEW CARD (Displayed if message report) */}
+          {isMessageReport && (
+            <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/40 bg-amber-50/30 dark:bg-amber-950/10 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300">
+                    <MessageSquare size={15} />
+                  </div>
+                  <div>
+                    <h4 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">
+                      Reported Chat Message
+                    </h4>
+                    <p className="text-[11px] text-gray-400 dark:text-white/40">
+                      {message?.created_at ? new Date(message.created_at).toLocaleString() : 'Message details'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Message Status Badge */}
+                {message?.is_deleted ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
+                    <AlertTriangle size={11} /> Message Deleted
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                    Flagged Message
+                  </span>
+                )}
+              </div>
+
+              {/* Message Sender Info Snapshot */}
+              {message && (
+                <div className="flex items-center gap-2.5 pt-1">
+                  <AvatarDisplay
+                    src={message.sender_avatar}
+                    name={message.sender_name || message.sender_username || 'Sender'}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                      {message.sender_name || message.sender_username || 'Sender'}
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-white/40">
+                      @{message.sender_username || report.reported_username}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Message Content Bubble */}
+              <div className="bg-white dark:bg-[#1A2234] rounded-xl p-3.5 border border-amber-200/50 dark:border-white/5 text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap shadow-xs">
+                {message?.content ? (
+                  message.content
+                ) : message?.is_deleted ? (
+                  <span className="italic text-gray-400 dark:text-white/40">[This message has been deleted or removed]</span>
+                ) : message?.image_url ? (
+                  <span className="italic text-gray-400 dark:text-white/40">[Message contains image only]</span>
+                ) : (
+                  <span className="italic text-gray-400 dark:text-white/40">[No message content]</span>
+                )}
+              </div>
+
+              {/* Message Image Attachment */}
+              {message?.image_url && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-white/50">
+                    Attached Image:
+                  </p>
+                  <div
+                    onClick={() => setPreviewImage(message.image_url!)}
+                    className="relative max-w-xs rounded-xl overflow-hidden aspect-video bg-black/5 cursor-pointer group border border-gray-200/60 dark:border-white/10"
+                  >
+                    <img src={message.image_url} alt="Attached" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                      <Eye size={14} /> View Full
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Surrounding Context Dialogue */}
+              {message?.context && message.context.length > 1 && (
+                <div className="pt-2 border-t border-amber-200/50 dark:border-white/5 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                    Conversation Context ({message.context.length} messages)
+                  </p>
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto p-2 rounded-xl bg-white/60 dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                    {message.context.map((ctxMsg) => {
+                      const isFlagged = ctxMsg.id === message.id;
+                      return (
+                        <div
+                          key={ctxMsg.id}
+                          className={`p-2 rounded-lg text-xs transition-colors ${
+                            isFlagged
+                              ? 'bg-amber-100/80 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/50 font-medium'
+                              : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-white/40 mb-1">
+                            <span className="font-semibold text-gray-700 dark:text-white/80">
+                              {ctxMsg.sender_name || `@${ctxMsg.sender_username}` || 'User'}
+                              {isFlagged && ' (Reported)'}
+                            </span>
+                            <span>{new Date(ctxMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
+                            {ctxMsg.content || (ctxMsg.image_url ? '[Image]' : '[Deleted]')}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Message ID Footer */}
+              <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-white/40 pt-1 border-t border-amber-200/50 dark:border-white/5">
+                <span className="text-[10px] font-mono opacity-70">
+                  MSG ID: {(report.message_id || message?.id || '').slice(0, 8)}…
+                </span>
+                {report.conversation_id && (
+                  <span className="text-[10px] font-mono opacity-70">
+                    CONV: {report.conversation_id.slice(0, 8)}…
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* REPORTED POST REVIEW CARD (Displayed if post report) */}
           {isPostReport && (
@@ -679,29 +970,32 @@ function ReportDetailSheet({
             </div>
           </div>
         </div>
-      </SheetContent>
+      </DialogContent>
 
-      {/* Image Preview Lightbox */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div className="relative max-w-3xl max-h-[90vh]">
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 p-1"
-            >
-              <X size={24} />
-            </button>
-            <img
-              src={previewImage}
-              alt="Reported media preview"
-              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
-            />
-          </div>
-        </div>
-      )}
-    </Sheet>
+      {/* Image Preview Lightbox rendered via Portal */}
+      {previewImage &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div className="relative max-w-3xl max-h-[90vh]">
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300 p-1"
+              >
+                <X size={24} />
+              </button>
+              <img
+                src={previewImage}
+                alt="Reported media preview"
+                className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </Dialog>
   );
 }

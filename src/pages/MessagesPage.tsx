@@ -916,6 +916,26 @@ export default function MessagesPage() {
      });
   }, [conversations, searchQuery, variantFilter]);
 
+  // Defer conversation list reorder when in full-screen conversation on mobile,
+  // so the animation triggers smoothly when the user returns to the chat list.
+  const [displayedConversations, setDisplayedConversations] = useState<Conversation[]>(filteredConversations);
+  const wasInChatOnMobileRef = useRef(false);
+
+  useEffect(() => {
+    if (isMobileView && activeConversation) {
+      wasInChatOnMobileRef.current = true;
+    } else if (wasInChatOnMobileRef.current) {
+      wasInChatOnMobileRef.current = false;
+      const timer = setTimeout(() => {
+        setDisplayedConversations(filteredConversations);
+      }, 60);
+      return () => clearTimeout(timer);
+    } else {
+      setDisplayedConversations(filteredConversations);
+    }
+  }, [filteredConversations, activeConversation, isMobileView]);
+
+
 
   const isParticipantOnline = activeConversation
     ? onlineUserIds.has(activeConversation.participantId)
@@ -990,7 +1010,7 @@ export default function MessagesPage() {
               </div>
             ) : (
               <ConversationList
-                conversations={filteredConversations}
+                conversations={displayedConversations}
                 activeId={activeConversation?.id}
                 activeIsStreakActiveToday={isStreakActiveToday}
                 onSelect={handleSelectConversation}

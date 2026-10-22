@@ -141,7 +141,7 @@ export interface ListReportsQuery {
   status?: ReportStatus | 'all';
   categoryId?: string;
   cursor?: string | null;
-  targetType?: 'all' | 'post' | 'user';
+  targetType?: 'all' | 'post' | 'user' | 'message';
 }
 
 export function listReports(params: ListReportsQuery) {

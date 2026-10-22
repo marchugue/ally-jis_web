@@ -1,7 +1,6 @@
 // src/components/chat/GameInviteCard.tsx
 
 import React, { useState } from 'react';
-import { Swords, Trophy, Clock, X, Check, ExternalLink, Sparkles, Hash, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 import type { GameInvitePayload } from '@/types/ally';
@@ -17,50 +16,40 @@ const GAME_META: Record<
   'merge' | 'ttt' | 'clue',
   {
     title: string;
-    tagline: string;
-    icon: React.ReactNode;
-    cardGradient: string;
-    accentBorder: string;
-    badgeBg: string;
-    badgeText: string;
+    cover: string;
   }
 > = {
   merge: {
-    title: '2048: Number Merge',
-    tagline: 'Timed speed & merge race',
-    icon: <Hash className="w-5 h-5 text-amber-400" />,
-    cardGradient: 'from-amber-950/40 via-amber-900/20 to-stone-900/50',
-    accentBorder: 'border-amber-500/40 hover:border-amber-400/60',
-    badgeBg: 'bg-amber-500/20 border-amber-500/40',
-    badgeText: 'text-amber-300',
+    title: '2048 Merge',
+    cover: '/game-merge-cover.jpg',
   },
   ttt: {
     title: 'Tic-Tac-Toe',
-    tagline: 'Turn-based tactical duel',
-    icon: <Swords className="w-5 h-5 text-emerald-400" />,
-    cardGradient: 'from-emerald-950/40 via-teal-900/20 to-stone-900/50',
-    accentBorder: 'border-emerald-500/40 hover:border-emerald-400/60',
-    badgeBg: 'bg-emerald-500/20 border-emerald-500/40',
-    badgeText: 'text-emerald-300',
+    cover: '/game-ttt-cover.jpg',
   },
   clue: {
     title: 'Secret Clue',
-    tagline: 'Clue giver & guesser duel',
-    icon: <Search className="w-5 h-5 text-purple-400" />,
-    cardGradient: 'from-purple-950/40 via-indigo-900/20 to-stone-900/50',
-    accentBorder: 'border-purple-500/40 hover:border-purple-400/60',
-    badgeBg: 'bg-purple-500/20 border-purple-500/40',
-    badgeText: 'text-purple-300',
+    cover: '/game-clue-cover.jpg',
   },
 };
 
-export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentUserId }) => {
+export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, isMe, currentUserId }) => {
   const [submitting, setSubmitting] = useState(false);
   const meta = GAME_META[invite.gameId] || GAME_META.ttt;
-  const isHost = invite.hostId === currentUserId;
-  const isGuest = invite.guestId === currentUserId;
 
-  const openGamePortal = (sessionId: string) => {
+  // Authoritative host / guest determination
+  const isHost = isMe || (invite.hostId && invite.hostId === currentUserId);
+  const isGuest = !isMe || (invite.guestId && invite.guestId === currentUserId);
+
+  // Normalize backend status ('invited', 'pending', 'active', etc.)
+  const rawStatus = (invite.status || 'pending').toLowerCase();
+  const isPending = rawStatus === 'pending' || rawStatus === 'invited';
+  const isActive = rawStatus === 'active';
+  const isFinished = rawStatus === 'finished';
+  const isDeclined = rawStatus === 'declined' || rawStatus === 'cancelled';
+  const isExpired = rawStatus === 'expired';
+
+  const openGamePortal = (sessionId?: string) => {
     const isProd =
       typeof window !== 'undefined' &&
       (window.location.hostname.endsWith('ally-jis.com') ||
@@ -70,10 +59,13 @@ export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentU
       ? 'https://game.ally-jis.com'
       : (import.meta.env.VITE_GAME_URL as string) || 'http://localhost:5174';
     const token = apiClient.getAccessToken();
-    const fullUrl = token
-      ? `${baseGameUrl}?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`
-      : `${baseGameUrl}?session=${encodeURIComponent(sessionId)}`;
 
+    const params = new URLSearchParams();
+    if (sessionId) params.set('session', sessionId);
+    if (token) params.set('token', token);
+
+    const qs = params.toString();
+    const fullUrl = `${baseGameUrl}${qs ? `?${qs}` : ''}`;
     window.open(fullUrl, '_blank');
   };
 
@@ -81,7 +73,9 @@ export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentU
     e.stopPropagation();
     try {
       setSubmitting(true);
-      await apiClient.acceptGameInvite(invite.sessionId);
+      if (invite.sessionId) {
+        await apiClient.acceptGameInvite(invite.sessionId);
+      }
       toast.success('Accepted! Launching duel room…');
       openGamePortal(invite.sessionId);
     } catch (err: any) {
@@ -95,7 +89,9 @@ export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentU
     e.stopPropagation();
     try {
       setSubmitting(true);
-      await apiClient.declineGameInvite(invite.sessionId);
+      if (invite.sessionId) {
+        await apiClient.declineGameInvite(invite.sessionId);
+      }
       toast.info('Invite declined');
     } catch (err: any) {
       toast.error(err?.message || 'Could not decline invite');
@@ -108,7 +104,9 @@ export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentU
     e.stopPropagation();
     try {
       setSubmitting(true);
-      await apiClient.cancelGameInvite(invite.sessionId);
+      if (invite.sessionId) {
+        await apiClient.cancelGameInvite(invite.sessionId);
+      }
       toast.info('Invite cancelled');
     } catch (err: any) {
       toast.error(err?.message || 'Could not cancel invite');
@@ -126,174 +124,136 @@ export const GameInviteCard: React.FC<GameInviteCardProps> = ({ invite, currentU
     <div
       onClick={(e) => e.stopPropagation()}
       className={cn(
-        'w-[270px] sm:w-[290px] rounded-2xl p-3.5 my-1 text-left select-none shadow-lg transition-all border backdrop-blur-md relative overflow-hidden',
-        'bg-gradient-to-b bg-stone-900/90 text-stone-100',
-        meta.cardGradient,
-        meta.accentBorder
+        'relative w-[250px] sm:w-[270px] aspect-square rounded-[22px] sm:rounded-[24px] p-4 my-1 text-left select-none shadow-2xl transition-all border border-white/15 hover:border-white/30 overflow-hidden flex flex-col justify-between group'
       )}
     >
-      {/* Top Banner: Game Icon + Game Name + Status */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0 shadow-inner">
-            {meta.icon}
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-xs font-bold text-stone-100 truncate tracking-wide font-medieval leading-tight">
-              {meta.title}
-            </h4>
-            <p className="text-[10px] text-stone-400 truncate leading-tight mt-0.5">
-              {meta.tagline}
-            </p>
-          </div>
+      {/* ═══ Full Bleed Background Image ═══ */}
+      <img
+        src={meta.cover}
+        alt={meta.title}
+        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none"
+      />
+
+      {/* ═══ Gradient Overlay for Readability ═══ */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-[#060c14]/95 via-[#060c14]/65 via-50% to-[#060c14]/35 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      {/* ═══ Top Section: Game Title Tag & Status Badge ═══ */}
+      <div className="relative z-10 flex items-center justify-between gap-2">
+        <div className="px-2.5 py-1 rounded-xl bg-black/65 backdrop-blur-md text-xs font-bold text-white tracking-wide border border-white/10 shadow-sm">
+          {meta.title}
         </div>
 
-        {/* Status Chip */}
         <span
           className={cn(
-            'text-[9px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0',
-            invite.status === 'pending' && 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse',
-            invite.status === 'active' && 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-            invite.status === 'finished' && 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-            invite.status === 'declined' && 'bg-red-500/20 text-red-300 border-red-500/40',
-            invite.status === 'expired' && 'bg-stone-700/40 text-stone-400 border-stone-600/40'
+            'text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md shadow-xs border',
+            isPending && 'bg-amber-500/80 text-white border-amber-400/40 animate-pulse',
+            isActive && 'bg-emerald-500/90 text-white border-emerald-400/40',
+            isFinished && 'bg-blue-500/80 text-white border-blue-400/40',
+            isDeclined && 'bg-rose-500/80 text-white border-rose-400/40',
+            isExpired && 'bg-stone-600/80 text-stone-200 border-stone-500/40'
           )}
         >
-          {invite.status === 'pending'
-            ? 'Invited'
-            : invite.status === 'active'
-            ? 'Live'
-            : invite.status === 'finished'
-            ? 'Over'
-            : invite.status}
+          {isPending ? 'Invited' : isActive ? 'Live' : isFinished ? 'Over' : isDeclined ? 'Declined' : 'Expired'}
         </span>
       </div>
 
-      {/* Center Description / Callout */}
-      <div className="bg-black/30 rounded-xl p-2.5 mb-3 border border-white/5 text-[11px] leading-relaxed">
-        {invite.status === 'pending' && (
-          <div>
-            {isGuest ? (
-              <p className="text-stone-200">
-                You were challenged to a duel! Accept to jump into the arena.
-              </p>
-            ) : isHost ? (
-              <p className="text-stone-300 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-spin" style={{ animationDuration: '4s' }} />
-                <span>Waiting for your ally to accept…</span>
+      {/* ═══ Bottom Section: Short Invite Message & Buttons ═══ */}
+      <div className="relative z-10 flex flex-col gap-2.5 pt-4">
+        {/* Short Invite Message */}
+        <div className="px-0.5">
+          {isPending ? (
+            isGuest ? (
+              <p className="text-xs font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] leading-tight">
+                Challenged you to play!
               </p>
             ) : (
-              <p className="text-stone-300">A duel was initiated.</p>
-            )}
-          </div>
-        )}
+              <p className="text-xs font-medium text-stone-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] leading-tight">
+                Waiting for opponent to accept...
+              </p>
+            )
+          ) : isActive ? (
+            <p className="text-xs font-semibold text-[#38C185] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] leading-tight">
+              Duel is underway! Rejoin anytime.
+            </p>
+          ) : isFinished ? (
+            <p className="text-xs font-medium text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] leading-tight">
+              Match concluded.
+            </p>
+          ) : (
+            <p className="text-xs text-stone-300 italic drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] leading-tight">
+              Invite expired or declined.
+            </p>
+          )}
+        </div>
 
-        {invite.status === 'active' && (
-          <p className="text-emerald-300 font-medium flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Duel is currently underway! Enter to play.</span>
-          </p>
-        )}
+        {/* Action Buttons (No Icons) */}
+        <div>
+          {isPending && (
+            <>
+              {isGuest ? (
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleAccept}
+                    className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#38C185] to-[#42d494] hover:brightness-105 text-[#05180f] font-bold text-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 text-center shadow-[0_0_15px_rgba(56,193,133,0.3)]"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleDecline}
+                    className="py-2.5 px-3 rounded-xl bg-black/45 hover:bg-rose-500/25 hover:text-rose-200 hover:border-rose-500/40 text-stone-200 text-xs border border-white/15 backdrop-blur-md active:scale-95 transition-all cursor-pointer disabled:opacity-50 text-center"
+                  >
+                    Decline
+                  </button>
+                </div>
+              ) : isHost ? (
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={handleEnterRoom}
+                    className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#38C185] to-[#42d494] hover:brightness-105 text-[#05180f] font-bold text-xs transition-all active:scale-95 cursor-pointer text-center shadow-[0_0_15px_rgba(56,193,133,0.3)]"
+                  >
+                    Enter Room
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleCancel}
+                    className="py-2.5 px-3 rounded-xl bg-black/45 hover:bg-white/20 text-stone-200 text-xs border border-white/15 backdrop-blur-md active:scale-95 transition-all cursor-pointer disabled:opacity-50 text-center"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
 
-        {invite.status === 'finished' && (
-          <p className="text-stone-300 flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>Match concluded. Points recorded on leaderboard!</span>
-          </p>
-        )}
+          {isActive && (
+            <button
+              type="button"
+              onClick={handleEnterRoom}
+              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#38C185] to-[#42d494] text-[#05180f] font-bold text-xs shadow-md active:scale-95 transition-all cursor-pointer text-center"
+            >
+              Resume
+            </button>
+          )}
 
-        {invite.status === 'declined' && (
-          <p className="text-stone-400 italic">This challenge was declined.</p>
-        )}
-
-        {invite.status === 'expired' && (
-          <p className="text-stone-400 italic">This invitation expired.</p>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        {invite.status === 'pending' && (
-          <>
-            {isGuest && (
-              <>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleAccept}
-                  className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-950/40 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Accept & Play</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleDecline}
-                  className="py-1.5 px-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-700/80 text-stone-300 text-xs border border-white/10 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  title="Decline"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </>
-            )}
-
-            {isHost && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleEnterRoom}
-                  className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-stone-900 font-bold text-xs shadow-md shadow-amber-950/40 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Enter Room</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleCancel}
-                  className="py-1.5 px-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-700/80 text-stone-400 text-xs border border-white/10 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  title="Cancel invite"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </>
-            )}
-          </>
-        )}
-
-        {invite.status === 'active' && (
-          <button
-            type="button"
-            onClick={handleEnterRoom}
-            className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Resume Duel</span>
-          </button>
-        )}
-
-        {invite.status === 'finished' && (
-          <button
-            type="button"
-            onClick={handleEnterRoom}
-            className="w-full py-1.5 px-3 rounded-xl bg-stone-800/80 hover:bg-stone-700/80 text-stone-200 text-xs border border-white/10 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>Open Game Arena</span>
-          </button>
-        )}
-
-        {(invite.status === 'declined' || invite.status === 'expired') && (
-          <button
-            type="button"
-            onClick={handleEnterRoom}
-            className="w-full py-1.5 px-3 rounded-xl bg-stone-800/40 hover:bg-stone-800/70 text-stone-400 text-xs border border-white/5 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Visit Arena</span>
-          </button>
-        )}
+          {(isFinished || isDeclined || isExpired) && (
+            <button
+              type="button"
+              onClick={handleEnterRoom}
+              className="w-full py-2.5 px-3 rounded-xl bg-black/45 hover:bg-white/20 text-stone-200 text-xs border border-white/15 backdrop-blur-md active:scale-95 transition-all cursor-pointer text-center"
+            >
+              Open Arena
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

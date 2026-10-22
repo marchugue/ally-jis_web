@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { apiClient, isApiConfigured } from '@/api/client';
+import { getSocket } from '@/lib/socket';
 import { useAuth } from './AuthContext';
 
 interface PresenceContextValue {
@@ -22,7 +23,7 @@ const PresenceContext = createContext<PresenceContextValue>({
   refreshOnlineUsers: async () => {},
 });
 
-const HEARTBEAT_INTERVAL_MS = 30000;
+const HEARTBEAT_INTERVAL_MS = 25000;
 const POLL_INTERVAL_MS = 30000;
 
 export function PresenceProvider({ children }: { children: ReactNode }) {
@@ -31,7 +32,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const [gameOnlineUserIds, setGameOnlineUserIds] = useState<Set<string>>(new Set());
   const [gameOnlineCount, setGameOnlineCount] = useState<number>(0);
 
-  const refreshOnlineUsers = async () => {
+  const refreshOnlineUsers = useCallback(async () => {
     try {
       const data = await apiClient.getOnlineUsers();
       setOnlineUserIds(new Set(data.userIds || []));
@@ -41,15 +42,15 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     } catch {
       // presence is best-effort
     }
-  };
+  }, []);
 
-  const sendHeartbeat = async () => {
+  const sendHeartbeat = useCallback(async () => {
     try {
       await apiClient.sendPresenceHeartbeat('web');
     } catch {
       // presence is best-effort
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!user || !isApiConfigured) {
@@ -79,12 +80,72 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // ── Real-Time Socket.io Presence Listeners ─────────────────────────────
+    const socket = getSocket();
+
+    const onUserOnline = (payload: { userId?: string; user_id?: string; platform?: string }) => {
+      const id = payload?.userId || payload?.user_id;
+      if (!id) return;
+      setOnlineUserIds((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      if (payload.platform === 'game') {
+        setGameOnlineUserIds((prev) => {
+          if (prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.add(id);
+          return next;
+        });
+        setGameOnlineCount((c) => c + 1);
+      }
+    };
+
+    const onUserOffline = (payload: { userId?: string; user_id?: string }) => {
+      const id = payload?.userId || payload?.user_id;
+      if (!id) return;
+      setOnlineUserIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setGameOnlineUserIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        setGameOnlineCount((c) => Math.max(0, c - 1));
+        return next;
+      });
+    };
+
+    const onPresenceChange = (payload: { userId?: string; user_id?: string; status?: string; platform?: string }) => {
+      if (payload?.status === 'offline') {
+        onUserOffline(payload);
+      } else {
+        onUserOnline(payload);
+      }
+    };
+
+    if (socket) {
+      socket.on('presence:online', onUserOnline);
+      socket.on('presence:offline', onUserOffline);
+      socket.on('presence:change', onPresenceChange);
+    }
+
     return () => {
       clearInterval(heartbeatInterval);
       clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (socket) {
+        socket.off('presence:online', onUserOnline);
+        socket.off('presence:offline', onUserOffline);
+        socket.off('presence:change', onPresenceChange);
+      }
     };
-  }, [user?.id]);
+  }, [user?.id, sendHeartbeat, refreshOnlineUsers]);
 
   const value: PresenceContextValue = {
     onlineUserIds,

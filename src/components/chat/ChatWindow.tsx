@@ -268,7 +268,15 @@ const MessageBubble = memo(function MessageBubble({
   const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
   const isMediaLocked = Boolean(imagesLocked && hasMedia);
   const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
-  const isGameInvite = Boolean(msg.game_invite);
+  const isGameInvite = Boolean(msg.game_invite || (msg.content && msg.content.includes('Game invite:')));
+  const effectiveGameInvite = msg.game_invite || (msg.content && msg.content.includes('Game invite:') ? {
+    sessionId: '',
+    gameId: (msg.content.includes('2048') || msg.content.includes('Merge') ? 'merge' : msg.content.includes('Clue') ? 'clue' : 'ttt') as 'merge' | 'ttt' | 'clue',
+    status: 'pending' as const,
+    hostId: msg.senderId,
+    guestId: currentUserId,
+    expiresAt: null,
+  } : null);
   const isMobile = useIsMobile();
 
   const openActionMenu = useCallback(() => {
@@ -564,9 +572,9 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           </div>
         )}
-        {isGameInvite && msg.game_invite && (
+        {isGameInvite && effectiveGameInvite && (
           <GameInviteCard
-            invite={msg.game_invite}
+            invite={effectiveGameInvite}
             isMe={isMe}
             currentUserId={currentUserId}
           />
@@ -1111,6 +1119,9 @@ export function ChatWindow({
           participantName={participantName || 'User'}
           participantId={reportingMessage.senderId}
           conversationId={conversationId || undefined}
+          messageId={reportingMessage.id}
+          messagePreview={reportingMessage.content || (reportingMessage.imageUrl ? '[Image]' : '')}
+          targetType="message"
           onClose={() => setReportingMessage(null)}
         />
       )}

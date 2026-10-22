@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, Trash2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Flag, Lightbulb, LogOut, ShieldOff, ShieldAlert, Trash2, X, Bell, BellOff } from 'lucide-react';
 import { Conversation, BlockStatus } from '@/types/ally';
 import { cn } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -9,6 +10,7 @@ import { ActiveAllyBadge } from '@/components/match/MatchTimerBadge';
 import { ChatStreakBadge } from '@/components/match/ChatStreakBadge';
 import { ReportModal } from '@/components/chat/ReportModal';
 import { BlockModal } from '@/components/chat/BlockModal';
+import { RestrictModal } from '@/components/chat/RestrictModal';
 import { DeleteConversationModal, DeleteMode } from '@/components/chat/DeleteConversationModal';
 import {
   AlertDialog,
@@ -165,11 +167,17 @@ function ConversationInfoContent({
   sharedInterests?: string[];
   avatarReveal?: AvatarRevealView | null;
 }) {
+  const navigate = useNavigate();
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showRestrictModal, setShowRestrictModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
   const [unblockingState, setUnblockingState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [isRestrictedByMe, setIsRestrictedByMe] = useState(false);
+  const [unrestrictingState, setUnrestrictingState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [isMuted, setIsMuted] = useState(false);
+  const [muteLoading, setMuteLoading] = useState(false);
 
   const isAnonymous = conversation.variant.startsWith('anonymous');
   const sharedInterests =
@@ -177,6 +185,46 @@ function ConversationInfoContent({
       ? extraSharedInterests
       : (conversation.sharedInterests ?? []);
   const isBlockedByMe = blockStatus === 'blockedByMe' || blockStatus === 'mutual';
+
+  useEffect(() => {
+    if (!conversation.participantId || isAnonymous) return;
+    apiClient.checkIsRestricted(conversation.participantId)
+      .then((res) => setIsRestrictedByMe(res.restrictedByMe))
+      .catch(() => {});
+    apiClient.checkIsMuted(conversation.participantId)
+      .then((res) => setIsMuted(res.muted))
+      .catch(() => {});
+  }, [conversation.participantId, isAnonymous]);
+
+  const handleToggleMute = async () => {
+    if (muteLoading || !conversation.participantId) return;
+    setMuteLoading(true);
+    try {
+      if (isMuted) {
+        await apiClient.unmuteUser(conversation.participantId);
+        setIsMuted(false);
+      } else {
+        await apiClient.muteUser({ mutedUserId: conversation.participantId });
+        setIsMuted(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle mute:', err);
+    } finally {
+      setMuteLoading(false);
+    }
+  };
+
+  const handleUnrestrict = async () => {
+    setUnrestrictingState('loading');
+    try {
+      await apiClient.unrestrictUser(conversation.participantId);
+      setIsRestrictedByMe(false);
+      setUnrestrictingState('idle');
+    } catch (err) {
+      console.error('Failed to unrestrict user:', err);
+      setUnrestrictingState('error');
+    }
+  };
 
   // ── Unblock flow ──────────────────────────────────────────────────────────
   const handleUnblock = async () => {
@@ -295,6 +343,41 @@ function ConversationInfoContent({
         </button>
       </div>
 
+      {/* ── Mute Notifications Toggle ── */}
+      <div className="mx-6 p-3 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-between gap-4 mt-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300">
+            {isMuted ? <BellOff size={16} /> : <Bell size={16} />}
+          </div>
+          <div className="min-w-0">
+            <p className="font-jakarta font-semibold text-xs text-gray-900 dark:text-white">
+              Mute notifications
+            </p>
+            <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 truncate">
+              {isMuted ? 'Silenced' : 'Alert on new messages'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleToggleMute}
+          disabled={muteLoading}
+          role="switch"
+          aria-checked={isMuted}
+          className={cn(
+            'w-11 h-6 rounded-full flex-shrink-0 relative transition-colors',
+            isMuted ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700',
+            muteLoading && 'opacity-50 cursor-not-allowed',
+          )}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform',
+              isMuted && 'translate-x-5',
+            )}
+          />
+        </button>
+      </div>
+
       {/* ── Block / Delete / Report / End Match ── */}
       <div className="px-6 pt-4 pb-2 space-y-1">
         {isBlockedByMe ? (
@@ -346,6 +429,30 @@ function ConversationInfoContent({
           </button>
         )}
 
+        {/* Restrict action */}
+        {isRestrictedByMe ? (
+          <button
+            onClick={handleUnrestrict}
+            disabled={unrestrictingState === 'loading'}
+            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors px-2 -mx-2"
+          >
+            <ShieldAlert size={17} className="text-amber-500 flex-shrink-0" />
+            <span className="font-jakarta text-sm text-amber-600 dark:text-amber-400 font-medium">
+              {unrestrictingState === 'loading' ? 'Unrestricting…' : `Unrestrict ${conversation.participantName}`}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowRestrictModal(true)}
+            className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors px-2 -mx-2"
+          >
+            <ShieldAlert size={17} className="text-amber-500 flex-shrink-0" />
+            <span className="font-jakarta text-sm text-amber-600 dark:text-amber-400 font-medium">
+              Restrict {conversation.participantName}
+            </span>
+          </button>
+        )}
+
         {/* End Match (for active anonymous conversations) */}
         {isAnonymous && conversation.variant !== 'anonymous_ended' && (
           <button
@@ -389,6 +496,18 @@ function ConversationInfoContent({
           participantId={conversation.participantId}
           onClose={() => setShowBlockModal(false)}
           onBlockSuccess={onBlockChange}
+        />
+      )}
+
+      {showRestrictModal && (
+        <RestrictModal
+          participantName={conversation.participantName}
+          participantId={conversation.participantId}
+          onClose={() => setShowRestrictModal(false)}
+          onRestrictSuccess={() => {
+            setIsRestrictedByMe(true);
+            navigate('/restricted-users');
+          }}
         />
       )}
 

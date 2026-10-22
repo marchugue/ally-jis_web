@@ -4,7 +4,7 @@
 // wrapper, the error type, token storage, and automatic fallback from
 // local backend to production backend when local is unreachable.
 
-export const DEFAULT_PROD_API_URL = 'https://ally-jisbackend-production.up.railway.app/api';
+export const DEFAULT_PROD_API_URL = 'https://api.ally-jis.com/api';
 
 const CONFIGURED_API_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || DEFAULT_PROD_API_URL;

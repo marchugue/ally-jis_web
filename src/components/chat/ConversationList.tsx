@@ -1,4 +1,5 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Drama, Trash2 } from 'lucide-react';
 import { Conversation } from '@/types/ally';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ interface ConversationRowProps {
   sentByMe: boolean;
   onSelect: (conv: Conversation) => void;
   onDelete?: (conv: Conversation) => void;
+  isMovingUp?: boolean;
 }
 
 // Each row only re-renders if ITS OWN props changed — not when a sibling
@@ -46,8 +48,10 @@ const ConversationRow = memo(function ConversationRow({
   sentByMe,
   onSelect,
   onDelete,
+  isMovingUp = false,
 }: ConversationRowProps) {
   const isUnreadFromThem = !sentByMe && conv.unreadCount > 0;
+
   const isAnonymous = conv.variant !== 'regular';
   const isEnded = conv.variant === 'anonymous_ended';
   const previewText = conv.lastMessage
@@ -70,7 +74,26 @@ const ConversationRow = memo(function ConversationRow({
     : null;
 
   return (
-    <div className="relative group">
+    <motion.div
+      layout="position"
+      layoutId={`conv-${conv.id}`}
+      transition={{
+        layout: {
+          type: 'spring',
+          stiffness: 280,
+          damping: 28,
+          mass: 0.8,
+        },
+      }}
+      style={{
+        zIndex: isMovingUp ? 0 : 2,
+        position: 'relative',
+      }}
+      animate={{
+        scale: isMovingUp ? [0.97, 1] : 1,
+      }}
+      className="relative group bg-white dark:bg-[#0D131F]"
+    >
       <button
         onClick={() => onSelect(conv)}
         className={cn(
@@ -151,7 +174,7 @@ const ConversationRow = memo(function ConversationRow({
           <Trash2 size={13} />
         </button>
       )}
-    </div>
+    </motion.div>
   );
 });
 
@@ -170,6 +193,28 @@ export function ConversationList({
   onLoadMore,
 }: ConversationListProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const prevIndicesRef = useRef<Map<string, number>>(new Map());
+  const [movingUpId, setMovingUpId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const currentIndices = new Map<string, number>();
+    let detectedMovingUp: string | null = null;
+    conversations.forEach((conv, index) => {
+      currentIndices.set(conv.id, index);
+      const prev = prevIndicesRef.current.get(conv.id);
+      if (prev !== undefined && prev > index && index === 0) {
+        detectedMovingUp = conv.id;
+      }
+    });
+
+    if (detectedMovingUp) {
+      setMovingUpId(detectedMovingUp);
+      const timer = setTimeout(() => setMovingUpId(null), 550);
+      prevIndicesRef.current = currentIndices;
+      return () => clearTimeout(timer);
+    }
+    prevIndicesRef.current = currentIndices;
+  }, [conversations]);
 
   useEffect(() => {
     if (!hasMore || isLoadingMore || !onLoadMore) return;
@@ -231,6 +276,7 @@ export function ConversationList({
       sentByMe={Boolean(currentUserId) && conv.lastMessageSenderId === currentUserId}
       onSelect={onSelect}
       onDelete={onDelete}
+      isMovingUp={movingUpId === conv.id}
     />
   ));
 

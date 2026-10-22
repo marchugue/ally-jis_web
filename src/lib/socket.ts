@@ -38,7 +38,8 @@ export function getSocket(): Socket | null {
   if (!token) return null;
 
   socket = io(socketUrl, {
-    auth: { token },
+    auth: { token, platform: 'web' },
+    query: { platform: 'web' },
     autoConnect: true,
     reconnection: true,
     timeout: 6000,

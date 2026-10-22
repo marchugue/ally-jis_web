@@ -6,6 +6,14 @@ import type {
   ReportUserResponse,
   BlockedUserRow,
   UnblockUserResponse,
+  RestrictUserPayload,
+  RestrictUserResponse,
+  UnrestrictUserResponse,
+  RestrictedUserRow,
+  MuteUserPayload,
+  MuteUserResponse,
+  UnmuteUserResponse,
+  MutedUserRow,
 } from '../types';
 
 /**
@@ -39,4 +47,54 @@ export async function unblockUser(blockedUserId: string): Promise<UnblockUserRes
 
 export async function listBlockedUsers(): Promise<BlockedUserRow[]> {
   return request<BlockedUserRow[]>('/moderation/blocked');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Restrict API
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function restrictUser(payload: RestrictUserPayload): Promise<RestrictUserResponse> {
+  return request<RestrictUserResponse>('/moderation/restrict', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function unrestrictUser(restrictedUserId: string): Promise<UnrestrictUserResponse> {
+  return request<UnrestrictUserResponse>(`/moderation/restrict/${restrictedUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function checkIsRestricted(userId: string): Promise<{ restricted: boolean; restrictedByMe: boolean }> {
+  return request<{ restricted: boolean; restrictedByMe: boolean }>(`/moderation/restricted/${userId}`);
+}
+
+export async function listRestrictedUsers(): Promise<RestrictedUserRow[]> {
+  return request<RestrictedUserRow[]>('/moderation/restricted');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mute API
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function muteUser(payload: MuteUserPayload): Promise<MuteUserResponse> {
+  return request<MuteUserResponse>('/moderation/mute', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function unmuteUser(mutedUserId: string): Promise<UnmuteUserResponse> {
+  return request<UnmuteUserResponse>(`/moderation/mute/${mutedUserId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function checkIsMuted(userId: string): Promise<{ muted: boolean }> {
+  return request<{ muted: boolean }>(`/moderation/muted/${userId}`);
+}
+
+export async function listMutedUsers(): Promise<MutedUserRow[]> {
+  return request<MutedUserRow[]>('/moderation/muted');
 }

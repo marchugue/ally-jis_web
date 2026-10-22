@@ -17,6 +17,7 @@ import NotificationsPage from "@/pages/NotificationsPage";
 import PostDetailPage from "@/pages/PostDetailPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import BlockedUsersPage from "@/pages/BlockedUserPage";
+import RestrictedUsersPage from "@/pages/RestrictedUserPage";
 import SettingsPage from "@/pages/SettingsPage";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -239,6 +240,16 @@ function App() {
             <Route path="/blocked-users" element={
               <PageTransition>
                 <BlockedUsersPage />
+              </PageTransition>
+            } />
+            <Route path="/restricted-users" element={
+              <PageTransition>
+                <RestrictedUsersPage />
+              </PageTransition>
+            } />
+            <Route path="/restricted" element={
+              <PageTransition>
+                <RestrictedUsersPage />
               </PageTransition>
             } />
             <Route path="/settings" element={

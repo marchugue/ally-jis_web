@@ -28,8 +28,10 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
     setOpenCategoryId((prev) => (prev === categoryId ? null : categoryId));
   };
 
+  const detailsMissing = !!selectedViolation?.requiresDetails && details.trim().length < 3;
+
   const handleSubmit = async () => {
-    if (!selectedViolation || !post.author_id) return;
+    if (!selectedViolation || !post.author_id || detailsMissing) return;
     setSubmitState('loading');
     setErrorMessage('');
 
@@ -160,7 +162,9 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
-                      Additional details for moderators (optional)
+                      {selectedViolation.requiresDetails
+                        ? 'Tell us what happened (required)'
+                        : 'Additional details for moderators (optional)'}
                     </label>
                     <textarea
                       value={details}
@@ -183,7 +187,7 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={submitState === 'loading'}
+                      disabled={submitState === 'loading' || detailsMissing}
                       className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {submitState === 'loading' ? (

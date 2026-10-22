@@ -10,7 +10,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  KeyRound, ShieldOff, LogOut, Trash2, ChevronRight, Eye, EyeOff,
+  KeyRound, ShieldOff, ShieldAlert, LogOut, Trash2, ChevronRight, Eye, EyeOff,
   UserCheck, Bell, Shield, Lock, Smartphone, Moon, Sliders,
   Search, ArrowLeft, ShieldCheck, Zap, Sun, Monitor, Palette,
   Flame, MessageSquare, Volume2, Clock, Check, History
@@ -342,6 +342,7 @@ export default function SettingsPage() {
   // User Preferences State
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [blockedCount, setBlockedCount] = useState<number | null>(null);
+  const [restrictedCount, setRestrictedCount] = useState<number | null>(null);
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false);
 
   // Load preferences from backend
@@ -358,6 +359,10 @@ export default function SettingsPage() {
     apiClient.listBlockedUsers()
       .then((rows) => setBlockedCount(rows.length))
       .catch(() => setBlockedCount(null));
+
+    apiClient.listRestrictedUsers()
+      .then((rows) => setRestrictedCount(rows.length))
+      .catch(() => setRestrictedCount(null));
   }, [useBackend]);
 
   // Generic patch preference handler with optimistic update
@@ -689,6 +694,26 @@ export default function SettingsPage() {
                       className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
                     >
                       <span>{blockedCount !== null ? `${blockedCount} blocked` : 'Manage'}</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+
+                  {/* Restricted Users Link Card */}
+                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                        <ShieldAlert size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Restricted Users</h4>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">View and manage users whose online presence is mutually hidden</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate('/restricted-users')}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>{restrictedCount !== null ? `${restrictedCount} restricted` : 'Manage'}</span>
                       <ChevronRight size={14} />
                     </button>
                   </div>

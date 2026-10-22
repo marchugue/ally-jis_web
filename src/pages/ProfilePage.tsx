@@ -7,7 +7,7 @@ import {
   UserPlus, RefreshCw,
   Sparkles, MessageSquare,
   Newspaper, Layers, MessageCircle,
-  Menu, ArrowLeft,
+  Menu, ArrowLeft, Flag,
 } from 'lucide-react';
 import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import { CURRENT_USER } from '@/data/mockData';
@@ -31,6 +31,7 @@ import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { ReportModal } from '@/components/chat/ReportModal';
 
 const PAGE_SIZE = 10;
 
@@ -173,6 +174,7 @@ export default function ProfilePage() {
 
   // Flat Right Slide-in Settings Drawer
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const [reportUserOpen, setReportUserOpen] = useState(false);
 
   // ── viewing someone else's profile ──────────────────────────────────────
   const [relationship, setRelationship] = useState<ProfileRelationshipSummary | null>(null);
@@ -621,6 +623,17 @@ export default function ProfilePage() {
                   <Menu size={20} />
                 </button>
               )}
+
+              {!isOwnProfile && viewedUserId && (
+                <button
+                  type="button"
+                  onClick={() => setReportUserOpen(true)}
+                  className="pointer-events-auto w-10 h-10 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all cursor-pointer"
+                  aria-label="Report user"
+                >
+                  <Flag size={18} />
+                </button>
+              )}
             </div>
 
             {/* Avatar overhanging cover */}
@@ -715,6 +728,16 @@ export default function ProfilePage() {
                     <Pencil size={13} /> Edit profile
                   </button>
                 </div>
+              )}
+              {!isOwnProfile && viewedUserId && (
+                <button
+                  type="button"
+                  onClick={() => setReportUserOpen(true)}
+                  className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-sm font-semibold transition-colors cursor-pointer"
+                  aria-label="Report user"
+                >
+                  <Flag size={13} /> Report
+                </button>
               )}
             </div>
           </div>
@@ -1058,6 +1081,22 @@ export default function ProfilePage() {
           open={settingsDrawerOpen}
           onClose={() => setSettingsDrawerOpen(false)}
           profile={profile}
+        />
+      )}
+
+      {/* ── Report user modal ── */}
+      {reportUserOpen && viewedUserId && !isOwnProfile && (
+        <ReportModal
+          participantName={
+            isIdentityRevealed
+              ? (profile?.name || (profile?.username ? `@${profile.username}` : 'this user'))
+              : isUnrevealedMatch
+              ? (profile?.name || routeState.name || 'Anonymous Ally')
+              : 'Anonymous Peer'
+          }
+          participantId={viewedUserId}
+          targetType="user"
+          onClose={() => setReportUserOpen(false)}
         />
       )}
     </div>

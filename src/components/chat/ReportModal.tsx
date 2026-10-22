@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronDown, ChevronLeft, Flag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { COMMUNITY_STANDARDS, ReportViolation } from '@/data/CommunityStandards';
+import { getCommunityStandards, ReportViolation } from '@/data/CommunityStandards';
 import { apiClient } from '@/api/client';
 
 interface ReportModalProps {
@@ -10,6 +10,12 @@ interface ReportModalProps {
   participantId: string;
   /** Passed through so the backend can scope the report to this conversation. */
   conversationId?: string;
+  /** When set, the report is attached to this specific chat message. */
+  messageId?: string;
+  /** Short preview of the reported message shown inside the modal. */
+  messagePreview?: string;
+  /** Defaults to "message" when a messageId is supplied, otherwise "user". */
+  targetType?: 'user' | 'message';
   onClose: () => void;
 }
 
@@ -19,24 +25,35 @@ export function ReportModal({
   participantName,
   participantId,
   conversationId,
+  messageId,
+  messagePreview,
+  targetType,
   onClose,
 }: ReportModalProps) {
+  const resolvedTarget: 'user' | 'message' = targetType ?? (messageId ? 'message' : 'user');
+  const categories = getCommunityStandards(resolvedTarget);
+
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
   const [selectedViolation, setSelectedViolation] = useState<ReportViolation | null>(null);
+  const [details, setDetails] = useState('');
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategoryId((prev) => (prev === categoryId ? null : categoryId));
   };
 
+  const detailsMissing = !!selectedViolation?.requiresDetails && details.trim().length < 3;
+
   const handleSubmit = async () => {
-    if (!selectedViolation) return;
+    if (!selectedViolation || detailsMissing) return;
     setSubmitState('loading');
     try {
       await apiClient.reportUser({
         reportedUserId: participantId,
         violationId: selectedViolation.id,
         conversationId,
+        messageId: resolvedTarget === 'message' ? messageId : undefined,
+        notes: details.trim() || undefined,
       });
       setSubmitState('success');
     } catch (err) {
@@ -46,6 +63,8 @@ export function ReportModal({
   };
 
   if (typeof document === 'undefined') return null;
+
+  const title = resolvedTarget === 'message' ? `Report message from ${participantName}` : `Report ${participantName}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
@@ -77,8 +96,8 @@ export function ReportModal({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-sm">
-                  Report {participantName}
+                <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-sm truncate">
+                  {title}
                 </h3>
                 <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">
                   {selectedViolation ? 'Confirm your report reason' : 'What\'s going on?'}
@@ -93,6 +112,18 @@ export function ReportModal({
               </button>
             </div>
 
+            {/* Reported message preview */}
+            {resolvedTarget === 'message' && messagePreview && (
+              <div className="px-5 pt-3 pb-2 bg-gray-50/70 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 flex-shrink-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/40 mb-1">
+                  Reported Message
+                </p>
+                <p className="text-xs text-gray-700 dark:text-white/80 line-clamp-3 italic break-words">
+                  "{messagePreview}"
+                </p>
+              </div>
+            )}
+
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-4">
               {selectedViolation ? (
@@ -104,6 +135,22 @@ export function ReportModal({
                     <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                       {selectedViolation.description}
                     </p>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
+                      {selectedViolation.requiresDetails
+                        ? 'Tell us what happened (required)'
+                        : 'Additional details for moderators (optional)'}
+                    </label>
+                    <textarea
+                      value={details}
+                      onChange={(e) => setDetails(e.target.value)}
+                      rows={3}
+                      maxLength={1000}
+                      placeholder="Provide any context that will help us evaluate this report..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-colors"
+                    />
                   </div>
 
                   {/* Inline error */}
@@ -123,6 +170,7 @@ export function ReportModal({
                 </div>
               ) : (
                 <CategoryAccordion
+                  categories={categories}
                   openCategoryId={openCategoryId}
                   onToggleCategory={toggleCategory}
                   onSelectViolation={setSelectedViolation}
@@ -135,10 +183,10 @@ export function ReportModal({
               <div className="p-4 border-t border-gray-100 dark:border-white/10 flex-shrink-0">
                 <button
                   onClick={handleSubmit}
-                  disabled={submitState === 'loading'}
+                  disabled={submitState === 'loading' || detailsMissing}
                   className={cn(
                     'w-full font-jakarta font-semibold text-sm py-3 rounded-xl transition-colors',
-                    submitState === 'loading'
+                    submitState === 'loading' || detailsMissing
                       ? 'bg-red-300 text-white cursor-not-allowed'
                       : 'bg-red-500 hover:bg-red-600 text-white',
                   )}
@@ -156,17 +204,19 @@ export function ReportModal({
 }
 
 function CategoryAccordion({
+  categories,
   openCategoryId,
   onToggleCategory,
   onSelectViolation,
 }: {
+  categories: ReturnType<typeof getCommunityStandards>;
   openCategoryId: string | null;
   onToggleCategory: (categoryId: string) => void;
   onSelectViolation: (violation: ReportViolation) => void;
 }) {
   return (
     <div className="border border-gray-100 dark:border-white/10 rounded-2xl overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-      {COMMUNITY_STANDARDS.map((category) => {
+      {categories.map((category) => {
         const isOpen = openCategoryId === category.id;
         return (
           <div key={category.id}>

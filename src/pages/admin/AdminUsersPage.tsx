@@ -21,6 +21,29 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
+
+export function getStudentDisplayName(user?: { full_name?: string | null; username?: string | null; email?: string | null } | null): string {
+  if (!user) return 'Student';
+  const fn = user.full_name?.trim();
+  if (fn && fn.toLowerCase() !== 'anonymous' && fn.toLowerCase() !== 'anonymous peer' && fn.toLowerCase() !== 'unnamed') {
+    return fn;
+  }
+  if (user.email && typeof user.email === 'string' && user.email.toLowerCase().endsWith('@chmsu.edu.ph')) {
+    const local = user.email.split('@')[0];
+    const parts = local.split(/[._-]/).filter(Boolean);
+    if (parts.length > 0) {
+      return parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+    }
+  }
+  if (user.username && user.username.trim().toLowerCase() !== 'anonymous') {
+    return user.username;
+  }
+  if (user.email) {
+    return user.email.split('@')[0];
+  }
+  return 'Student';
+}
 
 function StudentAvatar({
   src,
@@ -31,29 +54,18 @@ function StudentAvatar({
   name?: string | null;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const [error, setError] = useState(false);
-
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-xs',
     lg: 'w-16 h-16 text-xl font-bold',
   }[size];
 
-  const initial = (name ?? 'U').trim()[0]?.toUpperCase() ?? 'U';
-
   return (
-    <div className={`${sizeClasses} rounded-full bg-gradient-to-br from-[#1A6B3C]/20 to-emerald-600/30 dark:from-emerald-500/30 dark:to-teal-500/30 overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-300 font-bold shadow-xs select-none`}>
-      {src && !error ? (
-        <img
-          src={src}
-          onError={() => setError(true)}
-          className="w-full h-full object-cover"
-          alt={name ?? 'Student avatar'}
-        />
-      ) : (
-        <span>{initial}</span>
-      )}
-    </div>
+    <AvatarDisplay
+      src={src}
+      name={name}
+      className={`${sizeClasses} rounded-full shrink-0 border border-gray-200 dark:border-white/10 shadow-xs select-none`}
+    />
   );
 }
 
@@ -399,11 +411,13 @@ export default function AdminUsersPage() {
                         >
                           <td className="px-5 py-3.5 cursor-pointer" onClick={() => setSelectedUserId(u.id)}>
                             <div className="flex items-center gap-3">
-                              <StudentAvatar src={u.avatar_url} name={u.full_name ?? u.username} size="md" />
+                              <StudentAvatar src={u.avatar_url} name={getStudentDisplayName(u)} size="md" />
                               <div className="min-w-0">
                                 <p className="font-semibold text-gray-900 dark:text-white/90 flex items-center gap-1.5 truncate">
-                                  {u.full_name ?? u.username ?? 'Unnamed'}
-                                  {u.username && <span className="text-xs text-gray-400 font-normal">@{u.username}</span>}
+                                  {getStudentDisplayName(u)}
+                                  {u.username && u.username.toLowerCase() !== 'anonymous' && (
+                                    <span className="text-xs text-gray-400 font-normal">@{u.username}</span>
+                                  )}
                                 </p>
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <p className="text-xs text-gray-500 dark:text-white/40 truncate">{u.email}</p>
@@ -449,10 +463,13 @@ export default function AdminUsersPage() {
                     <div key={u.id} className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setSelectedUserId(u.id)}>
-                          <StudentAvatar src={u.avatar_url} name={u.full_name ?? u.username} size="md" />
+                          <StudentAvatar src={u.avatar_url} name={getStudentDisplayName(u)} size="md" />
                           <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
-                              {u.full_name ?? u.username ?? 'Unnamed'}
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate flex items-center gap-1">
+                              {getStudentDisplayName(u)}
+                              {u.username && u.username.toLowerCase() !== 'anonymous' && (
+                                <span className="text-xs text-gray-400 font-normal">@{u.username}</span>
+                              )}
                             </p>
                             <p className="text-xs text-gray-400 truncate">{u.email}</p>
                           </div>
@@ -963,13 +980,13 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
             <div className="mt-4 space-y-5 text-sm">
               {/* Header: Avatar & Info */}
               <div className="flex items-center gap-3.5 bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5">
-                <StudentAvatar src={detail.avatar_url} name={detail.full_name ?? detail.username} size="lg" />
+                <StudentAvatar src={detail.avatar_url} name={getStudentDisplayName(detail)} size="lg" />
                 <div className="min-w-0">
                   <p className="font-bold text-gray-900 dark:text-white text-base truncate">
-                    {detail.full_name ?? 'Unnamed Student'}
+                    {getStudentDisplayName(detail)}
                   </p>
                   <p className="text-xs text-[#1A6B3C] dark:text-emerald-400 font-medium">
-                    {detail.username ? `@${detail.username}` : 'No username set'}
+                    {detail.username && detail.username.toLowerCase() !== 'anonymous' ? `@${detail.username}` : (detail.email || 'No username set')}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-white/40 truncate">{detail.email}</p>
                 </div>
@@ -1111,7 +1128,7 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
               <div className="flex items-center gap-2">
                 <CreditCard size={16} className="text-emerald-400" />
                 <span className="text-sm font-semibold">
-                  {detail.full_name ?? detail.username} — Uploaded Student ID
+                  {getStudentDisplayName(detail)} — Uploaded Student ID
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-900/60 border border-emerald-700 text-emerald-300 uppercase">
                   {lightboxSide === 'front' ? 'Front Side' : 'Back Side'}
@@ -1288,10 +1305,13 @@ function PendingVerificationCard({
       <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
         <div className="space-y-2 cursor-pointer" onClick={onOpenDetail}>
           <div className="flex items-center gap-3">
-            <StudentAvatar src={item.avatar_url} name={item.full_name ?? item.username} size="md" />
+            <StudentAvatar src={item.avatar_url} name={getStudentDisplayName(item)} size="md" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline">
-                {item.full_name ?? item.username ?? 'Unnamed Student'}
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline flex items-center gap-1">
+                {getStudentDisplayName(item)}
+                {item.username && item.username.toLowerCase() !== 'anonymous' && (
+                  <span className="text-xs text-gray-400 font-normal font-mono">@{item.username}</span>
+                )}
               </p>
               <p className="text-xs text-gray-400 truncate">{item.email}</p>
             </div>
