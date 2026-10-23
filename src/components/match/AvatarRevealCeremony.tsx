@@ -7,7 +7,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AVATAR_EMOJI, DEFAULT_AVATAR_EMOJI, avatarColorFor } from '@/lib/matchOptions';
+import { avatarColorFor } from '@/lib/matchOptions';
+import { AnonymousAvatar } from './AnonymousAvatar';
 import { revealSeenKey } from '@/lib/avatarReveal';
 
 export interface AvatarRevealCeremonyProps {
@@ -80,8 +81,6 @@ export const AvatarRevealCeremony: React.FC<AvatarRevealCeremonyProps> = ({
   const firstName = name.split(' ')[0];
   const typed = useTypewriter(name, open, reduceMotion ? 0 : 1500);
   const accent = avatarColorFor(avatarKey);
-  const emoji = (avatarKey && AVATAR_EMOJI[avatarKey.toLowerCase()]) || DEFAULT_AVATAR_EMOJI;
-  const animalSrc = `/emojis/animals/${avatarKey?.toLowerCase().trim() || 'default'}.png`;
 
   const confetti = useMemo(
     () =>
@@ -165,42 +164,30 @@ export const AvatarRevealCeremony: React.FC<AvatarRevealCeremonyProps> = ({
                 )}
               </motion.div>
 
-              {/* Animal mask splits in two and falls away */}
-              {!reduceMotion &&
-                (['left', 'right'] as const).map((side) => (
-                  <motion.div
-                    key={side}
-                    className="absolute inset-0 flex items-center justify-center rounded-full"
-                    style={{
-                      backgroundColor: `${accent}`,
-                      clipPath: side === 'left' ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)',
-                    }}
-                    initial={{ x: 0, rotate: 0, opacity: 1 }}
-                    animate={{
-                      x: side === 'left' ? -90 : 90,
-                      y: 40,
-                      rotate: side === 'left' ? -28 : 28,
-                      opacity: 0,
-                    }}
-                    transition={{ delay: 0.55, duration: 0.9, ease: [0.55, 0, 0.75, 0.2] }}
-                  >
-                    <img
-                      src={animalSrc}
-                      alt={emoji}
-                      className="h-[72%] w-[72%] object-contain"
-                      draggable={false}
-                    />
-                  </motion.div>
-                ))}
+              {/* Anonymous Avatar (Smoothly fades out to reveal real photo, replacing animal crack) */}
+              {!reduceMotion && (
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center rounded-full pointer-events-none"
+                  initial={{ opacity: 1, scale: 1 }}
+                  animate={{ opacity: 0, scale: 1.08 }}
+                  transition={{ delay: 0.55, duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <AnonymousAvatar
+                    avatarKey={avatarKey}
+                    size={SIZE}
+                    borderless
+                  />
+                </motion.div>
+              )}
 
-              {/* Keepsake badge */}
+              {/* Keepsake badge (Uses AnonymousAvatar instead of animal) */}
               <motion.div
-                className="absolute -bottom-1 -right-1 flex h-12 w-12 items-center justify-center rounded-full bg-white p-1.5 shadow-lg dark:bg-[#1A2333]"
+                className="absolute -bottom-1 -right-1 flex h-12 w-12 items-center justify-center rounded-full bg-white p-1 shadow-lg dark:bg-[#1A2333]"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: t(1.6), type: 'spring', stiffness: 380, damping: 18 }}
               >
-                <img src={animalSrc} alt="" className="h-full w-full object-contain" draggable={false} />
+                <AnonymousAvatar avatarKey={avatarKey} size={40} borderless />
               </motion.div>
             </div>
 
