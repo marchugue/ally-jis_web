@@ -7,7 +7,7 @@ import {
   UserPlus, RefreshCw,
   Sparkles, MessageSquare,
   Newspaper, Layers, MessageCircle,
-  Menu, ArrowLeft, Flag,
+  Menu, ArrowLeft, Flag, Settings,
 } from 'lucide-react';
 import LordHeartIcon from '@/components/ally/LordHeartIcon';
 import { CURRENT_USER } from '@/data/mockData';
@@ -163,8 +163,8 @@ export default function ProfilePage() {
   const viewedUserId = routeUserId || user?.id || null;
   const isOwnProfile = !routeUserId || routeUserId === user?.id;
 
-  // Mobile active tab view: 'posts' or 'about'
-  const [mobileTab, setMobileTab] = useState<'posts' | 'about'>('posts');
+  // Mobile active tab view: 'feed', 'media', or 'about' (matching mobile app)
+  const [mobileTab, setMobileTab] = useState<'feed' | 'media' | 'about'>('feed');
 
   // Stream active sub-tab: 'feed' or 'media'
   const [streamTab, setStreamTab] = useState<'feed' | 'media'>('feed');
@@ -585,9 +585,247 @@ export default function ProfilePage() {
       <div className="max-w-7xl xl:max-w-[1440px] mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 w-full">
 
         {/* ══════════════════════════════════════════════════════════
-            ROCK-STILL PROFILE HEADER CARD (Cover, Avatar, Identity, Stats)
+            MOBILE APP VIEW (< md): MIRRORS ally-app/app/(tabs)/profile.tsx
         ══════════════════════════════════════════════════════════ */}
-        <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] overflow-hidden mb-0 sm:mb-6 shadow-none sm:shadow-2xs">
+        <div className="md:hidden">
+          {/* ── Top Header Bar with Settings Icon ── */}
+          <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-b border-[#E8E6E1] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+            {isOwnProfile ? (
+              <>
+                <span className="font-jakarta text-lg font-bold text-gray-900 dark:text-white">
+                  {profile.username ? `@${profile.username}` : 'Profile'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/settings')}
+                  className="w-9 h-9 rounded-full bg-[#F4F5F7] dark:bg-white/10 flex items-center justify-center text-gray-800 dark:text-gray-200 active:scale-95 transition-all cursor-pointer"
+                  aria-label="Open settings"
+                >
+                  <Settings size={18} />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="w-9 h-9 rounded-full bg-[#F3F4F6] dark:bg-white/10 flex items-center justify-center text-gray-800 dark:text-gray-200 active:scale-95 transition-all cursor-pointer"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <span className="font-jakarta text-base font-bold text-gray-900 dark:text-white truncate max-w-[200px]">
+                  {isIdentityRevealed
+                    ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
+                    : isUnrevealedMatch
+                    ? (profile.name || routeState.name || 'Anonymous Ally')
+                    : 'Anonymous Peer'}
+                </span>
+                {viewedUserId ? (
+                  <button
+                    type="button"
+                    onClick={() => setReportUserOpen(true)}
+                    className="w-9 h-9 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-red-600 dark:text-red-400 active:scale-95 transition-all cursor-pointer"
+                    aria-label="Report user"
+                  >
+                    <Flag size={16} />
+                  </button>
+                ) : (
+                  <div className="w-9" />
+                )}
+              </>
+            )}
+          </div>
+
+          {/* ── Profile Information Card ── */}
+          <div className="bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 px-4 pt-4 pb-3 mb-3">
+            {/* Avatar + Stats Row */}
+            <div className="flex items-center gap-4">
+              <div
+                onClick={isOwnProfile ? () => setEditModalOpen(true) : undefined}
+                className={cn(
+                  "w-20 h-20 rounded-full bg-white dark:bg-[#181818] border-2 border-white dark:border-[#181818] ring-1 ring-gray-200/80 dark:ring-white/15 overflow-hidden flex items-center justify-center shadow-md flex-shrink-0",
+                  isOwnProfile && "cursor-pointer"
+                )}
+              >
+                {showRealAvatar ? (
+                  <AvatarDisplay
+                    src={resolvedAvatarUrl}
+                    name={profile.username || profile.name}
+                    className="w-full h-full object-cover rounded-full"
+                    textClassName="text-3xl"
+                  />
+                ) : (
+                  <AnonymousAvatar
+                    avatarKey={resolvedAvatarKey}
+                    size={80}
+                    className="w-full h-full rounded-full"
+                  />
+                )}
+              </div>
+
+              {/* Followers, Following, Allies */}
+              <div className="flex items-center justify-around flex-1">
+                <button
+                  type="button"
+                  onClick={() => viewedUserId && setListModal('followers')}
+                  className="flex flex-col items-center min-w-[54px] cursor-pointer"
+                >
+                  <span className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                    {relationship?.followersCount ?? 0}
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Followers</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => viewedUserId && setListModal('following')}
+                  className="flex flex-col items-center min-w-[54px] cursor-pointer"
+                >
+                  <span className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                    {relationship?.followingCount ?? 0}
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Following</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => viewedUserId && setListModal('allies')}
+                  className="flex flex-col items-center min-w-[54px] cursor-pointer"
+                >
+                  <span className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                    {relationship?.alliesCount ?? 0}
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Allies</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Name, Course, Verified Badge */}
+            <div className="mt-3.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-fraunces font-bold text-lg text-gray-900 dark:text-white leading-tight">
+                  {isIdentityRevealed
+                    ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
+                    : isUnrevealedMatch
+                    ? (profile.name || routeState.name || 'Anonymous Ally')
+                    : 'Anonymous Peer'}
+                </span>
+                {isIdentityRevealed && profile.isVerified && (
+                  <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight">
+                    <Shield size={10} />
+                    CHMSU VERIFIED
+                  </span>
+                )}
+              </div>
+
+              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {profile.username ? `@${profile.username}` : ''}
+                {profile.course ? ` · ${profile.course}` : ''}
+                {profile.yearLevel ? ` · ${profile.yearLevel}` : ''}
+              </p>
+
+              {/* Bio */}
+              {profile.bio ? (
+                <p className="font-jakarta text-xs text-gray-700 dark:text-gray-300 mt-2 leading-relaxed whitespace-pre-line">
+                  {profile.bio}
+                </p>
+              ) : isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(true)}
+                  className="font-jakarta text-xs text-gray-400 dark:text-gray-500 italic mt-1.5 text-left cursor-pointer hover:text-[#1A6B3C]"
+                >
+                  + Add bio to introduce yourself to campus allies...
+                </button>
+              ) : null}
+
+              {/* Action Buttons */}
+              <div className="mt-3">
+                {isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(true)}
+                    className="w-full h-10 rounded-xl border border-[#1A6B3C]/30 text-[#1A6B3C] dark:text-emerald-400 bg-white dark:bg-white/5 font-jakarta text-xs font-bold flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <Pencil size={14} />
+                    <span>Edit profile</span>
+                  </button>
+                ) : (
+                  relationship && viewedUserId && (
+                    <div className="flex items-center gap-2">
+                      <RelationshipButtons
+                        targetUserId={viewedUserId}
+                        targetName={
+                          isIdentityRevealed
+                            ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student')
+                            : isUnrevealedMatch
+                            ? (profile.name || 'Anonymous Ally')
+                            : 'Anonymous Peer'
+                        }
+                        allyStatus={relationship.allyStatus}
+                        isFollowing={relationship.isFollowing}
+                        isFollowedBy={relationship.isFollowedBy}
+                        onAllyStatusChange={(status) => setRelationship((r) => r ? { ...r, allyStatus: status } : r)}
+                        onFollowChange={(following) => setRelationship((r) => r ? {
+                          ...r,
+                          isFollowing: following,
+                          followersCount: r.followersCount + (following ? 1 : -1),
+                        } : r)}
+                        onConversationReady={(conversationId) => navigate('/messages', { state: { conversationId } })}
+                      />
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* ── Mobile 3-Tab Switcher: Feed | Media | About (matching ally-app) ── */}
+            <div className="flex border-t border-[#E8E6E1] dark:border-white/10 mt-3 pt-0">
+              <button
+                type="button"
+                onClick={() => { setMobileTab('feed'); setStreamTab('feed'); }}
+                className={cn(
+                  "flex-1 py-2.5 font-jakarta text-sm text-center font-bold transition-all border-b-2 cursor-pointer",
+                  mobileTab === 'feed'
+                    ? "border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400"
+                )}
+              >
+                Feed
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMobileTab('media'); setStreamTab('media'); }}
+                className={cn(
+                  "flex-1 py-2.5 font-jakarta text-sm text-center font-bold transition-all border-b-2 cursor-pointer",
+                  mobileTab === 'media'
+                    ? "border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400"
+                )}
+              >
+                Media
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('about')}
+                className={cn(
+                  "flex-1 py-2.5 font-jakarta text-sm text-center font-bold transition-all border-b-2 cursor-pointer",
+                  mobileTab === 'about'
+                    ? "border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400"
+                )}
+              >
+                About
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════
+            DESKTOP PROFILE HEADER CARD (Cover, Avatar, Identity, Stats)
+        ══════════════════════════════════════════════════════════ */}
+        <div className="hidden md:block rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] overflow-hidden mb-0 sm:mb-6 shadow-none sm:shadow-2xs">
           {/* Cover Banner */}
           <div className="relative flex-shrink-0">
             <div className="h-44 sm:h-56 lg:h-64 bg-gradient-to-r from-[#1A6B3C] via-[#247946] to-[#3B8C7E] overflow-hidden relative">
@@ -597,43 +835,6 @@ export default function ProfilePage() {
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }}
               />
-            </div>
-
-            {/* Mobile Top Header Overlay (Hamburger Menu on Right & Back Button on Left) */}
-            <div className="md:hidden absolute top-3.5 left-3.5 right-3.5 z-20 flex items-center justify-between pointer-events-none">
-              {!isOwnProfile ? (
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="pointer-events-auto px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center gap-1.5 text-xs font-jakarta font-semibold transition-all cursor-pointer"
-                >
-                  <ArrowLeft size={14} /> Back
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={() => setSettingsDrawerOpen(true)}
-                  className="pointer-events-auto w-10 h-10 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all cursor-pointer"
-                  aria-label="Open settings menu"
-                >
-                  <Menu size={20} />
-                </button>
-              )}
-
-              {!isOwnProfile && viewedUserId && (
-                <button
-                  type="button"
-                  onClick={() => setReportUserOpen(true)}
-                  className="pointer-events-auto w-10 h-10 rounded-xl bg-black/40 hover:bg-black/60 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all cursor-pointer"
-                  aria-label="Report user"
-                >
-                  <Flag size={18} />
-                </button>
-              )}
             </div>
 
             {/* Avatar overhanging cover */}
@@ -744,66 +945,38 @@ export default function ProfilePage() {
 
           {/* Stats Bar */}
           <div className="px-6 sm:px-8 py-3.5 flex items-center gap-6 flex-wrap bg-white dark:bg-[#181818] flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => viewedUserId && setListModal('followers')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
-              >
-                <span className="font-bold text-gray-900 dark:text-white">{relationship?.followersCount ?? 0}</span>{' '}
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Followers</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => viewedUserId && setListModal('following')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
-              >
-                <span className="font-bold text-gray-900 dark:text-white">{relationship?.followingCount ?? 0}</span>{' '}
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Following</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => viewedUserId && setListModal('allies')}
-                className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
-              >
-                <span className="font-bold text-gray-900 dark:text-white">{relationship?.alliesCount ?? 0}</span>{' '}
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Allies</span>
-              </button>
-
-              {!isOwnProfile && relationship && (relationship.mutualAlliesCount > 0 || relationship.mutualFollowersCount > 0) && (
-                <span className="font-jakarta text-xs text-gray-400 dark:text-gray-500 ml-auto">
-                  {relationship.mutualAlliesCount > 0 && `${relationship.mutualAlliesCount} Mutual Allies`}
-                  {relationship.mutualAlliesCount > 0 && relationship.mutualFollowersCount > 0 && ' · '}
-                  {relationship.mutualFollowersCount > 0 && `${relationship.mutualFollowersCount} Mutual Followers`}
-                </span>
-              )}
-            </div>
-
-          {/* ── Mobile Tab Segment Switcher (visible only < lg, anchored right here inside header) ── */}
-          <div className="lg:hidden flex border-t border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818]">
             <button
               type="button"
-              onClick={() => setMobileTab('posts')}
-              className={cn(
-                'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer',
-                mobileTab === 'posts'
-                  ? 'text-[#1A6B3C] dark:text-emerald-400 border-[#1A6B3C] dark:border-emerald-400 bg-[#1A6B3C]/5 dark:bg-emerald-500/5'
-                  : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
-              )}
+              onClick={() => viewedUserId && setListModal('followers')}
+              className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              Timeline & Posts
+              <span className="font-bold text-gray-900 dark:text-white">{relationship?.followersCount ?? 0}</span>{' '}
+              <span className="text-gray-500 dark:text-gray-400 font-medium">Followers</span>
             </button>
             <button
               type="button"
-              onClick={() => setMobileTab('about')}
-              className={cn(
-                'flex-1 py-3 font-jakarta text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer',
-                mobileTab === 'about'
-                  ? 'text-[#1A6B3C] dark:text-emerald-400 border-[#1A6B3C] dark:border-emerald-400 bg-[#1A6B3C]/5 dark:bg-emerald-500/5'
-                  : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
-              )}
+              onClick={() => viewedUserId && setListModal('following')}
+              className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              About & Info
+              <span className="font-bold text-gray-900 dark:text-white">{relationship?.followingCount ?? 0}</span>{' '}
+              <span className="text-gray-500 dark:text-gray-400 font-medium">Following</span>
             </button>
+            <button
+              type="button"
+              onClick={() => viewedUserId && setListModal('allies')}
+              className="font-jakarta text-sm hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              <span className="font-bold text-gray-900 dark:text-white">{relationship?.alliesCount ?? 0}</span>{' '}
+              <span className="text-gray-500 dark:text-gray-400 font-medium">Allies</span>
+            </button>
+
+            {!isOwnProfile && relationship && (relationship.mutualAlliesCount > 0 || relationship.mutualFollowersCount > 0) && (
+              <span className="font-jakarta text-xs text-gray-400 dark:text-gray-500 ml-auto">
+                {relationship.mutualAlliesCount > 0 && `${relationship.mutualAlliesCount} Mutual Allies`}
+                {relationship.mutualAlliesCount > 0 && relationship.mutualFollowersCount > 0 && ' · '}
+                {relationship.mutualFollowersCount > 0 && `${relationship.mutualFollowersCount} Mutual Followers`}
+              </span>
+            )}
           </div>
         </div>
 
@@ -815,7 +988,7 @@ export default function ProfilePage() {
           {/* ── LEFT / MAIN STREAM COLUMN: Posts & Media ── */}
           <div className={cn(
             'lg:col-span-7 xl:col-span-8 space-y-0 sm:space-y-4 min-w-0',
-            mobileTab !== 'posts' && 'hidden lg:block'
+            mobileTab === 'about' && 'hidden lg:block'
           )}>
             {!canViewPosts ? (
               <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-12 text-center shadow-none sm:shadow-2xs">
@@ -827,8 +1000,8 @@ export default function ProfilePage() {
               </div>
             ) : (
               <>
-                {/* Feed & Media Sub-Tabs */}
-                <div className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-4 sm:px-6 flex items-center gap-8 shadow-none sm:shadow-2xs">
+                {/* Desktop Feed & Media Sub-Tabs (hidden on mobile, controlled by top tabs) */}
+                <div className="hidden md:flex rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] px-4 sm:px-6 items-center gap-8 shadow-none sm:shadow-2xs">
               <button
                 type="button"
                 onClick={() => setStreamTab('feed')}

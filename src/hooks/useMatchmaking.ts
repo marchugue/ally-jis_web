@@ -101,20 +101,23 @@ export function useMatchmaking(): UseMatchmakingResult {
 
       // Check if a match that was pending has now transitioned to 'chatting' with conversation_id
       const pendingId = pendingMatchIdRef.current;
-      const readyChatMatch = matches.find(
-        (m) =>
-          m.status === 'chatting' &&
-          m.conversation_id &&
-          (pendingId ? m.id === pendingId : true)
-      );
+      if (pendingId) {
+        const readyChatMatch = matches.find(
+          (m) =>
+            m.status === 'chatting' &&
+            m.conversation_id &&
+            m.id === pendingId
+        );
 
-      if (readyChatMatch && readyChatMatch.conversation_id && roomReadyRef.current !== readyChatMatch.conversation_id) {
-        roomReadyRef.current = readyChatMatch.conversation_id;
-        setRoomReady({
-          matchId: readyChatMatch.id,
-          conversationId: readyChatMatch.conversation_id,
-          identity: (readyChatMatch as any).identity || status.identity || undefined,
-        });
+        if (readyChatMatch && readyChatMatch.conversation_id && roomReadyRef.current !== readyChatMatch.conversation_id) {
+          roomReadyRef.current = readyChatMatch.conversation_id;
+          pendingMatchIdRef.current = null;
+          setRoomReady({
+            matchId: readyChatMatch.id,
+            conversationId: readyChatMatch.conversation_id,
+            identity: (readyChatMatch as any).identity || status.identity || undefined,
+          });
+        }
       }
 
       // Streak from the most-recent active match
@@ -140,6 +143,7 @@ export function useMatchmaking(): UseMatchmakingResult {
         if (payload?.conversationId) {
           roomReadyRef.current = payload.conversationId;
         }
+        pendingMatchIdRef.current = null;
         setRoomReady(payload);
         void refreshStatus();
       };

@@ -34,12 +34,23 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
   const { unreadCount } = useNotifications();
 
   const isMessagesPage = location.pathname === '/messages';
+  const isSettingsPage = location.pathname === '/settings' || location.pathname.startsWith('/settings/');
+  const isBlockedUsersPage = location.pathname === '/blocked-users';
+  const isRestrictedUsersPage = location.pathname === '/restricted-users' || location.pathname === '/restricted';
+  const isPostDetailPage = location.pathname.startsWith('/post/');
+  const isRequestsPage = location.pathname === '/requests';
+  const isSubPage = isSettingsPage || isBlockedUsersPage || isRestrictedUsersPage || isPostDetailPage || isRequestsPage;
 
   // Existing behavior: hide bottom bar while typing (keyboard open).
   // New behavior: an open thread on mobile hides BOTH bars entirely, so the
   // conversation gets the full screen, like Messenger/Instagram DMs.
+  // Also hide on subpages like Settings to match native mobile stack screens.
   const shouldHideForChatFocus = isMessagesPage && isMobile && isChatFocused;
-  const shouldHideBottomNav = hideBottomNav || shouldHideForChatFocus || (isMessagesPage && isMobile && isInputFocused);
+  const shouldHideBottomNav =
+    hideBottomNav ||
+    shouldHideForChatFocus ||
+    (isMessagesPage && isMobile && isInputFocused) ||
+    (isMobile && isSubPage);
   const shouldHideTopNav = shouldHideForChatFocus;
 
   const isLinkActive = (path: string) => {
@@ -316,10 +327,10 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
         </nav>
       )}
 
-      {/* ── Bottom mobile nav: full width, space-between layout with exact old padding and gap ── */}
+      {/* ── Bottom mobile nav: mirrors mobile app TAB_THEME closely ── */}
       {!shouldHideBottomNav && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-t border-[#1A6B3C]/10 dark:border-white/10 z-50 px-4 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-between py-3">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-[#111827] border-t border-[#E8E6E1] dark:border-white/10 z-50 px-2 pb-safe shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center justify-between h-[58px]">
             {navLinks.map(({ path, label, outlineSrc, solidSrc, activeState, hoverState }) => {
               const isActive = isLinkActive(path);
               const isHovered = hoveredLink === path;
@@ -336,12 +347,19 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                   }}
                   onTouchStart={() => setHoveredLink(path)}
                   onTouchEnd={() => setHoveredLink(null)}
-                  className="flex flex-col items-center gap-1 transition-all relative flex-1"
+                  className="flex flex-col items-center justify-center relative flex-1 h-full py-1 group"
                 >
+                  {/* Top indicator bar matching TAB_THEME.indicatorColor & indicatorHeight from ally-app */}
+                  {isActive && (
+                    <div className="absolute top-0 w-10 h-[3px] rounded-full bg-[#1A6B3C] dark:bg-emerald-400" />
+                  )}
+
                   <div
                     className={cn(
-                      'p-1.5 rounded-xl transition-all relative flex items-center justify-center',
-                      isActive && 'scale-110 bg-[#1A6B3C]/10 dark:bg-emerald-400/15 text-[#1A6B3C] dark:text-emerald-400 ring-1 ring-[#1A6B3C]/20 dark:ring-emerald-400/25'
+                      'relative flex items-center justify-center transition-all',
+                      isActive
+                        ? 'text-[#1A6B3C] dark:text-emerald-400 -translate-y-0.5'
+                        : 'text-gray-400 dark:text-gray-500 opacity-60 group-hover:opacity-100'
                     )}
                   >
                     <LordNavIcon
@@ -351,15 +369,24 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                       isHovered={isHovered}
                       activeState={activeState}
                       hoverState={hoverState}
-                      size={26}
+                      size={24}
                       stroke="regular"
                     />
                     {label === 'Notifications' && unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white dark:ring-[#121212]">
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white dark:ring-[#111827]">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
                   </div>
+
+                  <span
+                    className={cn(
+                      'text-[9.5px] font-jakarta font-bold mt-0.5 tracking-tight leading-none',
+                      isActive ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'
+                    )}
+                  >
+                    {label === 'Notifications' ? 'Alerts' : label}
+                  </span>
                 </Link>
               );
             })}

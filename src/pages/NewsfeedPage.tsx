@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { AlertCircle, RefreshCw, Plus, Home, Users, ArrowUp } from 'lucide-react';
+import { AlertCircle, RefreshCw, Plus, Home, Users, ArrowUp, SlidersHorizontal, Check } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import FeedPostCard from '@/components/feed/FeedPostCard';
 import PostComposerTrigger from '@/components/ally/PostComposerTrigger';
@@ -42,6 +42,7 @@ export default function NewsfeedPage() {
   const useBackend = Boolean(isApiConfigured && user);
 
   const [composerOpen, setComposerOpen] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [activePost, setActivePost] = useState<FeedPost | null>(null);
   const [pendingReplyCommentId, setPendingReplyCommentId] = useState<string | null>(null);
   const handledDeepLinkRef = useRef<string | null>(null);
@@ -174,37 +175,71 @@ export default function NewsfeedPage() {
   return (
     <PageTransition>
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pb-24 md:pb-8">
-        {/* ── Mobile Sticky Header Bar: Ally-jis Label on Left & Filter Pills on Right ── */}
-        <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-b border-[#E2DED7] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-          <span className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-white tracking-tight">
-            Ally<span className="text-[#E8A838]">-jis</span>
-          </span>
+        {/* ── Mobile Sticky Header Bar: Ally-jis Brand & Filter Dropdown matching ally-app ── */}
+        <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-b border-[#E8E6E1] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+          {/* Left: Ally-jis Brand Title */}
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-emerald-400 tracking-tight">
+              Ally<span className="text-[#E8A838]">-jis</span>
+            </span>
+            {activeFilter !== 'popular' && (
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 capitalize font-jakarta">
+                • {activeFilter === 'allies' ? 'Allies' : 'Following'}
+              </span>
+            )}
+          </div>
 
-          <div className="flex items-center gap-1.5">
-            {(
-              [
-                { key: 'popular', label: 'All Feed' },
-                { key: 'allies', label: 'Allies' },
-                { key: 'following', label: 'Following' },
-              ] as const
-            ).map((tab) => {
-              const isSelected = activeFilter === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveFilter(tab.key)}
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-jakarta font-semibold transition-all whitespace-nowrap cursor-pointer",
-                    isSelected
-                      ? "bg-[#1A6B3C] text-white shadow-xs"
-                      : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-white/15"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+          {/* Right: Dynamic Animated Filter Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFilterDropdown((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold font-jakarta border transition-all cursor-pointer",
+                activeFilter !== 'popular' || showFilterDropdown
+                  ? "bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 border-[#1A6B3C]/30 dark:border-emerald-500/30"
+                  : "bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10"
+              )}
+            >
+              <SlidersHorizontal size={14} className={activeFilter !== 'popular' || showFilterDropdown ? "text-[#1A6B3C] dark:text-emerald-400" : "text-gray-600 dark:text-gray-300"} />
+              <span className="capitalize">
+                {activeFilter === 'popular' ? 'Filter' : activeFilter === 'allies' ? 'Allies' : 'Following'}
+              </span>
+            </button>
+
+            {showFilterDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowFilterDropdown(false)} />
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#181818] border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {[
+                    { value: 'popular', label: 'All Feed' },
+                    { value: 'following', label: 'Following' },
+                    { value: 'allies', label: 'Allies' },
+                  ].map((option) => {
+                    const isSelected = activeFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveFilter(option.value as FeedFilterTab);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-jakarta transition-colors text-left cursor-pointer",
+                          isSelected
+                            ? "bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/15 dark:text-emerald-400 font-bold"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 font-medium"
+                        )}
+                      >
+                        <span>{option.label}</span>
+                        {isSelected && <Check size={14} className="text-[#1A6B3C] dark:text-emerald-400 stroke-[2.5]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

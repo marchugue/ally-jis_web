@@ -366,6 +366,13 @@ export default function DiscoverPage() {
 
 
 
+      {/* ── Mobile Header Bar: Ally-jis Brand matching ScreenHeader in ally-app ── */}
+      <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-b border-[#E8E6E1] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+        <span className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-emerald-400 tracking-tight">
+          Ally<span className="text-[#E8A838]">-jis</span>
+        </span>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-32 md:pb-12 w-full">
         {banner && (
           <div className="mb-4 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm font-jakarta text-amber-800 dark:text-amber-300 flex items-center justify-between">

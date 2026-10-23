@@ -957,11 +957,11 @@ export default function MessagesPage() {
           'border-r border-gray-100 dark:border-white/10',
           activeConversation && 'hidden md:flex',
         )}>
-          {/* ── Mobile Chats Header ── */}
-          <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md border-b border-[#E2DED7] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-            <h1 className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-white tracking-tight">
-              Chats
-            </h1>
+          {/* ── Mobile Screen Header matching ally-app ── */}
+          <div className="md:hidden sticky top-0 z-20 bg-white/95 dark:bg-[#0D131F]/95 backdrop-blur-md border-b border-[#E8E6E1] dark:border-white/10 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+            <span className="font-fraunces text-[22px] font-bold text-[#1A6B3C] dark:text-emerald-400 tracking-tight">
+              Ally<span className="text-[#E8A838]">-jis</span>
+            </span>
           </div>
 
           <div className="px-4 pt-4 pb-3 flex-shrink-0">

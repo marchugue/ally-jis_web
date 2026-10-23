@@ -64,8 +64,7 @@ export const MatchTimerBadge: React.FC<MatchTimerBadgeProps> = ({
 
     const initial = calculateRemaining();
     setSecondsLeft(initial);
-    if (initial <= 0 && onExpire) {
-      onExpire();
+    if (initial <= 0) {
       return;
     }
 
