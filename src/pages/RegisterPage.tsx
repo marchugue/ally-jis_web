@@ -25,16 +25,20 @@ import {
   Search,
   ExternalLink,
   Trash2,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient, isApiConfigured } from '@/api/client';
-import type { PresetAvatarRow } from '@/api/types';
+import { supabase } from '@/lib/supabase';
+import type { PresetAvatarRow, AuthSession } from '@/api/types';
+
 import {
   getWebRegisterCache,
   saveWebRegisterCache,
   clearWebRegisterCache,
   fileToDataUrl,
   dataUrlToFile,
+  rotateImageFile,
 } from '@/lib/registerCache';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { profileService } from '@/lib/services/profileService';
@@ -42,14 +46,75 @@ import { useLookupOptions } from '@/hooks/useLookupOptions';
 import { notify } from '@/components/ui/sonner';
 import { useAuth } from '@/context/AuthContext';
 import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
+import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { ANIMAL_KEYS } from '@/lib/matchOptions';
+import { COURSES_BY_DEPT, DEPARTMENTS, YEAR_LEVELS, ORGANIZATIONS } from '@/data/mockData';
 
-// ── Preset Options ──────────────────────────────────────────────────────────
+// ── Interest Emoji Mapping ───────────────────────────────────────────────────
+const INTEREST_EMOJIS: Record<string, string> = {
+  // Technology
+  'Coding': '💻',
+  'Web Design': '🎨',
+  'AI & ML': '🤖',
+  'Cybersecurity': '🛡️',
+  'Game Dev': '🎮',
+  'Robotics': '🦾',
+  'Web Dev': '🌐',
+  'Mobile Dev': '📱',
 
-const AVATAR_OPTIONS = [
-  '😊', '😎', '🤓', '🤔', '😴', '🥳', '👽', '👻',
-  '🤖', '👾', '🦊', '🐱', '🐶', '🐼', '🐸', '🦉',
-  '🦄', '🦖', '🐙', '🐡',
-];
+  // Arts & Culture
+  'Photography': '📸',
+  'Drawing': '✏️',
+  'Music': '🎵',
+  'Dancing': '💃',
+  'Filmmaking': '🎬',
+  'Creative Writing': '✍️',
+  'Film': '🎥',
+  'Writing': '📝',
+  'Theater': '🎭',
+
+  // Nature
+  'Hiking': '🥾',
+  'Environment': '🌿',
+  'Gardening': '🌱',
+  'Camping': '⛺',
+  'Bird Watching': '🦅',
+
+  // Sports & Fitness
+  'Basketball': '🏀',
+  'Volleyball': '🏐',
+  'Swimming': '🏊',
+  'Badminton': '🏸',
+  'Football': '⚽',
+  'Fitness': '🏋️',
+  'Running': '🏃',
+  'Gym': '💪',
+
+  // Leadership & Academic
+  'Community Service': '🤝',
+  'Student Gov': '🏛️',
+  'Volunteering': '💖',
+  'Debate': '🗣️',
+  'Public Speaking': '🎤',
+  'Research': '🔬',
+  'Science': '🧪',
+  'Math': '📐',
+  'History': '📜',
+  'Literature': '📖',
+
+  // Lifestyle
+  'Cooking': '🍳',
+  'Reading': '📚',
+  'Travel': '✈️',
+  'Anime': '⛩️',
+  'Gaming': '🕹️',
+  'Fashion': '👗',
+  'K-Pop': '🎧',
+};
+
+function getInterestEmoji(label: string): string {
+  return INTEREST_EMOJIS[label] || '✨';
+}
 
 const TERMS_TEXT = `Welcome to Ally-jis! By creating an account or using our platform, you agree to follow these Terms & Conditions:
 
@@ -95,72 +160,103 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Helper: rotate image file on client before upload
-async function rotateImageFile(file: File, degrees: number): Promise<File | Blob> {
-  const normDeg = ((degrees % 360) + 360) % 360;
-  if (normDeg === 0 || !file.type.startsWith('image/')) return file;
 
-  return new Promise((resolve) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(file);
-        return;
-      }
-
-      const isQuarterTurn = normDeg === 90 || normDeg === 270;
-      canvas.width = isQuarterTurn ? img.height : img.width;
-      canvas.height = isQuarterTurn ? img.width : img.height;
-
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((normDeg * Math.PI) / 180);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const rotated = new File([blob], file.name, { type: file.type || 'image/jpeg' });
-            resolve(rotated);
-          } else {
-            resolve(file);
-          }
-        },
-        file.type || 'image/jpeg',
-        0.92
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(file);
-    };
-    img.src = objectUrl;
-  });
+export interface EmailAnalysis {
+  isChmsu: boolean;
+  isExternal: boolean;
+  isTypo: boolean;
+  typoMessage?: string;
+  suggestedEmail?: string;
 }
+
+export const analyzeEmail = (rawEmail: string): EmailAnalysis => {
+  const clean = rawEmail.trim().toLowerCase();
+  if (!clean || !clean.includes('@')) {
+    return { isChmsu: false, isExternal: false, isTypo: false };
+  }
+
+  const atIndex = clean.lastIndexOf('@');
+  const localPart = clean.substring(0, atIndex);
+  const domain = clean.substring(atIndex + 1);
+
+  if (!domain) {
+    return { isChmsu: false, isExternal: false, isTypo: false };
+  }
+
+  // Exact CHMSU institutional domain
+  if (domain === 'chmsu.edu.ph') {
+    return { isChmsu: true, isExternal: false, isTypo: false };
+  }
+
+  // Any domain that ends in .edu.ph but is not chmsu.edu.ph
+  if (domain.endsWith('.edu.ph')) {
+    return {
+      isChmsu: false,
+      isExternal: false,
+      isTypo: true,
+      typoMessage: 'Did you mean @chmsu.edu.ph? Only CHMSU student accounts are supported for institutional registration.',
+      suggestedEmail: `${localPart}@chmsu.edu.ph`,
+    };
+  }
+
+  // Common CHMSU typos
+  const chmsuTypos = [
+    'chmsu.ph',
+    'chmsu.edu',
+    'chmsu.com',
+    'chmsu.org',
+    'chmsc.edu.ph',
+    'chmsc.ph',
+    'chmsc.edu',
+    'cmsu.edu.ph',
+    'cmsu.ph',
+    'chmu.edu.ph',
+    'chms.edu.ph',
+    'chmsuedu.ph',
+    'chmsu-edu.ph',
+    'gmail.chmsu.edu.ph',
+  ];
+
+  if (chmsuTypos.includes(domain)) {
+    return {
+      isChmsu: false,
+      isExternal: false,
+      isTypo: true,
+      typoMessage: 'Did you mean @chmsu.edu.ph?',
+      suggestedEmail: `${localPart}@chmsu.edu.ph`,
+    };
+  }
+
+  // Valid personal/external domain (e.g. gmail.com, yahoo.com, outlook.com)
+  if (domain.includes('.')) {
+    return { isChmsu: false, isExternal: true, isTypo: false };
+  }
+
+  return { isChmsu: false, isExternal: false, isTypo: false };
+};
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session, needsOnboarding, isPendingApproval, completeLogin } = useAuth();
+  const { user, session, needsOnboarding, isPendingApproval, completeLogin, signOut } = useAuth();
   const { organizations, departments, coursesByDept, interestsByCategory, yearLevels } = useLookupOptions();
 
-  // ── Navigation / Phase State ──────────────────────────────────────────────
-  // If user arrived with an email type in URL (or resumed from incomplete profile)
+
+  // ── Navigation State (Always starts directly in form, email selection removed) ──
   const initialEmailType = (searchParams.get('emailType') as 'chmsu' | 'external') || 'chmsu';
   const startStepParam = Number(searchParams.get('startStep') || searchParams.get('step'));
   const hasInitialStep = startStepParam >= 2 && startStepParam <= 4;
+  const startIdSubStepParam = searchParams.get('idSubStep') as 'front' | 'back' | 'review' | null;
+  const isUploadIdRequested = searchParams.get('uploadId') === 'true' || searchParams.get('reupload') === '1' || Boolean(startIdSubStepParam);
 
-  const [phase, setPhase] = useState<'select-email' | 'form'>(
-    hasInitialStep ? 'form' : searchParams.has('emailType') ? 'form' : 'select-email'
-  );
+  const [phase, setPhase] = useState<'form'>('form');
   const [emailType, setEmailType] = useState<'chmsu' | 'external'>(initialEmailType);
-  const [step, setStep] = useState<number>(hasInitialStep ? startStepParam : 1);
+  const [step, setStep] = useState<number>(isUploadIdRequested ? 1 : (hasInitialStep ? startStepParam : 1));
 
   // External student ID sub-steps: 'front' | 'back' | 'review' | 'none'
-  const [idSubStep, setIdSubStep] = useState<'none' | 'front' | 'back' | 'review'>('none');
+  const [idSubStep, setIdSubStep] = useState<'none' | 'front' | 'back' | 'review'>(
+    isUploadIdRequested ? (startIdSubStepParam || 'front') : 'none'
+  );
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [frontRotation, setFrontRotation] = useState<number>(0);
@@ -179,9 +275,11 @@ export default function RegisterPage() {
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const pendingUserIdRef = useRef<string | null>(null);
   const isOtpVerifiedRef = useRef<boolean>(false);
   const formEmailRef = useRef<string>('');
+
 
   // Form Data
   const [form, setForm] = useState({
@@ -194,7 +292,7 @@ export default function RegisterPage() {
     yearLevel: '',
     organizations: [] as string[],
     interests: [] as string[],
-    avatar: '😊',
+    avatar: 'fox',
     bio: '',
   });
 
@@ -203,6 +301,39 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
+
+  // Step 2 Academic Sub-Step ('username' | 'department' | 'course' | 'year' | 'organizations')
+  const [academicSubStep, setAcademicSubStep] = useState<'username' | 'department' | 'course' | 'year' | 'organizations'>('username');
+  const academicSubStepRef = useRef(academicSubStep);
+  useEffect(() => {
+    academicSubStepRef.current = academicSubStep;
+  }, [academicSubStep]);
+
+  // Step 2 Custom Year Level
+  const [customYearInput, setCustomYearInput] = useState('');
+  const [isCustomYear, setIsCustomYear] = useState(false);
+
+  // Step 2 Campus Org Auto Suggestion
+  const [orgSearchQuery, setOrgSearchQuery] = useState('');
+  const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
+  const orgDropdownRef = useRef<HTMLDivElement>(null);
+  const orgInputRef = useRef<HTMLInputElement>(null);
+
+  // Close org dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        orgDropdownRef.current &&
+        !orgDropdownRef.current.contains(e.target as Node) &&
+        orgInputRef.current &&
+        !orgInputRef.current.contains(e.target as Node)
+      ) {
+        setIsOrgDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Step 3 custom interest state
   const [customInterest, setCustomInterest] = useState('');
@@ -251,24 +382,112 @@ export default function RegisterPage() {
     root.style.colorScheme = 'light';
   }, []);
 
-  // ── Route & Auth Guards ───────────────────────────────────────────────────
-  // If user is already authenticated & onboarding is complete, redirect
+  // Forward any OAuth callback queries/hashes mistakenly landing on /register directly to /confirm
   useEffect(() => {
-    if (session && !needsOnboarding) {
+    const code = searchParams.get('code');
+    const hash = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    const hashAccessToken = hashParams.get('access_token');
+
+    if (code || hashAccessToken) {
+      navigate(`/confirm${window.location.search}${window.location.hash}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  // ── Route & Auth Guards ───────────────────────────────────────────────────
+  // If user is already authenticated & onboarding is complete, redirect (unless uploading ID)
+  useEffect(() => {
+    if (session && !needsOnboarding && !hasInitialStep && !isUploadIdRequested) {
       navigate(isPendingApproval ? '/pending-approval' : '/dashboard', { replace: true });
     }
-  }, [session, needsOnboarding, isPendingApproval, navigate]);
+  }, [session, needsOnboarding, isPendingApproval, hasInitialStep, isUploadIdRequested, navigate]);
 
-  // If user is already logged in but onboarding is incomplete, skip Step 1
+  // If user is already logged in but onboarding is incomplete, skip Step 1 (unless uploading ID)
   useEffect(() => {
-    if (session?.user && needsOnboarding) {
-      setPhase('form');
-      setStep((prev) => (prev === 1 ? 2 : prev));
-      if (!registeredUserId) {
-        setRegisteredUserId(session.user.id);
+    const activeUser = user || session?.user;
+    if (activeUser && (needsOnboarding || hasInitialStep)) {
+      const cached = getWebRegisterCache();
+      const hasUploadedId = Boolean(
+        activeUser.user_metadata?.student_id_url ||
+        (activeUser as any)?.student_id_url ||
+        cached?.frontPreviewDataUrl
+      );
+
+      if (!isUploadIdRequested || hasUploadedId) {
+        setPhase('form');
+        setStep((prev) => (prev === 1 ? 2 : prev));
+        setIdSubStep('none');
+        setAcademicSubStep((prev) => prev || 'username');
       }
-      const uName = (session.user.user_metadata?.username as string) || '';
-      const uEmail = session.user.email || '';
+      if (!registeredUserId) {
+        setRegisteredUserId(activeUser.id);
+      }
+      const uName = (activeUser.user_metadata?.username as string) || '';
+      const uEmail = activeUser.email || '';
+      const emailAnalysis = analyzeEmail(uEmail);
+      setEmailType(emailAnalysis.isChmsu ? 'chmsu' : 'external');
+      setForm((prev) => ({
+        ...prev,
+        username: prev.username || uName,
+        email: prev.email || uEmail,
+        password: prev.password || 'AccountVerified1!',
+      }));
+
+      // If user has cached ID previews but not yet on server, auto-upload in background
+      if (cached?.frontPreviewDataUrl && !activeUser.user_metadata?.student_id_url) {
+        const front = dataUrlToFile(cached.frontPreviewDataUrl, 'student-id-front.jpg');
+        if (front) {
+          const rotation = cached.frontRotation || 0;
+          rotateImageFile(front, rotation).then((rot) => {
+            apiClient.uploadStudentId(activeUser.id, rot, 'front').catch((err) =>
+              console.warn('[RegisterPage] Auto-upload front ID warning:', err)
+            );
+          });
+        }
+        if (cached.backPreviewDataUrl) {
+          const back = dataUrlToFile(cached.backPreviewDataUrl, 'student-id-back.jpg');
+          if (back) {
+            const rotation = cached.backRotation || 0;
+            rotateImageFile(back, rotation).then((rot) => {
+              apiClient.uploadStudentId(activeUser.id, rot, 'back').catch((err) =>
+                console.warn('[RegisterPage] Auto-upload back ID warning:', err)
+              );
+            });
+          }
+        }
+      }
+    }
+  }, [user, session, needsOnboarding, hasInitialStep, isUploadIdRequested, registeredUserId]);
+
+  // If user is already logged in and needs to upload student ID (e.g. from OAuth or pending-approval)
+  useEffect(() => {
+    const activeUser = user || session?.user;
+    if (activeUser && isUploadIdRequested && !hasInitialStep) {
+      const cached = getWebRegisterCache();
+      const hasUploadedId = Boolean(
+        activeUser.user_metadata?.student_id_url ||
+        (activeUser as any)?.student_id_url ||
+        cached?.frontPreviewDataUrl
+      );
+      if (hasUploadedId && needsOnboarding) {
+        // ID is already present in cache or database — bypass uploadId and proceed straight to Step 2!
+        setPhase('form');
+        setStep(2);
+        setIdSubStep('none');
+        setAcademicSubStep('username');
+        navigate('/register?step=2', { replace: true });
+        return;
+      }
+      setPhase('form');
+      setStep((prev) => (prev >= 2 ? prev : 1));
+      setIdSubStep((prev) => (prev === 'none' ? 'front' : prev));
+      if (!registeredUserId) {
+        setRegisteredUserId(activeUser.id);
+      }
+      const uName = (activeUser.user_metadata?.username as string) || '';
+      const uEmail = activeUser.email || '';
+      const emailAnalysis = analyzeEmail(uEmail);
+      setEmailType(emailAnalysis.isChmsu ? 'chmsu' : 'external');
       setForm((prev) => ({
         ...prev,
         username: prev.username || uName,
@@ -276,7 +495,7 @@ export default function RegisterPage() {
         password: prev.password || 'AccountVerified1!',
       }));
     }
-  }, [session, needsOnboarding, registeredUserId]);
+  }, [user, session, isUploadIdRequested, hasInitialStep, registeredUserId, needsOnboarding, navigate]);
 
   // Handle escape key to dismiss modals
   useEffect(() => {
@@ -315,13 +534,10 @@ export default function RegisterPage() {
   // Restores registration progress, pending verification states, and ID previews
   // so refreshing or leaving the page does NOT cancel or lose progress.
   useEffect(() => {
-    // If arriving with URL query overrides, let URL take precedence
-    if (hasInitialStep || searchParams.has('emailType')) return;
-
     const cached = getWebRegisterCache();
     if (!cached) return;
 
-    if (cached.showOtpView && cached.registeredUserId) {
+    if (cached.showOtpView && cached.registeredUserId && !hasInitialStep) {
       // Validate with server if verification is still pending
       apiClient.getOtpStatus(cached.registeredUserId)
         .then((status) => {
@@ -333,7 +549,7 @@ export default function RegisterPage() {
             if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
           } else if (status.exists) {
             // Pending verification is active: restore OTP view seamlessly
-            setPhase(cached.phase || 'form');
+            setPhase('form');
             setEmailType(cached.emailType || 'chmsu');
             setStep(cached.step || 1);
             setIdSubStep(cached.idSubStep || 'none');
@@ -357,7 +573,7 @@ export default function RegisterPage() {
             if (cached.backRotation) setBackRotation(cached.backRotation);
           } else {
             // Expired on server, but preserve form data so user doesn't lose their input
-            setPhase(cached.phase || 'form');
+            setPhase('form');
             setEmailType(cached.emailType || 'chmsu');
             setStep(1);
             setShowOtpView(false);
@@ -366,7 +582,7 @@ export default function RegisterPage() {
         })
         .catch(() => {
           // Network issue: restore cached state anyway
-          setPhase(cached.phase || 'form');
+          setPhase('form');
           setEmailType(cached.emailType || 'chmsu');
           setStep(cached.step || 1);
           setIdSubStep(cached.idSubStep || 'none');
@@ -377,11 +593,31 @@ export default function RegisterPage() {
         });
     } else {
       // Restore non-OTP progress (Step 1-4 form values, files, etc.)
-      if (cached.phase) setPhase(cached.phase);
-      if (cached.emailType) setEmailType(cached.emailType);
-      if (cached.step && cached.step >= 1) setStep(cached.step);
-      if (cached.idSubStep) setIdSubStep(cached.idSubStep);
-      if (cached.form) setForm((prev) => ({ ...prev, ...cached.form }));
+      setPhase('form');
+      if (cached.emailType && !searchParams.has('emailType')) setEmailType(cached.emailType);
+      if (hasInitialStep) {
+        setStep(startStepParam);
+      } else if (!isUploadIdRequested && cached.step && cached.step >= 1) {
+        setStep(cached.step);
+      }
+      if (!isUploadIdRequested && cached.idSubStep) setIdSubStep(cached.idSubStep);
+      if (cached.academicSubStep) setAcademicSubStep(cached.academicSubStep);
+      if (cached.form) {
+        setForm((prev) => ({
+          ...prev,
+          username: prev.username || cached.form?.username || '',
+          email: prev.email || cached.form?.email || '',
+          password: prev.password || cached.form?.password || '',
+          confirmPassword: prev.confirmPassword || cached.form?.confirmPassword || '',
+          department: prev.department || cached.form?.department || '',
+          course: prev.course || cached.form?.course || '',
+          yearLevel: prev.yearLevel || cached.form?.yearLevel || '',
+          organizations: prev.organizations.length > 0 ? prev.organizations : (cached.form?.organizations || []),
+          interests: prev.interests.length > 0 ? prev.interests : (cached.form?.interests || []),
+          avatar: prev.avatar && prev.avatar !== '😊' ? prev.avatar : (cached.form?.avatar || '😊'),
+          bio: prev.bio || cached.form?.bio || '',
+        }));
+      }
       if (cached.frontPreviewDataUrl) {
         setFrontPreview(cached.frontPreviewDataUrl);
         const restoredFront = dataUrlToFile(cached.frontPreviewDataUrl, 'student-id-front.jpg');
@@ -408,6 +644,7 @@ export default function RegisterPage() {
       emailType,
       step,
       idSubStep,
+      academicSubStep,
       registeredUserId,
       showOtpView,
       otpDigits,
@@ -423,6 +660,7 @@ export default function RegisterPage() {
     emailType,
     step,
     idSubStep,
+    academicSubStep,
     registeredUserId,
     showOtpView,
     otpDigits,
@@ -445,7 +683,7 @@ export default function RegisterPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       saveWebRegisterCache({ frontPreviewDataUrl: dataUrl, frontRotation: 0 });
-    } catch {}
+    } catch { }
   };
 
   const handleBackFileChange = async (file: File) => {
@@ -456,41 +694,69 @@ export default function RegisterPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       saveWebRegisterCache({ backPreviewDataUrl: dataUrl, backRotation: 0 });
-    } catch {}
+    } catch { }
   };
 
   // ── Validation Helpers ────────────────────────────────────────────────────
+  const validateUsername = async (customVal?: string): Promise<boolean> => {
+    const raw = customVal !== undefined ? customVal : form.username;
+    const clean = raw.trim().toLowerCase().replace(/\s+/g, '');
+    if (!clean) {
+      setErrors((prev) => ({ ...prev, username: 'Username is required.' }));
+      return false;
+    }
+    if (clean.length < 3) {
+      setErrors((prev) => ({ ...prev, username: 'Username must be at least 3 characters.' }));
+      return false;
+    }
+    if (clean.length > 20) {
+      setErrors((prev) => ({ ...prev, username: 'Username cannot exceed 20 characters.' }));
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(clean)) {
+      setErrors((prev) => ({ ...prev, username: 'Only letters, numbers, and underscores are allowed.' }));
+      return false;
+    }
+
+    if (isApiConfigured) {
+      try {
+        const activeUser = user || session?.user;
+        const activeId = registeredUserId || activeUser?.id;
+        const available = await profileService.checkUsername(clean, activeId);
+        if (!available) {
+          setErrors((prev) => ({ ...prev, username: 'That username is already taken. Please choose another.' }));
+          return false;
+        }
+      } catch {
+        // Non-blocking fallback
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, username: '' }));
+    return true;
+  };
+
   const validateStep1 = async (): Promise<boolean> => {
     const errs: Record<string, string> = {};
 
-    // Username validation
-    const cleanUsername = form.username.trim();
-    if (!cleanUsername) {
-      errs.username = 'Username is required.';
-    } else if (cleanUsername.length < 3) {
-      errs.username = 'Username must be at least 3 characters.';
-    } else if (cleanUsername.length > 20) {
-      errs.username = 'Username cannot exceed 20 characters.';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-      errs.username = 'Only letters, numbers, and underscores are allowed.';
-    }
-
     // Email validation
     const cleanEmail = form.email.trim().toLowerCase();
+    const emailAnalysis = analyzeEmail(cleanEmail);
+
     if (!cleanEmail) {
       errs.email = 'Email address is required.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       errs.email = 'Please enter a valid email address.';
-    } else if (emailType === 'chmsu' && !cleanEmail.endsWith('@chmsu.edu.ph')) {
-      errs.email = 'Must be an institutional @chmsu.edu.ph student email.';
+    } else if (emailAnalysis.isTypo) {
+      errs.email = emailAnalysis.typoMessage || 'Did you mean @chmsu.edu.ph?';
     }
 
     // Password validation
     const pwRules = [
-      { test: (p: string) => p.length >= 8,           msg: 'at least 8 characters' },
-      { test: (p: string) => /[A-Z]/.test(p),         msg: 'an uppercase letter' },
-      { test: (p: string) => /[a-z]/.test(p),         msg: 'a lowercase letter' },
-      { test: (p: string) => /[0-9]/.test(p),         msg: 'a number' },
+      { test: (p: string) => p.length >= 8, msg: 'at least 8 characters' },
+      { test: (p: string) => /[A-Z]/.test(p), msg: 'an uppercase letter' },
+      { test: (p: string) => /[a-z]/.test(p), msg: 'a lowercase letter' },
+      { test: (p: string) => /[0-9]/.test(p), msg: 'a number' },
       { test: (p: string) => /[^A-Za-z0-9]/.test(p), msg: 'a special character' },
     ];
     if (!form.password) {
@@ -512,16 +778,23 @@ export default function RegisterPage() {
       return false;
     }
 
-    // Check username availability with backend
+    // Check email availability with backend — decline immediately on step 1 if email is existing
     if (isApiConfigured) {
       try {
-        const available = await profileService.checkUsername(cleanUsername.toLowerCase());
-        if (!available) {
-          setErrors({ username: 'That username is already taken. Please choose another.' });
+        const emailCheck = await apiClient.checkEmail(cleanEmail);
+        if (emailCheck && !emailCheck.available) {
+          const errMsg = emailCheck.message || 'An account with this email already exists. Please log in or use a different email.';
+          setErrors({ email: errMsg });
+          notify.error('Email already registered', errMsg);
           return false;
         }
-      } catch {
-        // Non-blocking fallback
+      } catch (err: any) {
+        if (err?.status === 409 || err?.message?.toLowerCase().includes('already')) {
+          const errMsg = 'An account with this email already exists. Please log in or use a different email.';
+          setErrors({ email: errMsg });
+          notify.error('Email already registered', errMsg);
+          return false;
+        }
       }
     }
 
@@ -531,6 +804,7 @@ export default function RegisterPage() {
 
   const validateStep2 = (): boolean => {
     const errs: Record<string, string> = {};
+    if (!form.username) errs.username = 'Please choose your campus username.';
     if (!form.department) errs.department = 'Please select your department / college.';
     if (!form.course) errs.course = 'Please select your academic course.';
     if (!form.yearLevel) errs.yearLevel = 'Please select your year level.';
@@ -557,16 +831,50 @@ export default function RegisterPage() {
     return Object.keys(errs).length === 0;
   };
 
+  // ── Google OAuth Sign-Up / Login ─────────────────────────────────────────
+  const handleGoogleSignUp = async () => {
+    try {
+      setGoogleLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/confirm`,
+        },
+      });
+      if (error) {
+        console.error('Google OAuth error:', error);
+        notify.error('Google Sign-In failed', error.message || 'Could not initiate Google Sign-In.');
+        setGoogleLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Google OAuth error:', err);
+      notify.error('Google Sign-In failed', err?.message || 'Could not initiate Google Sign-In.');
+      setGoogleLoading(false);
+    }
+  };
+
   // ── Step 1 Submission & ID Flow ───────────────────────────────────────────
   const handleNextFromStep1 = async () => {
+
     const isValid = await validateStep1();
     if (!isValid) return;
 
-    if (emailType === 'external') {
+    const emailAnalysis = analyzeEmail(form.email);
+    const activeEmailType: 'chmsu' | 'external' = emailAnalysis.isChmsu ? 'chmsu' : 'external';
+    setEmailType(activeEmailType);
+
+    if (activeEmailType === 'external') {
       // Navigate into Student ID upload sub-flow
       pushHistory();
       setIdSubStep('front');
       return;
+    }
+
+    const candidateUsername = form.username.trim()
+      ? form.username.trim().toLowerCase()
+      : (form.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || 'student');
+    if (!form.username) {
+      setForm((prev) => ({ ...prev, username: candidateUsername }));
     }
 
     // CHMSU Email: create account immediately & prompt inline OTP
@@ -575,7 +883,7 @@ export default function RegisterPage() {
       const result = await apiClient.register({
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        username: form.username.trim().toLowerCase(),
+        username: candidateUsername.length < 3 ? `${candidateUsername}_chmsu` : candidateUsername,
         email_type: 'chmsu',
         interests: [],
         organizations: [],
@@ -588,7 +896,11 @@ export default function RegisterPage() {
       setShowOtpView(true);
       notify.success('Verification code sent!', `Check your inbox at ${form.email}`);
     } catch (err: any) {
-      notify.error('Registration failed', err?.message || 'Could not create account.');
+      const msg = err?.message || 'Could not create account.';
+      if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('already registered')) {
+        setErrors((prev) => ({ ...prev, email: 'An account with this email already exists. Please log in or use a different email.' }));
+      }
+      notify.error('Registration failed', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -604,11 +916,85 @@ export default function RegisterPage() {
 
     setIsSubmitting(true);
     try {
+      const activeUser = user || session?.user;
+
+      // Case A: User is ALREADY authenticated (e.g. registered via Google OAuth or re-uploading ID)
+      if (activeUser) {
+        const userId = activeUser.id;
+
+        // 1. Upload front ID with rotation applied
+        const rotatedFront = await rotateImageFile(frontFile, frontRotation);
+        await apiClient.uploadStudentId(userId, rotatedFront, 'front');
+
+        // 2. Upload back ID if provided
+        if (backFile) {
+          try {
+            const rotatedBack = await rotateImageFile(backFile, backRotation);
+            await apiClient.uploadStudentId(userId, rotatedBack, 'back');
+          } catch (err) {
+            console.warn('Back ID upload warning:', err);
+          }
+        }
+
+        // 3. Refresh user session in auth context so student_id_url is immediately recognized
+        let updatedSession: AuthSession | null = null;
+        try {
+          updatedSession = await apiClient.getSession();
+          if (updatedSession) {
+            completeLogin(updatedSession, true);
+          }
+        } catch (err) {
+          console.warn('Failed to refresh session after ID upload:', err);
+        }
+
+        const stillNeedsOnboard = Boolean(
+          (!updatedSession?.user?.user_metadata?.onboarding_complete &&
+           !activeUser.user_metadata?.onboarding_complete) ||
+          needsOnboarding
+        );
+
+        // 4. If user still needs onboarding (academic info), transition directly to step 2 without OTP
+        if (stillNeedsOnboard) {
+          notify.success('ID uploaded successfully!', 'Now please complete your academic profile.');
+          setIdSubStep('none');
+          setAcademicSubStep('username');
+          setStep(2);
+          saveWebRegisterCache({
+            phase: 'form',
+            emailType: 'external',
+            step: 2,
+            idSubStep: 'none',
+            academicSubStep: 'username',
+            registeredUserId: userId,
+            form: {
+              ...form,
+              email: form.email || activeUser.email || '',
+              username: form.username || (activeUser.user_metadata?.username as string) || '',
+            },
+          });
+          navigate('/register?step=2', { replace: true });
+          return;
+        }
+
+        // Otherwise (profile already completed or user is pending admin approval)
+        notify.success('Student ID submitted!', 'Your ID has been submitted for administrative verification.');
+        navigate('/pending-approval', { replace: true });
+        return;
+      }
+
+      // Case B: Brand new user registering with email/password
+      const candidateUsername = form.username.trim()
+        ? form.username.trim().toLowerCase()
+        : (form.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || 'student');
+      if (!form.username) {
+        setForm((prev) => ({ ...prev, username: candidateUsername }));
+      }
+
       // 1. Create account
       const result = await apiClient.register({
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        username: form.username.trim().toLowerCase(),
+        username: candidateUsername.length < 3 ? `${candidateUsername}_student` : candidateUsername,
         email_type: 'external',
         interests: [],
         organizations: [],
@@ -644,7 +1030,13 @@ export default function RegisterPage() {
       setShowOtpView(true);
       notify.success('Account created & code sent!', `We sent a 6-digit code to ${form.email}`);
     } catch (err: any) {
-      notify.error('Registration failed', err?.message || 'Could not complete registration.');
+      const msg = err?.message || 'Could not complete registration.';
+      if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('already registered')) {
+        setErrors((prev) => ({ ...prev, email: 'An account with this email already exists. Please log in or use a different email.' }));
+        setIdSubStep('none');
+        setStep(1);
+      }
+      notify.error('Registration failed', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -661,10 +1053,13 @@ export default function RegisterPage() {
       pendingUserIdRef.current = null;
       completeLogin(authSession, true);
       setShowOtpView(false);
-      saveWebRegisterCache({ showOtpView: false, step: 2 });
+      saveWebRegisterCache({ showOtpView: false, step: 2, idSubStep: 'none', academicSubStep: 'username' });
       notify.success('Email confirmed!', "Your email is verified. Let's finish your academic profile.");
       pushHistory();
+      setIdSubStep('none');
+      setAcademicSubStep('username');
       setStep(2);
+      navigate('/register?step=2', { replace: true });
     } catch (err: any) {
       setOtpError(err?.message || 'Incorrect verification code. Please check and try again.');
     } finally {
@@ -782,6 +1177,8 @@ export default function RegisterPage() {
   const showOtpViewRef = useRef(showOtpView);
   const activeModalRef = useRef(activeModal);
   const enlargedImageRef = useRef(enlargedImage);
+  const authUser = user || session?.user;
+  const authUserRef = useRef(authUser);
   const sessionRef = useRef(session);
   const historyDepthRef = useRef<number>(0);
   const isNavigatingBackRef = useRef<boolean>(false);
@@ -793,13 +1190,14 @@ export default function RegisterPage() {
   useEffect(() => { activeModalRef.current = activeModal; }, [activeModal]);
   useEffect(() => { enlargedImageRef.current = enlargedImage; }, [enlargedImage]);
   useEffect(() => { sessionRef.current = session; }, [session]);
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
 
   const pushHistory = () => {
     if (isNavigatingBackRef.current) return;
     try {
       historyDepthRef.current += 1;
       window.history.pushState({ allyRegister: true, depth: historyDepthRef.current }, '');
-    } catch {}
+    } catch { }
   };
 
   const executeBackStep = () => {
@@ -820,6 +1218,10 @@ export default function RegisterPage() {
       return true;
     }
     if (idSubStepRef.current === 'front') {
+      if (isUploadIdRequested && authUserRef.current) {
+        navigate(isPendingApproval ? '/pending-approval' : '/dashboard');
+        return true;
+      }
       setIdSubStep('none');
       return true;
     }
@@ -828,20 +1230,47 @@ export default function RegisterPage() {
       saveWebRegisterCache({ showOtpView: false });
       return true;
     }
-    if (stepRef.current === 2 && sessionRef.current?.user) {
-      notify.info('Account Verified', 'Your account is verified. Please complete your academic details.');
-      return false;
-    }
-    if (stepRef.current > 1) {
-      setStep(stepRef.current - 1);
+    if (stepRef.current === 4) {
+      setStep(3);
       return true;
     }
-    if (stepRef.current === 1 && phaseRef.current === 'form') {
-      setPhase('select-email');
+    if (stepRef.current === 3) {
+      setStep(2);
+      setAcademicSubStep('organizations');
       return true;
     }
-    if (phaseRef.current === 'select-email') {
-      navigate('/');
+    if (stepRef.current === 2) {
+      if (academicSubStepRef.current === 'organizations') {
+        setAcademicSubStep('year');
+        return true;
+      }
+      if (academicSubStepRef.current === 'year') {
+        setAcademicSubStep('course');
+        return true;
+      }
+      if (academicSubStepRef.current === 'course') {
+        setAcademicSubStep('department');
+        return true;
+      }
+      if (academicSubStepRef.current === 'department') {
+        setAcademicSubStep('username');
+        return true;
+      }
+      if (academicSubStepRef.current === 'username') {
+        if (authUserRef.current) {
+          navigate(isPendingApproval ? '/pending-approval' : '/dashboard');
+          return true;
+        }
+        setStep(1);
+        return true;
+      }
+    }
+    if (stepRef.current === 1) {
+      if (authUserRef.current) {
+        navigate(isPendingApproval ? '/pending-approval' : '/dashboard');
+        return true;
+      }
+      navigate('/login');
       return true;
     }
     return false;
@@ -853,7 +1282,7 @@ export default function RegisterPage() {
       if (!window.history.state?.allyRegisterRoot) {
         window.history.replaceState({ allyRegisterRoot: true }, '');
       }
-    } catch {}
+    } catch { }
 
     const handlePopState = () => {
       if (historyDepthRef.current > 0) {
@@ -871,12 +1300,31 @@ export default function RegisterPage() {
   }, [navigate]);
 
   const handleBack = () => {
+    // If logged in and at the very beginning of onboarding, take user directly back to dashboard
+    if (authUserRef.current) {
+      if (
+        (stepRef.current === 2 && academicSubStepRef.current === 'username') ||
+        (stepRef.current === 1 && !showOtpViewRef.current && (idSubStepRef.current === 'none' || (isUploadIdRequested && idSubStepRef.current === 'front')))
+      ) {
+        navigate(isPendingApproval ? '/pending-approval' : '/dashboard');
+        return;
+      }
+    }
+
     if (historyDepthRef.current > 0) {
       window.history.back();
     } else {
-      executeBackStep();
+      const handled = executeBackStep();
+      if (!handled) {
+        if (authUserRef.current) {
+          navigate(isPendingApproval ? '/pending-approval' : '/dashboard');
+        } else {
+          navigate('/login');
+        }
+      }
     }
   };
+
 
   const openModal = (m: 'terms' | 'privacy') => {
     pushHistory();
@@ -936,8 +1384,29 @@ export default function RegisterPage() {
     });
   };
 
-  // Available courses dynamically computed from selected department
-  const currentCourses = form.department ? coursesByDept[form.department] || [] : [];
+  // Available courses dynamically computed from selected department (with fallback)
+  const currentCourses = useMemo(() => {
+    if (!form.department) return [];
+    const fromHook = coursesByDept[form.department];
+    if (fromHook && fromHook.length > 0) return fromHook;
+    return COURSES_BY_DEPT[form.department] || [];
+  }, [coursesByDept, form.department]);
+
+  // Combined organizations from backend lookup and local mock
+  const allOrgOptions = useMemo(() => {
+    const list = organizations && organizations.length > 0 ? organizations : ORGANIZATIONS;
+    return Array.from(new Set(list));
+  }, [organizations]);
+
+  // Suggested organizations for campus org input
+  const suggestedOrgs = useMemo(() => {
+    const q = orgSearchQuery.trim().toLowerCase();
+    return allOrgOptions.filter((org) => {
+      const notSelected = !form.organizations.includes(org);
+      const matches = !q || org.toLowerCase().includes(q);
+      return notSelected && matches;
+    });
+  }, [allOrgOptions, form.organizations, orgSearchQuery]);
 
   // Available categories dynamically derived from lookup data
   const availableCategories = useMemo(() => {
@@ -1015,1967 +1484,1832 @@ export default function RegisterPage() {
     );
   }
 
-  // ── PHASE 0: SELECT EMAIL VIEW ────────────────────────────────────────────
-  if (phase === 'select-email') {
-    return (
-      <div className="min-h-screen bg-[#F7F4EF] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 selection:bg-[#1A6B3C] selection:text-white flex flex-col justify-between overflow-x-hidden">
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#F7F4EF]/85 dark:bg-[#090D16]/85 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
-          <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 h-14 sm:h-16 md:h-18 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3 group">
-              <motion.div
-                whileHover={{ scale: 1.08, rotate: -4 }}
-                whileTap={{ scale: 0.94 }}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1A6B3C] dark:bg-emerald-600 flex items-center justify-center text-white font-fraunces font-bold text-base sm:text-lg shadow-sm"
-              >
-                A
-              </motion.div>
-              <div className="flex flex-col">
-                <span className="font-fraunces font-bold text-lg sm:text-xl tracking-tight text-[#1A6B3C] dark:text-white leading-none">
-                  Ally<span className="text-[#E8A838]">-jis</span>
-                </span>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#1A6B3C]/60 dark:text-gray-400 pt-0.5">
-                  CHMSU Alijis
-                </span>
-              </div>
-            </Link>
-
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A6B3C] dark:text-white bg-white dark:bg-white/10 hover:bg-[#EDE7DB] dark:hover:bg-white/20 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all shadow-xs border border-[#1A6B3C]/10 dark:border-white/10"
-            >
-              <ArrowLeft size={14} /> Back to Sign in
-            </Link>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-8 md:py-10 flex items-center justify-center">
-          <div className="w-full max-w-5xl xl:max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 xl:gap-20 items-center">
-            {/* Left Column: Header (Centered) */}
-            <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center mb-4 sm:mb-6 shadow-sm"
-              >
-                <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10" />
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-[#1A6B3C] dark:text-white leading-tight text-center"
-              >
-                How would you like to sign up?
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.15 }}
-                className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 sm:mt-3 max-w-md leading-relaxed text-center mx-auto"
-              >
-                Choose an email type to verify your student identity.
-              </motion.p>
-            </div>
-
-            {/* Right Column: Option Cards Container (Centered) */}
-            <div className="md:col-span-7 lg:col-span-1 flex flex-col items-center justify-center w-full max-w-lg md:max-w-none lg:max-w-xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="w-full space-y-3.5 sm:space-y-4 text-left"
-              >
-                {/* Option 1: CHMSU Email */}
-                <button
-                  type="button"
-                  onClick={() => setEmailType('chmsu')}
-                  className={cn(
-                    'w-full p-4 sm:p-5 md:p-5 lg:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2.5 sm:gap-3 relative cursor-pointer',
-                    emailType === 'chmsu'
-                      ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
-                      : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                          emailType === 'chmsu'
-                            ? 'bg-[#1A6B3C] text-white'
-                            : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
-                        )}
-                      >
-                        <GraduationCap size={20} />
-                      </div>
-                      <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                        CHMSU Student Email
-                      </h3>
-                    </div>
-                    {emailType === 'chmsu' && (
-                      <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                      Instant verification code sent to your student inbox. No ID upload needed.
-                    </p>
-                  </div>
-                </button>
-
-                {/* Option 2: Personal Email */}
-                <button
-                  type="button"
-                  onClick={() => setEmailType('external')}
-                  className={cn(
-                    'w-full p-4 sm:p-5 md:p-5 lg:p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2.5 sm:gap-3 relative cursor-pointer',
-                    emailType === 'external'
-                      ? 'border-[#1A6B3C] dark:border-emerald-500 bg-white dark:bg-[#111827] shadow-lg ring-2 ring-[#1A6B3C]/10 dark:ring-emerald-500/20'
-                      : 'border-[#1A6B3C]/15 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 hover:border-[#1A6B3C]/40 dark:hover:border-white/30'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                          emailType === 'external'
-                            ? 'bg-[#1A6B3C] text-white'
-                            : 'bg-[#1A6B3C]/10 dark:bg-white/10 text-[#1A6B3C] dark:text-gray-200'
-                        )}
-                      >
-                        <FileCheck size={20} />
-                      </div>
-                      <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                        Personal Email
-                      </h3>
-                    </div>
-                    {emailType === 'external' && (
-                      <CheckCircle2 className="text-[#1A6B3C] dark:text-emerald-400 w-5 h-5" />
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="font-jakarta text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                      For students awaiting school email. Requires Student ID or COR verification.
-                    </p>
-                  </div>
-                </button>
-              </motion.div>
-
-              {/* Continue Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.25 }}
-                className="w-full mt-6"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    pushHistory();
-                    setPhase('form');
-                    setStep(1);
-                  }}
-                  className="w-full bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Continue</span>
-                  <ArrowRight size={16} />
-                </button>
-              </motion.div>
-            </div>
-          </div>
-        </main>
-
-        {/* Footer */}
-        <footer className="py-6 border-t border-[#1A6B3C]/10 dark:border-white/10 text-center text-xs font-jakarta text-gray-500">
-          Carlos Hilado Memorial State University · Alijis Campus · Ally-jis
-        </footer>
-      </div>
-    );
-  }
-
   // ── MAIN REGISTRATION / MULTI-STEP VIEW ───────────────────────────────────
   return (
     <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#090D16] text-[#1A6B3C] dark:text-gray-100 flex flex-col justify-between overflow-x-hidden">
-      {/* ── TOP BAR ── */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#FAF8F5]/90 dark:bg-[#090D16]/90 border-b border-[#1A6B3C]/10 dark:border-white/10 transition-all">
-        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 h-14 sm:h-16 md:h-18 flex items-center justify-between">
+      {/* ── TOP ACTION & PROGRESSION BAR (Aligned with Back link, slightly wider, progression tracks forward & back) ── */}
+      <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 pt-6 sm:pt-8 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer group"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
+          <span>Back</span>
+        </button>
+
+        {/* Progression Bar on top, aligned with back link */}
+        {idSubStep === 'none' && !showOtpView && (
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {[1, 2, 3, 4].map((num) => (
+              <div
+                key={num}
+                className={cn(
+                  'h-1.5 sm:h-2 rounded-full transition-all duration-300',
+                  num === step
+                    ? 'w-10 sm:w-16 bg-[#1A6B3C] dark:bg-emerald-500 shadow-xs'
+                    : num < step
+                      ? 'w-8 sm:w-12 bg-[#1A6B3C] dark:bg-emerald-500'
+                      : 'w-8 sm:w-12 bg-gray-200 dark:bg-white/10'
+                )}
+                title={`Step ${num} of 4`}
+              />
+            ))}
+          </div>
+        )}
+
+        {authUser ? (
           <button
             type="button"
-            onClick={handleBack}
-            className="w-9 h-9 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400 hover:bg-gray-50 dark:hover:bg-white/20 transition-all shadow-xs cursor-pointer"
-            aria-label="Go back"
+            onClick={async () => {
+              await signOut();
+              clearWebRegisterCache();
+              navigate('/login', { replace: true });
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 bg-white/80 hover:bg-red-50 dark:bg-white/5 dark:hover:bg-red-950/30 transition-all border-2 border-gray-300 dark:border-white/10 cursor-pointer shadow-2xs"
+            title="Log out of current account"
           >
-            <ArrowLeft size={18} />
+            <LogOut size={13} />
+            <span>Log out</span>
           </button>
+        ) : idSubStep === 'back' ? (
+          <button
+            type="button"
+            onClick={() => {
+              pushHistory();
+              setIdSubStep('review');
+            }}
+            className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            Skip
+          </button>
+        ) : (
+          <div className="w-16 hidden sm:block" />
+        )}
+      </div>
 
-          <span className="font-mono text-xs uppercase tracking-widest font-bold text-gray-400 dark:text-gray-500">
-            {idSubStep !== 'none'
-              ? 'Student Verification'
-              : `STEP ${step} OF ${STEPS.length}`}
-          </span>
-
-          {idSubStep === 'back' ? (
-            <button
-              type="button"
-              onClick={() => {
-                pushHistory();
-                setIdSubStep('review');
-              }}
-              className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-            >
-              Skip
-            </button>
-          ) : (
-            <div className="w-9" />
-          )}
+      {/* ── BODY CONTAINER (Fully blending to background, no card wrapper, no illustration column) ── */}
+      <main className="flex-1 w-full max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col justify-center">
+        {/* Dynamic Context Header */}
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
+            {showOtpView
+              ? 'Verify your email'
+              : idSubStep === 'front'
+                ? 'Upload Front ID or COR'
+                : idSubStep === 'back'
+                  ? 'Upload Back of ID'
+                  : idSubStep === 'review'
+                    ? 'Review Student ID'
+                    : step === 1
+                      ? 'Create your Account'
+                      : step === 2
+                        ? academicSubStep === 'username'
+                          ? 'Choose your Username'
+                          : academicSubStep === 'department'
+                            ? 'Select your Department'
+                            : academicSubStep === 'course'
+                              ? 'Select your Course'
+                              : academicSubStep === 'year'
+                                ? 'Select your Year Level'
+                                : 'Campus Organizations'
+                        : step === 3
+                          ? 'Select your Interests'
+                          : 'Your Profile'}
+          </h1>
+          <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
+            {showOtpView
+              ? `We sent a 6-digit verification code to ${form.email}`
+              : idSubStep === 'front'
+                ? 'Please upload the front side of your CHMSU student ID or COR.'
+                : idSubStep === 'back'
+                  ? 'Upload the back side of your student ID, or skip if none.'
+                  : idSubStep === 'review'
+                    ? 'Ensure all student details and photo are legible before confirming.'
+                    : step === 1
+                      ? 'Sign up with your CHMSU institutional or personal email'
+                      : step === 2
+                        ? academicSubStep === 'username'
+                          ? 'Pick a unique handle for your student profile'
+                          : academicSubStep === 'department'
+                            ? 'Which college do you belong to at CHMSU Alijis?'
+                            : academicSubStep === 'course'
+                              ? `Degree programs in ${form.department || 'your department'}`
+                              : academicSubStep === 'year'
+                                ? 'What year level are you currently enrolled in?'
+                                : 'Add your student organizations or clubs (optional)'
+                        : step === 3
+                          ? 'Choose at least 3 interests to power your campus connections'
+                          : 'Review how fellow CHMSU students will see you'}
+          </p>
         </div>
-      </header>
-
-      {/* ── BODY CONTAINER ── */}
-      <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-16 py-5 sm:py-7 md:py-8 lg:py-10 flex flex-col justify-center">
-        <div className="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 xl:gap-16 items-start w-full max-w-5xl xl:max-w-6xl mx-auto">
-          {/* ── LEFT COLUMN: STEP CONTEXT (Centered) ── */}
-          <div className="md:col-span-5 lg:col-span-1 flex flex-col items-center text-center justify-center w-full max-w-sm md:max-w-xs lg:max-w-md mx-auto md:sticky md:top-20 lg:top-24">
-            <motion.div
-              key={`badge-${step}-${idSubStep}-${showOtpView}`}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center mb-3 sm:mb-5 shadow-sm"
-            >
-              {showOtpView ? (
-                <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
-              ) : idSubStep !== 'none' ? (
-                <Upload className="w-7 h-7 sm:w-8 sm:h-8" />
-              ) : step === 1 ? (
-                <GraduationCap className="w-7 h-7 sm:w-8 sm:h-8" />
-              ) : step === 2 ? (
-                <GraduationCap className="w-7 h-7 sm:w-8 sm:h-8" />
-              ) : step === 3 ? (
-                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8" />
-              ) : (
-                <FileText className="w-7 h-7 sm:w-8 sm:h-8" />
-              )}
-            </motion.div>
-
-            <h1 className="font-fraunces text-2xl sm:text-3xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight text-center">
-              {showOtpView
-                ? 'Verify your email'
-                : idSubStep === 'front'
-                  ? 'Upload Front ID or COR'
-                  : idSubStep === 'back'
-                    ? 'Upload Back of ID'
-                    : idSubStep === 'review'
-                      ? 'Review Student ID'
-                      : STEPS[step - 1]?.label}
-            </h1>
-
-            <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-md leading-relaxed text-center mx-auto">
-              {showOtpView
-                ? `We sent a 6-digit verification code to ${form.email}`
-                : idSubStep === 'front'
-                  ? 'Please upload the front side of your CHMSU student ID or official Certificate of Registration.'
-                  : idSubStep === 'back'
-                    ? 'Now upload the back side of your student ID, or skip if your card has no back.'
-                    : idSubStep === 'review'
-                      ? 'Ensure all student details and photo are sharp and legible before submitting.'
-                      : STEPS[step - 1]?.hint}
-            </p>
-
-            {/* Progress dots */}
-            {idSubStep === 'none' && !showOtpView && (
-              <div className="flex items-center justify-center gap-2 mt-4 sm:mt-5 mx-auto">
-                {STEPS.map(({ num }) => (
-                  <div
-                    key={num}
-                    className={cn(
-                      'h-2 rounded-full transition-all duration-300',
-                      num === step
-                        ? 'w-7 bg-[#1A6B3C] dark:bg-emerald-500'
-                        : num < step
-                          ? 'w-2 bg-[#1A6B3C]/60 dark:bg-emerald-500/60'
-                          : 'w-2 bg-gray-200 dark:bg-white/15'
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Verification Trust Badge (for ID Upload or OTP) — visible on tablets md: and desktops */}
-            {(idSubStep !== 'none' || showOtpView) && (
-              <div className="hidden md:flex flex-col gap-1.5 sm:gap-2 mt-4 lg:mt-6 p-3 sm:p-4 rounded-2xl bg-white/70 dark:bg-[#111827]/70 border border-[#1A6B3C]/15 dark:border-white/10 w-full max-w-xs sm:max-w-sm mx-auto text-center items-center">
-                <div className="flex items-center gap-2 text-xs font-mono text-[#1A6B3C] dark:text-emerald-400 font-semibold">
-                  <Shield size={14} />
-                  <span>Verified CHMSU Identity</span>
-                </div>
-                <p className="text-xs font-jakarta text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {showOtpView
-                    ? 'Enter the 6-digit code sent to your student email to activate your account.'
-                    : 'All uploaded student IDs and COR documents are encrypted and reviewed solely by authorized university campus admins.'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* ── RIGHT COLUMN: ONBOARDING STEPS FORM (Centered) ── */}
-          <div className="md:col-span-7 lg:col-span-1 flex flex-col items-center justify-center w-full max-w-lg md:max-w-none lg:max-w-xl mx-auto">
-            <div className="w-full bg-white dark:bg-[#111827] rounded-3xl p-5 sm:p-7 md:p-6 lg:p-8 xl:p-10 border border-[#1A6B3C]/10 dark:border-white/10 shadow-xl">
-              {/* =========================================================================
+        {/* =========================================================================
               OTP VIEW (Step 1 or External ID Upload Completion)
              ========================================================================= */}
-              {showOtpView && (
-                <div className="flex flex-col items-center py-2 space-y-6">
-                  {/* 6 Digit Input Boxes */}
-                  <div className="flex items-center justify-center gap-2 sm:gap-3">
-                    {otpDigits.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        id={`otp-digit-${idx}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, '');
-                          const updated = [...otpDigits];
-                          updated[idx] = val.slice(-1);
-                          setOtpDigits(updated);
-                          if (val && idx < 5) {
-                            const next = document.getElementById(`otp-digit-${idx + 1}`);
-                            next?.focus();
-                          }
-                          if (val && idx === 5 && updated.every(Boolean)) {
-                            handleVerifyOtp(updated.join(''));
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
-                            const prev = document.getElementById(`otp-digit-${idx - 1}`);
-                            prev?.focus();
-                          }
-                        }}
-                        onPaste={(e) => {
-                          e.preventDefault();
-                          const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
-                          if (!paste) return;
-                          const nextDigits = [...otpDigits];
-                          paste.split('').forEach((char, i) => {
-                            nextDigits[i] = char;
-                          });
-                          setOtpDigits(nextDigits);
-                          if (paste.length === 6) {
-                            handleVerifyOtp(paste);
-                          }
-                        }}
-                        className={cn(
-                          'w-10 h-12 sm:w-12 sm:h-14 md:w-11 md:h-13 lg:w-13 lg:h-15 text-center font-fraunces text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 transition-all outline-none',
-                          digit
-                            ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-300'
-                            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C] dark:focus:border-emerald-500'
-                        )}
-                      />
-                    ))}
-                  </div>
-
-                  {otpError && (
-                    <div className="w-full max-w-sm p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 font-jakarta">
-                      <AlertCircle size={16} className="shrink-0" />
-                      <span>{otpError}</span>
-                    </div>
+        {showOtpView && (
+          <div className="flex flex-col items-center py-2 space-y-6">
+            {/* 6 Digit Input Boxes */}
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  id={`otp-digit-${idx}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    const updated = [...otpDigits];
+                    updated[idx] = val.slice(-1);
+                    setOtpDigits(updated);
+                    if (val && idx < 5) {
+                      const next = document.getElementById(`otp-digit-${idx + 1}`);
+                      next?.focus();
+                    }
+                    if (val && idx === 5 && updated.every(Boolean)) {
+                      handleVerifyOtp(updated.join(''));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
+                      const prev = document.getElementById(`otp-digit-${idx - 1}`);
+                      prev?.focus();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+                    if (!paste) return;
+                    const nextDigits = [...otpDigits];
+                    paste.split('').forEach((char, i) => {
+                      nextDigits[i] = char;
+                    });
+                    setOtpDigits(nextDigits);
+                    if (paste.length === 6) {
+                      handleVerifyOtp(paste);
+                    }
+                  }}
+                  className={cn(
+                    'w-10 h-12 sm:w-12 sm:h-14 md:w-11 md:h-13 lg:w-13 lg:h-15 text-center font-fraunces text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 transition-all outline-none',
+                    digit
+                      ? 'border-[#1A6B3C] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/40 text-[#1A6B3C] dark:text-emerald-300'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C] dark:focus:border-emerald-500'
                   )}
+                />
+              ))}
+            </div>
 
-                  <button
-                    type="button"
-                    disabled={isVerifyingOtp || otpDigits.join('').length < 6}
-                    onClick={() => handleVerifyOtp(otpDigits.join(''))}
-                    className="w-full max-w-sm bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isVerifyingOtp ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Confirm & Continue</span>
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
+            {otpError && (
+              <div className="w-full max-w-sm p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 font-jakarta">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{otpError}</span>
+              </div>
+            )}
 
-                  <div className="text-center text-xs font-jakarta text-gray-500 space-y-2">
-                    <p>
-                      Didn't get the code?{' '}
-                      <button
-                        type="button"
-                        onClick={handleResendOtp}
-                        disabled={isResendingOtp || resendCooldown > 0}
-                        className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50 cursor-pointer"
-                      >
-                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : isResendingOtp ? 'Sending...' : 'Resend Code'}
-                      </button>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleCancelRegistration}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline cursor-pointer"
-                    >
-                      ← Change email address or restart
-                    </button>
-                  </div>
-                </div>
+            <button
+              type="button"
+              disabled={isVerifyingOtp || otpDigits.join('').length < 6}
+              onClick={() => handleVerifyOtp(otpDigits.join(''))}
+              className="w-full max-w-sm bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {isVerifyingOtp ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>Confirm & Continue</span>
+                  <ArrowRight size={16} />
+                </>
               )}
+            </button>
 
-              {/* =========================================================================
+            <div className="text-center text-xs font-jakarta text-gray-500 space-y-2">
+              <p>
+                Didn't get the code?{' '}
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResendingOtp || resendCooldown > 0}
+                  className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : isResendingOtp ? 'Sending...' : 'Resend Code'}
+                </button>
+              </p>
+              <button
+                type="button"
+                onClick={handleCancelRegistration}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline cursor-pointer"
+              >
+                ← Change email address or restart
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
               STUDENT ID SUB-FLOW: FRONT SIDE (External Email)
              ========================================================================= */}
-              {!showOtpView && idSubStep === 'front' && (
-                <div className="space-y-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
-                    <span>Step 1 of 2 • Front Side</span>
+        {!showOtpView && idSubStep === 'front' && (
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
+              <span>Step 1 of 2 • Front Side</span>
+            </div>
+
+            {/* Upload Dropzone */}
+            <input
+              ref={frontInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onClick={(e) => {
+                (e.target as HTMLInputElement).value = '';
+              }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFrontFileChange(file);
+              }}
+            />
+
+            {frontFile && frontPreview ? (
+              <div className="space-y-3">
+                {isImageFile(frontFile) ? (
+                  <div
+                    onClick={() =>
+                      openEnlargedImage({
+                        src: frontPreview,
+                        title: 'Front ID Preview',
+                        rotation: frontRotation,
+                      })
+                    }
+                    className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
+                    title="Click to zoom / inspect photo"
+                  >
+                    <img
+                      src={frontPreview}
+                      alt="Front ID Preview"
+                      style={{ transform: `rotate(${frontRotation}deg)` }}
+                      className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                    />
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
+                      <Maximize2 size={16} />
+                      <span>Click anywhere to inspect & zoom</span>
+                    </div>
+                    <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFrontRotation((r) => (r + 90) % 360);
+                        }}
+                        className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                        title="Rotate 90 degrees"
+                      >
+                        <RotateCw size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEnlargedImage({
+                            src: frontPreview,
+                            title: 'Front ID Preview',
+                            rotation: frontRotation,
+                          });
+                        }}
+                        className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                        title="Zoom / Inspect"
+                      >
+                        <Maximize2 size={16} />
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Upload Dropzone */}
-                  <input
-                    ref={frontInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="hidden"
-                    onClick={(e) => {
-                      (e.target as HTMLInputElement).value = '';
+                ) : (
+                  /* PDF Document Preview Card */
+                  <div
+                    onClick={() => {
+                      if (frontPreview) window.open(frontPreview, '_blank');
                     }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFrontFileChange(file);
-                    }}
-                  />
-
-                  {frontFile && frontPreview ? (
-                    <div className="space-y-3">
-                      {isImageFile(frontFile) ? (
-                        <div
-                          onClick={() =>
-                            openEnlargedImage({
-                              src: frontPreview,
-                              title: 'Front ID Preview',
-                              rotation: frontRotation,
-                            })
-                          }
-                          className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
-                          title="Click to zoom / inspect photo"
-                        >
-                          <img
-                            src={frontPreview}
-                            alt="Front ID Preview"
-                            style={{ transform: `rotate(${frontRotation}deg)` }}
-                            className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                          />
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
-                            <Maximize2 size={16} />
-                            <span>Click anywhere to inspect & zoom</span>
-                          </div>
-                          <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFrontRotation((r) => (r + 90) % 360);
-                              }}
-                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                              title="Rotate 90 degrees"
-                            >
-                              <RotateCw size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEnlargedImage({
-                                  src: frontPreview,
-                                  title: 'Front ID Preview',
-                                  rotation: frontRotation,
-                                });
-                              }}
-                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                              title="Zoom / Inspect"
-                            >
-                              <Maximize2 size={16} />
-                            </button>
-                          </div>
+                    className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
+                    title="Click to open / view PDF in new tab"
+                  >
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
+                        <FileText size={28} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
+                            PDF Document
+                          </span>
+                          <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                            {formatFileSize(frontFile.size)}
+                          </span>
                         </div>
-                      ) : (
-                        /* PDF Document Preview Card */
-                        <div
-                          onClick={() => {
-                            if (frontPreview) window.open(frontPreview, '_blank');
-                          }}
-                          className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
-                          title="Click to open / view PDF in new tab"
-                        >
-                          <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
-                              <FileText size={28} />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
-                                  PDF Document
-                                </span>
-                                <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                                  {formatFileSize(frontFile.size)}
-                                </span>
-                              </div>
-                              <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
-                                {frontFile.name}
-                              </p>
-                              <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                <ExternalLink size={12} /> Click to preview / open PDF
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (frontInputRef.current) {
-                                  frontInputRef.current.value = '';
-                                  frontInputRef.current.click();
-                                }
-                              }}
-                              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              Replace
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
-                        <div className="flex items-center gap-1.5 truncate max-w-[240px]">
-                          <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
-                          <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{frontFile.name}</span>
-                          <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(frontFile.size)})</span>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (frontInputRef.current) {
-                                frontInputRef.current.value = '';
-                                frontInputRef.current.click();
-                              }
-                            }}
-                            className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                          >
-                            Change photo
-                          </button>
-                          <span className="text-gray-300 dark:text-gray-600">•</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFrontFile(null);
-                              setFrontPreview(null);
-                              setFrontRotation(0);
-                              if (frontInputRef.current) frontInputRef.current.value = '';
-                            }}
-                            className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
+                          {frontFile.name}
+                        </p>
+                        <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                          <ExternalLink size={12} /> Click to preview / open PDF
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <div
-                      role="button"
-                      tabIndex={0}
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (frontInputRef.current) {
+                            frontInputRef.current.value = '';
+                            frontInputRef.current.click();
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
+                  <div className="flex items-center gap-1.5 truncate max-w-[240px]">
+                    <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
+                    <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{frontFile.name}</span>
+                    <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(frontFile.size)})</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
                       onClick={() => {
                         if (frontInputRef.current) {
                           frontInputRef.current.value = '';
                           frontInputRef.current.click();
                         }
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          if (frontInputRef.current) {
-                            frontInputRef.current.value = '';
-                            frontInputRef.current.click();
-                          }
-                        }
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handleFrontFileChange(file);
-                      }}
-                      className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+                      className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                        <Upload size={24} />
-                      </div>
-                      <div>
-                        <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
-                          Upload Front ID or COR
-                        </p>
-                        <p className="font-jakarta text-xs text-gray-500 mt-1">
-                          Drag and drop image or click anywhere in this box to browse
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
-                    </div>
-                  )}
-
-                  {/* Guidelines */}
-                  <div className="p-4 rounded-2xl bg-[#F7F4EF] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10 text-xs font-jakarta text-gray-600 dark:text-gray-300 space-y-1.5">
-                    <p className="font-bold text-gray-900 dark:text-white">Verification Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
-                      <li>Place ID flat on an even, well-lit surface</li>
-                      <li>Avoid camera flash glare, shadows, and blurry edges</li>
-                      <li>Ensure your full name, student number, and photo are clear</li>
-                      <li>Certificate of Registration (COR) accepted if ID is not yet issued</li>
-                    </ul>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      Back
+                      Change photo
                     </button>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
                     <button
                       type="button"
-                      disabled={!frontFile}
                       onClick={() => {
-                        pushHistory();
-                        setIdSubStep('back');
+                        setFrontFile(null);
+                        setFrontPreview(null);
+                        setFrontRotation(0);
+                        if (frontInputRef.current) frontInputRef.current.value = '';
                       }}
-                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                      className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
                     >
-                      <span>Next: Back Side</span>
-                      <ArrowRight size={16} />
+                      Remove
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if (frontInputRef.current) {
+                    frontInputRef.current.value = '';
+                    frontInputRef.current.click();
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (frontInputRef.current) {
+                      frontInputRef.current.value = '';
+                      frontInputRef.current.click();
+                    }
+                  }
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFrontFileChange(file);
+                }}
+                className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
+                  <Upload size={24} />
+                </div>
+                <div>
+                  <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
+                    Upload Front ID or COR
+                  </p>
+                  <p className="font-jakarta text-xs text-gray-500 mt-1">
+                    Drag and drop image or click anywhere in this box to browse
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
+              </div>
+            )}
 
-              {/* =========================================================================
+            {/* Guidelines */}
+            <div className="p-4 rounded-2xl bg-[#F7F4EF] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10 text-xs font-jakarta text-gray-600 dark:text-gray-300 space-y-1.5">
+              <p className="font-bold text-gray-900 dark:text-white">Verification Guidelines:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
+                <li>Place ID flat on an even, well-lit surface</li>
+                <li>Avoid camera flash glare, shadows, and blurry edges</li>
+                <li>Ensure your full name, student number, and photo are clear</li>
+                <li>Certificate of Registration (COR) accepted if ID is not yet issued</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!frontFile}
+                onClick={() => {
+                  pushHistory();
+                  setIdSubStep('back');
+                }}
+                className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                <span>Next: Back Side</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
               STUDENT ID SUB-FLOW: BACK SIDE (Optional)
              ========================================================================= */}
-              {!showOtpView && idSubStep === 'back' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
-                      Step 2 of 2 • Back Side (Optional)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        pushHistory();
-                        setIdSubStep('review');
-                      }}
-                      className="text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-                    >
-                      Skip this step →
-                    </button>
+        {!showOtpView && idSubStep === 'back' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-400">
+                Step 2 of 2 • Back Side (Optional)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  pushHistory();
+                  setIdSubStep('review');
+                }}
+                className="text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
+              >
+                Skip this step →
+              </button>
+            </div>
+
+            <input
+              ref={backInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onClick={(e) => {
+                (e.target as HTMLInputElement).value = '';
+              }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleBackFileChange(file);
+              }}
+            />
+
+            {backFile && backPreview ? (
+              <div className="space-y-3">
+                {isImageFile(backFile) ? (
+                  <div
+                    onClick={() =>
+                      openEnlargedImage({
+                        src: backPreview,
+                        title: 'Back ID Preview',
+                        rotation: backRotation,
+                      })
+                    }
+                    className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
+                    title="Click to zoom / inspect photo"
+                  >
+                    <img
+                      src={backPreview}
+                      alt="Back ID Preview"
+                      style={{ transform: `rotate(${backRotation}deg)` }}
+                      className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                    />
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
+                      <Maximize2 size={16} />
+                      <span>Click anywhere to inspect & zoom</span>
+                    </div>
+                    <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBackRotation((r) => (r + 90) % 360);
+                        }}
+                        className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                        title="Rotate 90 degrees"
+                      >
+                        <RotateCw size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEnlargedImage({
+                            src: backPreview,
+                            title: 'Back ID Preview',
+                            rotation: backRotation,
+                          });
+                        }}
+                        className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
+                        title="Zoom / Inspect"
+                      >
+                        <Maximize2 size={16} />
+                      </button>
+                    </div>
                   </div>
-
-                  <input
-                    ref={backInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="hidden"
-                    onClick={(e) => {
-                      (e.target as HTMLInputElement).value = '';
+                ) : (
+                  /* PDF Document Preview Card */
+                  <div
+                    onClick={() => {
+                      if (backPreview) window.open(backPreview, '_blank');
                     }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleBackFileChange(file);
-                    }}
-                  />
-
-                  {backFile && backPreview ? (
-                    <div className="space-y-3">
-                      {isImageFile(backFile) ? (
-                        <div
-                          onClick={() =>
-                            openEnlargedImage({
-                              src: backPreview,
-                              title: 'Back ID Preview',
-                              rotation: backRotation,
-                            })
-                          }
-                          className="relative rounded-2xl overflow-hidden border-2 border-[#1A6B3C] bg-black/5 flex items-center justify-center min-h-[220px] cursor-pointer group shadow-xs"
-                          title="Click to zoom / inspect photo"
-                        >
-                          <img
-                            src={backPreview}
-                            alt="Back ID Preview"
-                            style={{ transform: `rotate(${backRotation}deg)` }}
-                            className="max-h-64 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                          />
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-semibold backdrop-blur-[1px] pointer-events-none">
-                            <Maximize2 size={16} />
-                            <span>Click anywhere to inspect & zoom</span>
-                          </div>
-                          <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setBackRotation((r) => (r + 90) % 360);
-                              }}
-                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                              title="Rotate 90 degrees"
-                            >
-                              <RotateCw size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEnlargedImage({
-                                  src: backPreview,
-                                  title: 'Back ID Preview',
-                                  rotation: backRotation,
-                                });
-                              }}
-                              className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-md"
-                              title="Zoom / Inspect"
-                            >
-                              <Maximize2 size={16} />
-                            </button>
-                          </div>
+                    className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
+                    title="Click to open / view PDF in new tab"
+                  >
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
+                        <FileText size={28} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
+                            PDF Document
+                          </span>
+                          <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                            {formatFileSize(backFile.size)}
+                          </span>
                         </div>
-                      ) : (
-                        /* PDF Document Preview Card */
-                        <div
-                          onClick={() => {
-                            if (backPreview) window.open(backPreview, '_blank');
-                          }}
-                          className="relative group rounded-2xl p-5 sm:p-6 border-2 border-[#1A6B3C]/50 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#1A6B3C] dark:hover:border-emerald-400 transition-all shadow-xs"
-                          title="Click to open / view PDF in new tab"
-                        >
-                          <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
-                              <FileText size={28} />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
-                                  PDF Document
-                                </span>
-                                <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                                  {formatFileSize(backFile.size)}
-                                </span>
-                              </div>
-                              <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
-                                {backFile.name}
-                              </p>
-                              <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                <ExternalLink size={12} /> Click to preview / open PDF
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (backInputRef.current) {
-                                  backInputRef.current.value = '';
-                                  backInputRef.current.click();
-                                }
-                              }}
-                              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              Replace
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
-                        <div className="flex items-center gap-1.5 truncate max-w-[240px]">
-                          <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
-                          <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{backFile.name}</span>
-                          <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(backFile.size)})</span>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (backInputRef.current) {
-                                backInputRef.current.value = '';
-                                backInputRef.current.click();
-                              }
-                            }}
-                            className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                          >
-                            Change photo
-                          </button>
-                          <span className="text-gray-300 dark:text-gray-600">•</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBackFile(null);
-                              setBackPreview(null);
-                              setBackRotation(0);
-                              if (backInputRef.current) backInputRef.current.value = '';
-                            }}
-                            className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        <p className="font-jakarta text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-xs">
+                          {backFile.name}
+                        </p>
+                        <p className="font-jakarta text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                          <ExternalLink size={12} /> Click to preview / open PDF
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <div
-                      role="button"
-                      tabIndex={0}
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (backInputRef.current) {
+                            backInputRef.current.value = '';
+                            backInputRef.current.click();
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs font-jakarta text-gray-500">
+                  <div className="flex items-center gap-1.5 truncate max-w-[240px]">
+                    <CheckCircle2 size={14} className="text-[#1A6B3C] dark:text-emerald-400 shrink-0" />
+                    <span className="truncate text-gray-700 dark:text-gray-300 font-medium">{backFile.name}</span>
+                    <span className="text-[11px] text-gray-400 shrink-0">({formatFileSize(backFile.size)})</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
                       onClick={() => {
                         if (backInputRef.current) {
                           backInputRef.current.value = '';
                           backInputRef.current.click();
                         }
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          if (backInputRef.current) {
-                            backInputRef.current.value = '';
-                            backInputRef.current.click();
-                          }
-                        }
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handleBackFileChange(file);
-                      }}
-                      className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+                      className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                        <Upload size={24} />
-                      </div>
-                      <div>
-                        <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
-                          Upload Back of ID (Optional)
-                        </p>
-                        <p className="font-jakarta text-xs text-gray-500 mt-1">
-                          If your student card has emergency contacts or barcode on the back
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      Back
+                      Change photo
                     </button>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
                     <button
                       type="button"
                       onClick={() => {
-                        pushHistory();
-                        setIdSubStep('review');
+                        setBackFile(null);
+                        setBackPreview(null);
+                        setBackRotation(0);
+                        if (backInputRef.current) backInputRef.current.value = '';
                       }}
-                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                      className="text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold cursor-pointer"
                     >
-                      <span>{backFile ? 'Next: Review ID' : 'Skip & Review'}</span>
-                      <ArrowRight size={16} />
+                      Remove
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if (backInputRef.current) {
+                    backInputRef.current.value = '';
+                    backInputRef.current.click();
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (backInputRef.current) {
+                      backInputRef.current.value = '';
+                      backInputRef.current.click();
+                    }
+                  }
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleBackFileChange(file);
+                }}
+                className="border-2 border-dashed border-[#1A6B3C]/30 dark:border-white/20 hover:border-[#1A6B3C] dark:hover:border-emerald-400 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3 cursor-pointer bg-gray-50/50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#1A6B3C]/10 dark:bg-white/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
+                  <Upload size={24} />
+                </div>
+                <div>
+                  <p className="font-fraunces text-base font-bold text-gray-900 dark:text-white">
+                    Upload Back of ID (Optional)
+                  </p>
+                  <p className="font-jakarta text-xs text-gray-500 mt-1">
+                    If your student card has emergency contacts or barcode on the back
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-gray-400">JPG, PNG, WEBP or PDF · Up to 10MB</span>
+              </div>
+            )}
 
-              {/* =========================================================================
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pushHistory();
+                  setIdSubStep('review');
+                }}
+                className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{backFile ? 'Next: Review ID' : 'Skip & Review'}</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
               STUDENT ID SUB-FLOW: REVIEW & CONFIRM
              ========================================================================= */}
-              {!showOtpView && idSubStep === 'review' && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
-                      Confirm ID Photos
-                    </h3>
-                    <p className="font-jakarta text-xs text-gray-500 mt-1">
-                      Please review your uploaded photos before proceeding to email verification.
-                    </p>
-                  </div>
+        {!showOtpView && idSubStep === 'review' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
+                Confirm ID Photos
+              </h3>
+              <p className="font-jakarta text-xs text-gray-500 mt-1">
+                Please review your uploaded photos before proceeding to email verification.
+              </p>
+            </div>
 
-                  {/* Cards Side-by-Side or Stacked */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Front Card Review */}
-                    <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
-                        <span>Front Side</span>
-                        <button
-                          type="button"
-                          onClick={() => setIdSubStep('front')}
-                          className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
-                        >
-                          Change
-                        </button>
-                      </div>
-                      {frontFile && frontPreview && (
-                        <div
-                          onClick={() => {
-                            if (isPdfFile(frontFile)) {
-                              window.open(frontPreview, '_blank');
-                            } else {
-                              openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
-                            }
-                          }}
-                          className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
-                          title="Click to inspect preview"
-                        >
-                          {isPdfFile(frontFile) ? (
-                            <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-                              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
-                                <FileText size={22} />
-                              </div>
-                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
-                                {frontFile.name}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                                <ExternalLink size={10} /> View PDF
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <img
-                                src={frontPreview}
-                                alt="Front ID"
-                                style={{ transform: `rotate(${frontRotation}deg)` }}
-                                className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
-                                <Maximize2 size={14} />
-                                <span>Click to Inspect</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
-                                }}
-                                className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
-                                title="Zoom / Inspect"
-                              >
-                                <Maximize2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Back Card Review (if any) */}
-                    <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
-                        <span>Back Side</span>
-                        <button
-                          type="button"
-                          onClick={() => setIdSubStep('back')}
-                          className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
-                        >
-                          {backFile ? 'Change' : '+ Add Back'}
-                        </button>
-                      </div>
-                      {backFile && backPreview ? (
-                        <div
-                          onClick={() => {
-                            if (isPdfFile(backFile)) {
-                              window.open(backPreview, '_blank');
-                            } else {
-                              openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
-                            }
-                          }}
-                          className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
-                          title="Click to inspect preview"
-                        >
-                          {isPdfFile(backFile) ? (
-                            <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-                              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
-                                <FileText size={22} />
-                              </div>
-                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
-                                {backFile.name}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                                <ExternalLink size={10} /> View PDF
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <img
-                                src={backPreview}
-                                alt="Back ID"
-                                style={{ transform: `rotate(${backRotation}deg)` }}
-                                className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
-                                <Maximize2 size={14} />
-                                <span>Click to Inspect</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
-                                }}
-                                className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
-                                title="Zoom / Inspect"
-                              >
-                                <Maximize2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => setIdSubStep('back')}
-                          className="h-36 rounded-xl border border-dashed border-gray-300 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-500 flex flex-col items-center justify-center text-center p-3 cursor-pointer transition-colors"
-                        >
-                          <p className="font-jakarta text-xs text-gray-400">Back side skipped</p>
-                          <span className="mt-1 text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold hover:underline">
-                            + Upload photo
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Encryption notice */}
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#E8F5EE] dark:bg-emerald-950/30 border border-[#1A6B3C]/15 dark:border-emerald-500/20 text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-300">
-                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p>
-                      Bank-grade encrypted storage. Only verified CHMSU campus administrators can view your ID for enrollment verification.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={handleConfirmIdAndCreateAccount}
-                      className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <span>Confirm & Send Code</span>
-                          <ArrowRight size={16} />
-                        </>
-                      )}
-                    </button>
-                  </div>
+            {/* Cards Side-by-Side or Stacked */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Front Card Review */}
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
+                <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
+                  <span>Front Side</span>
+                  <button
+                    type="button"
+                    onClick={() => setIdSubStep('front')}
+                    className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
+                  >
+                    Change
+                  </button>
                 </div>
-              )}
+                {frontFile && frontPreview && (
+                  <div
+                    onClick={() => {
+                      if (isPdfFile(frontFile)) {
+                        window.open(frontPreview, '_blank');
+                      } else {
+                        openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                      }
+                    }}
+                    className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
+                    title="Click to inspect preview"
+                  >
+                    {isPdfFile(frontFile) ? (
+                      <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
+                          <FileText size={22} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
+                          {frontFile.name}
+                        </span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                          <ExternalLink size={10} /> View PDF
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <img
+                          src={frontPreview}
+                          alt="Front ID"
+                          style={{ transform: `rotate(${frontRotation}deg)` }}
+                          className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
+                          <Maximize2 size={14} />
+                          <span>Click to Inspect</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEnlargedImage({ src: frontPreview, title: 'Front ID Preview', rotation: frontRotation });
+                          }}
+                          className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
+                          title="Zoom / Inspect"
+                        >
+                          <Maximize2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              {/* =========================================================================
+              {/* Back Card Review (if any) */}
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-3 bg-gray-50 dark:bg-white/5 space-y-2">
+                <div className="flex items-center justify-between text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300">
+                  <span>Back Side</span>
+                  <button
+                    type="button"
+                    onClick={() => setIdSubStep('back')}
+                    className="text-[#1A6B3C] dark:text-emerald-400 hover:underline text-[11px] cursor-pointer"
+                  >
+                    {backFile ? 'Change' : '+ Add Back'}
+                  </button>
+                </div>
+                {backFile && backPreview ? (
+                  <div
+                    onClick={() => {
+                      if (isPdfFile(backFile)) {
+                        window.open(backPreview, '_blank');
+                      } else {
+                        openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                      }
+                    }}
+                    className="relative group rounded-xl overflow-hidden bg-black/10 flex items-center justify-center h-36 cursor-pointer border border-transparent hover:border-[#1A6B3C] dark:hover:border-emerald-500 transition-all shadow-2xs"
+                    title="Click to inspect preview"
+                  >
+                    {isPdfFile(backFile) ? (
+                      <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center">
+                          <FileText size={22} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">
+                          {backFile.name}
+                        </span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                          <ExternalLink size={10} /> View PDF
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <img
+                          src={backPreview}
+                          alt="Back ID"
+                          style={{ transform: `rotate(${backRotation}deg)` }}
+                          className="h-full w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
+                          <Maximize2 size={14} />
+                          <span>Click to Inspect</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEnlargedImage({ src: backPreview, title: 'Back ID Preview', rotation: backRotation });
+                          }}
+                          className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white shadow-xs cursor-pointer"
+                          title="Zoom / Inspect"
+                        >
+                          <Maximize2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setIdSubStep('back')}
+                    className="h-36 rounded-xl border border-dashed border-gray-300 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-500 flex flex-col items-center justify-center text-center p-3 cursor-pointer transition-colors"
+                  >
+                    <p className="font-jakarta text-xs text-gray-400">Back side skipped</p>
+                    <span className="mt-1 text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold hover:underline">
+                      + Upload photo
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Encryption notice */}
+            <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#E8F5EE] dark:bg-emerald-950/30 border border-[#1A6B3C]/15 dark:border-emerald-500/20 text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-300">
+              <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+              <p>
+                Bank-grade encrypted storage. Only verified CHMSU campus administrators can view your ID for enrollment verification.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-1/3 py-4 rounded-full border border-gray-300 dark:border-white/10 text-xs font-mono uppercase font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleConfirmIdAndCreateAccount}
+                className="flex-1 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>
+                      {session || user
+                        ? needsOnboarding
+                          ? 'Confirm & Continue Setup'
+                          : 'Submit ID for Verification'
+                        : 'Confirm & Send Code'}
+                    </span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
               STEP 1: BASIC INFO FORM
              ========================================================================= */}
-              {!showOtpView && idSubStep === 'none' && step === 1 && (
-                <div className="space-y-5">
-                  {/* Account Type Banner */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF7F2] dark:bg-white/5 border border-[#1A6B3C]/10 dark:border-white/10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#1A6B3C]/10 dark:bg-emerald-950/50 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400">
-                        {emailType === 'chmsu' ? <GraduationCap size={16} /> : <FileCheck size={16} />}
-                      </div>
-                      <div>
-                        <p className="font-fraunces text-xs font-bold text-gray-900 dark:text-white">
-                          {emailType === 'chmsu' ? 'CHMSU Student Account' : 'Personal Email Account'}
-                        </p>
-                        <p className="font-mono text-[10px] text-gray-500">
-                          {emailType === 'chmsu' ? 'Instant @chmsu.edu.ph verification' : 'Student ID verification required'}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      className="text-xs font-mono uppercase font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-                    >
-                      Change
-                    </button>
+        {!showOtpView && idSubStep === 'none' && step === 1 && (
+          <div className="space-y-5">
+            {/* Email Address with Smart CHMSU vs Personal Detection & Typo Logic */}
+            {(() => {
+              const emailAnalysis = analyzeEmail(form.email);
+
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      Email Address
+                    </label>
+
+                    {/* Smart Detection Badges */}
+                    {emailAnalysis.isChmsu && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/10 text-[#1A6B3C] dark:text-emerald-400 border border-emerald-500/20 animate-in fade-in">
+                        <GraduationCap size={13} />
+                        CHMSU Institutional Email
+                      </span>
+                    )}
+                    {emailAnalysis.isExternal && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 animate-in fade-in">
+                        <FileCheck size={13} />
+                        Personal Email
+                      </span>
+                    )}
                   </div>
 
-                  {/* Username Input */}
-                  <div>
-                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">@</span>
-                      <input
-                        type="text"
-                        value={form.username}
-                        onChange={(e) => {
-                          setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s+/g, '') });
-                          setErrors((prev) => ({ ...prev, username: '' }));
-                        }}
-                        placeholder="maria_santos"
-                        className={cn(
-                          'w-full pl-9 pr-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                          errors.username
-                            ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                            : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                        )}
-                      />
-                    </div>
-                    {errors.username && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.username}</p>}
-                  </div>
-
-                  {/* Email Address */}
-                  <div>
-                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                      {emailType === 'chmsu' ? 'CHMSU Student Email' : 'Personal Email Address'}
-                    </label>
+                  <div className="relative">
                     <input
                       type="email"
                       value={form.email}
                       onChange={(e) => {
-                        setForm({ ...form, email: e.target.value });
+                        const val = e.target.value;
+                        setForm({ ...form, email: val });
                         setErrors((prev) => ({ ...prev, email: '' }));
+                        const analysis = analyzeEmail(val);
+                        if (analysis.isChmsu) {
+                          setEmailType('chmsu');
+                        } else if (analysis.isExternal) {
+                          setEmailType('external');
+                        }
                       }}
-                      placeholder={emailType === 'chmsu' ? 'name@chmsu.edu.ph' : 'name@gmail.com'}
+                      onBlur={async () => {
+                        const cleanEmail = form.email.trim().toLowerCase();
+                        if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return;
+                        const analysis = analyzeEmail(cleanEmail);
+                        if (analysis.isTypo) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            email: analysis.typoMessage || 'Did you mean @chmsu.edu.ph?',
+                          }));
+                          return;
+                        }
+                        try {
+                          const res = await apiClient.checkEmail(cleanEmail);
+                          if (res && !res.available) {
+                            setErrors((prev) => ({
+                              ...prev,
+                              email: res.message || 'An account with this email already exists. Please log in or use a different email.',
+                            }));
+                          }
+                        } catch (err: any) {
+                          if (err?.status === 409 || err?.message?.toLowerCase().includes('already')) {
+                            setErrors((prev) => ({
+                              ...prev,
+                              email: 'An account with this email already exists. Please log in or use a different email.',
+                            }));
+                          }
+                        }
+                      }}
+                      placeholder="yourname@chmsu.edu.ph or name@gmail.com"
                       className={cn(
-                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                        errors.email
-                          ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                          : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
+                        'w-full px-5 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                        errors.email || emailAnalysis.isTypo
+                          ? 'border-red-400 bg-red-50/50 text-red-900 dark:bg-red-950/20 dark:border-red-500'
+                          : emailAnalysis.isChmsu
+                            ? 'border-[#1A6B3C] dark:border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20 text-gray-900 dark:text-white'
+                            : 'border-gray-300 dark:border-white/20 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white'
                       )}
                     />
-                    {errors.email && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.email}</p>}
                   </div>
 
-                  {/* Password & Confirm Password */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                        Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={form.password}
-                          onChange={(e) => {
-                            setForm({ ...form, password: e.target.value });
-                            setErrors((prev) => ({ ...prev, password: '' }));
-                          }}
-                          placeholder="••••••••"
-                          className={cn(
-                            'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                            errors.password
-                              ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                              : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                          )}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
+                  {/* Typo reminder / error box if ends in .edu.ph (not chmsu.edu.ph) or has typo */}
+                  {emailAnalysis.isTypo && (
+                    <div className="mt-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div className="text-xs font-jakarta text-amber-900 dark:text-amber-200">
+                          <p className="font-semibold">{emailAnalysis.typoMessage || 'Did you mean @chmsu.edu.ph?'}</p>
+                          <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                            CHMSU student accounts use <span className="font-mono font-bold">@chmsu.edu.ph</span>.
+                          </p>
+                        </div>
                       </div>
-                      {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
-
-                      {/* ── Dynamic Password Strength Validator (5 Horizontal Bars) ────────────── */}
-                      <PasswordStrengthIndicator password={form.password} />
-                    </div>
-
-                    <div>
-                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                        Confirm Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          value={form.confirmPassword}
-                          onChange={(e) => {
-                            setForm({ ...form, confirmPassword: e.target.value });
-                            setErrors((prev) => ({ ...prev, confirmPassword: '' }));
-                          }}
-                          placeholder="••••••••"
-                          className={cn(
-                            'w-full px-4 pr-11 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all',
-                            errors.confirmPassword
-                              ? 'border-red-300 bg-red-50/50 text-red-900 dark:bg-red-950/20'
-                              : 'border-gray-200 dark:border-white/10 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white'
-                          )}
-                        />
+                      {emailAnalysis.suggestedEmail && (
                         <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
-                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                        >
-                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                      {errors.confirmPassword && (
-                        <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.confirmPassword}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action Button */}
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={handleNextFromStep1}
-                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>{emailType === 'external' ? 'Continue to Student ID' : 'Create & Verify Email'}</span>
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
-
-                  <div className="text-center pt-2 text-xs font-jakarta text-gray-500">
-                    Already have an account?{' '}
-                    <Link to="/login" className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline">
-                      Sign in →
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* =========================================================================
-              STEP 2: ACADEMIC DETAILS
-             ========================================================================= */}
-              {step === 2 && (
-                <div className="space-y-5">
-                  {/* Department Selection */}
-                  <div>
-                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                      College / Department
-                    </label>
-                    <select
-                      value={form.department}
-                      onChange={(e) => {
-                        const dept = e.target.value;
-                        setForm({ ...form, department: dept, course: '' });
-                        setErrors((prev) => ({ ...prev, department: '', course: '' }));
-                      }}
-                      className={cn(
-                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none bg-no-repeat bg-[right_1rem_center]',
-                        errors.department
-                          ? 'border-red-300 bg-red-50/50'
-                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]'
-                      )}
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.department && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.department}</p>}
-                  </div>
-
-                  {/* Course Selection (filtered) */}
-                  <div>
-                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                      Academic Course
-                    </label>
-                    <select
-                      disabled={!form.department}
-                      value={form.course}
-                      onChange={(e) => {
-                        setForm({ ...form, course: e.target.value });
-                        setErrors((prev) => ({ ...prev, course: '' }));
-                      }}
-                      className={cn(
-                        'w-full px-4 py-3.5 rounded-2xl border font-jakarta text-sm outline-none transition-all cursor-pointer appearance-none',
-                        errors.course
-                          ? 'border-red-300 bg-red-50/50'
-                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:border-[#1A6B3C]',
-                        !form.department && 'opacity-50 cursor-not-allowed'
-                      )}
-                    >
-                      <option value="">
-                        {form.department ? 'Select Course' : 'Select a department first'}
-                      </option>
-                      {currentCourses.map((crs) => (
-                        <option key={crs} value={crs}>
-                          {crs}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.course && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.course}</p>}
-                  </div>
-
-                  {/* Year Level */}
-                  <div>
-                    <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                      Year Level
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      {yearLevels.map((yr) => (
-                        <button
-                          key={yr}
                           type="button"
                           onClick={() => {
-                            setForm({ ...form, yearLevel: yr });
-                            setErrors((prev) => ({ ...prev, yearLevel: '' }));
+                            const fixed = emailAnalysis.suggestedEmail!;
+                            setForm((prev) => ({ ...prev, email: fixed }));
+                            setEmailType('chmsu');
+                            setErrors((prev) => ({ ...prev, email: '' }));
                           }}
-                          className={cn(
-                            'py-3 px-3 rounded-xl border text-xs font-jakarta font-bold transition-all text-center cursor-pointer',
-                            form.yearLevel === yr
-                              ? 'border-[#1A6B3C] bg-[#1A6B3C] text-white shadow-xs'
-                              : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-gray-300'
-                          )}
+                          className="shrink-0 text-xs font-mono font-bold text-[#1A6B3C] dark:text-emerald-300 bg-white dark:bg-white/10 hover:bg-emerald-50 dark:hover:bg-white/20 px-2.5 py-1.5 rounded-lg border border-emerald-500/20 transition-all cursor-pointer shadow-2xs"
                         >
-                          {yr}
+                          Fix to @chmsu.edu.ph
                         </button>
-                      ))}
-                    </div>
-                    {errors.yearLevel && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.yearLevel}</p>}
-                  </div>
-
-                  {/* Campus Organizations */}
-                  <div className="pt-2 border-t border-gray-100 dark:border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                        Campus Organizations <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                      </label>
-                      {form.organizations.length > 0 && (
-                        <span className="text-[11px] font-mono text-[#1A6B3C] dark:text-emerald-400 font-bold">
-                          {form.organizations.length} joined
-                        </span>
                       )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                      {organizations.map((org) => {
-                        const isSelected = form.organizations.includes(org);
-                        return (
-                          <button
-                            key={org}
-                            type="button"
-                            onClick={() => toggleOrg(org)}
-                            className={cn(
-                              'px-3 py-1.5 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
-                              isSelected
-                                ? 'border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:text-emerald-300 font-bold'
-                                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300'
-                            )}
-                          >
-                            {isSelected ? <Check size={13} strokeWidth={2.5} /> : <Plus size={13} />}
-                            <span>{org}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Next Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (validateStep2()) {
-                        pushHistory();
-                        setStep(3);
-                      }
-                    }}
-                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>Continue to Interests</span>
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              )}
-
-              {/* =========================================================================
-              STEP 3: PASSIONS & INTERESTS
-             ========================================================================= */}
-              {step === 3 && (
-                <div className="space-y-5">
-                  {/* Category Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                    {availableCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setActiveCategory(cat)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-bold shrink-0 transition-all cursor-pointer',
-                          activeCategory === cat
-                            ? 'bg-[#1A6B3C] text-white'
-                            : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-                        )}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Search Box */}
-                  <div className="relative">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={interestSearch}
-                      onChange={(e) => setInterestSearch(e.target.value)}
-                      placeholder="Search interests..."
-                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
-                    />
-                  </div>
-
-                  {/* Selected Interests Summary Chips (if any selected) */}
-                  {form.interests.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-jakarta font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Selected ({form.interests.length})
-                        </span>
-                        {form.interests.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, interests: [] }))}
-                            className="text-[11px] font-jakarta text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                          >
-                            Clear all
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto overscroll-contain custom-scrollbar p-1">
-                        {form.interests.map((label) => (
-                          <span
-                            key={label}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-jakarta font-medium bg-[#1A6B3C]/10 text-[#1A6B3C] dark:bg-emerald-500/20 dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleInterest(label)}
-                              className="hover:text-red-500 transition-colors text-xs font-bold leading-none cursor-pointer ml-0.5"
-                              title={`Remove ${label}`}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   )}
 
-                  {/* Interest Tag Cloud */}
-                  <div
-                    ref={interestListRef}
-                    className="p-1 max-h-64 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar flex flex-wrap content-start gap-2"
-                  >
-                    {filteredInterests.length === 0 ? (
-                      <div className="w-full py-8 text-center text-xs font-jakarta text-gray-400">
-                        No interests matching "{interestSearch}".
-                      </div>
-                    ) : (
-                      filteredInterests.map(({ label, color }) => {
-                        const isSelected = form.interests.includes(label);
-                        return (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => toggleInterest(label)}
-                            style={{
-                              borderColor: isSelected ? '#1A6B3C' : undefined,
-                              backgroundColor: isSelected ? '#1A6B3C' : undefined,
-                            }}
-                            className={cn(
-                              'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
-                              isSelected
-                                ? 'text-white shadow-xs'
-                                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-200 hover:border-gray-300'
-                            )}
-                          >
-                            {isSelected && <Check size={13} strokeWidth={2.5} />}
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Add Custom Interest Input */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-white/10">
-                    <input
-                      type="text"
-                      value={customInterest}
-                      onChange={(e) => setCustomInterest(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomInterest()}
-                      placeholder="Add custom passion or hobby..."
-                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomInterest}
-                      className="px-4 py-2.5 rounded-xl bg-[#1A6B3C] text-white font-mono text-xs uppercase font-bold hover:bg-[#14532D] transition-colors cursor-pointer"
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  {/* Selected Count & Error */}
-                  <div className="flex items-center justify-between text-xs font-jakarta pt-1">
-                    <span className="text-gray-500">
-                      Selected:{' '}
-                      <strong className={form.interests.length >= 3 ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-amber-600'}>
-                        {form.interests.length}
-                      </strong>{' '}
-                      (minimum 3 required)
-                    </span>
-                    {errors.interests && <span className="text-red-500 font-medium">{errors.interests}</span>}
-                  </div>
-
-                  {/* Next Button */}
-                  <button
-                    type="button"
-                    disabled={form.interests.length < 3}
-                    onClick={() => {
-                      if (validateStep3()) {
-                        pushHistory();
-                        setStep(4);
-                      }
-                    }}
-                    className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                  >
-                    <span>Continue to Avatar & Bio</span>
-                    <ArrowRight size={16} />
-                  </button>
+                  {/* Standard field error */}
+                  {errors.email && !emailAnalysis.isTypo && (
+                    <p className="text-red-500 text-xs mt-1.5 font-jakarta flex items-center gap-1.5">
+                      <AlertCircle size={13} className="shrink-0" />
+                      <span>{errors.email}</span>
+                    </p>
+                  )}
                 </div>
-              )}
+              );
+            })()}
 
-              {/* =========================================================================
-              STEP 4: AVATAR & BIO
-             ========================================================================= */}
-              {step === 4 && (
-                <div className="space-y-6">
-                  {/* Avatar Selector Tabs */}
-                  <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3">
-                      <div>
-                        <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                          Choose Profile Avatar
-                        </label>
-                        <p className="text-[11px] font-jakarta text-gray-400 dark:text-gray-500 mt-0.5">
-                          Pick an illustrated avatar, choose an emoji, or upload your own
-                        </p>
-                      </div>
-                      <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/10 p-1 text-[11px] font-mono font-bold self-start sm:self-auto border border-gray-200/60 dark:border-white/5">
-                        <button
-                          type="button"
-                          onClick={() => setAvatarTab('presets')}
-                          className={cn(
-                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
-                            avatarTab === 'presets'
-                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                          )}
-                        >
-                          Presets
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAvatarTab('emoji')}
-                          className={cn(
-                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
-                            avatarTab === 'emoji'
-                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                          )}
-                        >
-                          Emoji
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAvatarTab('custom')}
-                          className={cn(
-                            'px-3 py-1.5 rounded-lg transition-all cursor-pointer',
-                            avatarTab === 'custom'
-                              ? 'bg-white dark:bg-[#111827] text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                          )}
-                        >
-                          Photo Upload
-                        </button>
-                      </div>
-                    </div>
+            {/* Password */}
+            <div>
+              <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    setErrors((prev) => ({ ...prev, password: '' }));
+                  }}
+                  placeholder="••••••••"
+                  className={cn(
+                    'w-full px-5 pr-12 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                    errors.password
+                      ? 'border-red-400 bg-red-50/50 text-red-900 dark:bg-red-950/20 dark:border-red-500'
+                      : 'border-gray-300 dark:border-white/20 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white'
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.password}</p>}
+              <PasswordStrengthIndicator password={form.password} />
+            </div>
 
-                    {avatarTab === 'presets' && (
-                      isLoadingPresets ? (
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-3 p-3 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                          {Array.from({ length: 8 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="aspect-square rounded-2xl bg-gray-200/80 dark:bg-white/10 animate-pulse"
-                            />
-                          ))}
-                        </div>
-                      ) : presetAvatars.length === 0 ? (
-                        <div className="p-6 rounded-2xl border border-gray-200/80 dark:border-white/10 text-center bg-gray-50/50 dark:bg-white/5 space-y-2">
-                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">
-                            No preset avatars found. You can choose an emoji or upload your own photo!
-                          </p>
-                          <div className="flex items-center justify-center gap-2 pt-1">
-                            <button
-                              type="button"
-                              onClick={() => setAvatarTab('emoji')}
-                              className="text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer"
-                            >
-                              Choose Emoji →
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-3 max-h-56 sm:max-h-64 overflow-y-auto p-2.5 custom-scrollbar bg-gray-50/70 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10">
-                          {presetAvatars.map((preset) => {
-                            const isSelected = form.avatar === preset.url;
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => {
-                                  setForm((prev) => ({ ...prev, avatar: preset.url }));
-                                  setCustomAvatarPreview(null);
-                                  setCustomAvatarFile(null);
-                                }}
-                                className={cn(
-                                  'relative aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer group focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/50',
-                                  isSelected
-                                    ? 'border-[#1A6B3C] dark:border-emerald-500 scale-105 shadow-sm ring-2 ring-[#1A6B3C]/20 dark:ring-emerald-500/20'
-                                    : 'border-transparent hover:border-[#1A6B3C]/40 dark:hover:border-emerald-500/40 hover:scale-102 bg-white dark:bg-[#111827]'
-                                )}
-                                title={preset.label ?? 'Preset avatar'}
-                              >
-                                <img
-                                  src={preset.url}
-                                  alt={preset.label ?? 'Preset avatar'}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                                {isSelected && (
-                                  <div className="absolute inset-0 bg-[#1A6B3C]/20 dark:bg-emerald-500/20 flex items-center justify-center pointer-events-none">
-                                    <span className="w-5 h-5 rounded-full bg-[#1A6B3C] dark:bg-emerald-500 text-white text-[11px] flex items-center justify-center shadow-xs">
-                                      <Check size={12} strokeWidth={3} />
-                                    </span>
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )
-                    )}
-
-                    {avatarTab === 'emoji' && (
-                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2 p-2.5 rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                        {AVATAR_OPTIONS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => {
-                              setForm((prev) => ({ ...prev, avatar: emoji }));
-                              setCustomAvatarPreview(null);
-                              setCustomAvatarFile(null);
-                            }}
-                            className={cn(
-                              'w-10 h-10 sm:w-11 sm:h-11 rounded-xl text-xl sm:text-2xl flex items-center justify-center transition-all cursor-pointer',
-                              form.avatar === emoji
-                                ? 'bg-[#1A6B3C] text-white shadow-md scale-110'
-                                : 'hover:bg-white dark:hover:bg-white/10'
-                            )}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {avatarTab === 'custom' && (
-                      <div>
-                        <input
-                          ref={avatarInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onClick={(e) => {
-                            (e.target as HTMLInputElement).value = '';
-                          }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setCustomAvatarFile(file);
-                              const url = URL.createObjectURL(file);
-                              setCustomAvatarPreview(url);
-                              setForm({ ...form, avatar: url });
-                            }
-                          }}
-                        />
-
-                        {customAvatarPreview ? (
-                          <div className="flex items-center gap-4 p-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                            <div
-                              onClick={() =>
-                                openEnlargedImage({
-                                  src: customAvatarPreview,
-                                  title: 'Profile Photo Preview',
-                                  rotation: 0,
-                                })
-                              }
-                              className="relative group cursor-pointer shrink-0"
-                              title="Click to inspect photo"
-                            >
-                              <img
-                                src={customAvatarPreview}
-                                alt="Custom Avatar"
-                                className="w-16 h-16 rounded-full object-cover border-2 border-[#1A6B3C] group-hover:scale-105 transition-transform shadow-xs"
-                              />
-                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Maximize2 size={15} />
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0 text-xs font-jakarta">
-                              <p className="font-bold text-gray-800 dark:text-white truncate">
-                                Custom photo selected
-                              </p>
-                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                                {customAvatarFile?.name || 'Uploaded photo'}
-                              </p>
-                              <div className="flex items-center gap-3 mt-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (avatarInputRef.current) {
-                                      avatarInputRef.current.value = '';
-                                      avatarInputRef.current.click();
-                                    }
-                                  }}
-                                  className="text-[#1A6B3C] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
-                                >
-                                  Change photo
-                                </button>
-                                <span className="text-gray-300 dark:text-gray-600">•</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCustomAvatarPreview(null);
-                                    setCustomAvatarFile(null);
-                                    setForm((prev) => ({ ...prev, avatar: '😊' }));
-                                    if (avatarInputRef.current) avatarInputRef.current.value = '';
-                                  }}
-                                  className="text-red-500 hover:underline font-semibold cursor-pointer"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
-                              if (avatarInputRef.current) {
-                                avatarInputRef.current.value = '';
-                                avatarInputRef.current.click();
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                if (avatarInputRef.current) {
-                                  avatarInputRef.current.value = '';
-                                  avatarInputRef.current.click();
-                                }
-                              }
-                            }}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const file = e.dataTransfer.files?.[0];
-                              if (file && file.type.startsWith('image/')) {
-                                setCustomAvatarFile(file);
-                                const url = URL.createObjectURL(file);
-                                setCustomAvatarPreview(url);
-                                setForm({ ...form, avatar: url });
-                              }
-                            }}
-                            className="w-full py-6 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-[#1A6B3C] dark:hover:border-emerald-400 flex flex-col items-center justify-center gap-2 cursor-pointer bg-gray-50 dark:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1A6B3C]/40"
-                          >
-                            <div className="w-10 h-10 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/10 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center">
-                              <Camera size={20} />
-                            </div>
-                            <span className="font-jakarta text-xs font-semibold text-gray-700 dark:text-gray-300">
-                              Upload profile photo
-                            </span>
-                            <span className="text-[11px] font-mono text-gray-400">Click or drop image here · JPG, PNG up to 5MB</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Profile Preview Card */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#1A6B3C]/5 dark:bg-white/5 border border-[#1A6B3C]/15 dark:border-white/10">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
-                        Profile Preview
-                      </span>
-                      <span className="text-[11px] font-jakarta text-gray-400 dark:text-gray-500">
-                        How others see you
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border-2 border-[#1A6B3C]/30 dark:border-emerald-500/30 flex-shrink-0 bg-white dark:bg-[#111827] shadow-xs">
-                        <AvatarDisplay
-                          src={customAvatarPreview ?? form.avatar}
-                          name={form.username || 'User'}
-                          className="w-full h-full object-cover"
-                          textClassName="text-2xl sm:text-3xl"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-jakarta font-bold text-sm sm:text-base text-gray-900 dark:text-white truncate">
-                          {form.username || 'your_username'}
-                        </p>
-                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                          {form.course || 'Your Course'}{form.yearLevel ? ` · ${form.yearLevel}` : ''}
-                        </p>
-                        {form.bio && (
-                          <p className="font-jakarta text-xs text-gray-600 dark:text-gray-300 line-clamp-2 mt-1 italic">
-                            "{form.bio}"
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bio Textarea */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                        Intro / Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                      </label>
-                      <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
-                    </div>
-                    <textarea
-                      rows={3}
-                      maxLength={250}
-                      value={form.bio}
-                      onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                      placeholder="Tell campus allies a bit about yourself, your favorite projects, or what you enjoy doing..."
-                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 font-jakarta text-sm outline-none focus:border-[#1A6B3C] resize-none"
-                    />
-                  </div>
-
-                  {/* Agreements */}
-                  <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-white/10">
-                    <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => {
-                          setAgreedToTerms(e.target.checked);
-                          setErrors((prev) => ({ ...prev, terms: '' }));
-                        }}
-                        className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
-                      />
-                      <span>
-                        I agree to the{' '}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openModal('terms');
-                          }}
-                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
-                        >
-                          Terms & Conditions
-                        </button>
-                      </span>
-                    </label>
-                    {errors.terms && <p className="text-red-500 text-xs font-jakarta">{errors.terms}</p>}
-
-                    <label className="flex items-start gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={agreedToPrivacy}
-                        onChange={(e) => {
-                          setAgreedToPrivacy(e.target.checked);
-                          setErrors((prev) => ({ ...prev, privacy: '' }));
-                        }}
-                        className="mt-0.5 rounded text-[#1A6B3C] focus:ring-[#1A6B3C]"
-                      />
-                      <span>
-                        I agree to the{' '}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openModal('privacy');
-                          }}
-                          className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
-                        >
-                          Campus Privacy Policy
-                        </button>
-                      </span>
-                    </label>
-                    {errors.privacy && <p className="text-red-500 text-xs font-jakarta">{errors.privacy}</p>}
-                  </div>
-
-                  {/* Finish Button */}
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={handleCompleteRegistration}
-                    className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Complete Registration</span>
-                        <Check size={16} />
-                      </>
-                    )}
-                  </button>
-                </div>
+            {/* Confirm Password */}
+            <div>
+              <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={form.confirmPassword}
+                  onChange={(e) => {
+                    setForm({ ...form, confirmPassword: e.target.value });
+                    setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                  }}
+                  placeholder="••••••••"
+                  className={cn(
+                    'w-full px-5 pr-12 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                    errors.confirmPassword
+                      ? 'border-red-400 bg-red-50/50 text-red-900 dark:bg-red-950/20 dark:border-red-500'
+                      : 'border-gray-300 dark:border-white/20 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white'
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1 font-jakarta">{errors.confirmPassword}</p>
               )}
             </div>
+
+            {/* Action Button */}
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleNextFromStep1}
+              className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>{emailType === 'external' ? 'Continue to Student ID' : 'Create & Verify Email'}</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+
+            {/* Horizontal Line with "or" */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300/70 dark:border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[#FAF8F5] dark:bg-[#090D16] px-4 font-mono font-bold text-gray-500 dark:text-gray-400">
+                  or
+                </span>
+              </div>
+            </div>
+
+            {/* Google OAuth Button */}
+            <button
+              type="button"
+              disabled={googleLoading || isSubmitting}
+              onClick={handleGoogleSignUp}
+              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-white/10 hover:bg-gray-50 dark:hover:bg-white/15 text-gray-800 dark:text-white font-jakarta text-sm font-semibold py-3.5 px-5 rounded-full border-2 border-gray-300 dark:border-white/20 transition-all shadow-xs cursor-pointer disabled:opacity-60 active:scale-[0.99]"
+            >
+              {googleLoading ? (
+                <div className="w-5 h-5 border-2 border-gray-400 border-t-[#1A6B3C] dark:border-t-emerald-400 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                  <span>Continue with Google</span>
+                </>
+              )}
+            </button>
+
+            <div className="text-center pt-2 text-xs font-jakarta text-gray-500">
+              Already have an account?{' '}
+              <Link to="/login" className="font-bold text-[#1A6B3C] dark:text-emerald-400 hover:underline">
+                Sign in →
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* =========================================================================
+              STEP 2: USERNAME & ACADEMIC DETAILS (5 Separate Sub-Pages)
+             ========================================================================= */}
+        {step === 2 && (
+          <div className="space-y-6">
+            {/* Sub-page 1: Username */}
+            {academicSubStep === 'username' && (
+              <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+                <div>
+                  <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                    Campus Username
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">@</span>
+                    <input
+                      type="text"
+                      value={form.username}
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '');
+                        setForm((prev) => ({ ...prev, username: val }));
+                        setErrors((prev) => ({ ...prev, username: '' }));
+                      }}
+                      onBlur={() => {
+                        if (form.username.trim()) {
+                          validateUsername(form.username);
+                        }
+                      }}
+                      placeholder="maria_santos"
+                      className={cn(
+                        'w-full pl-9 pr-5 py-3.5 rounded-full border-2 font-jakarta text-sm outline-none transition-all',
+                        errors.username
+                          ? 'border-red-400 bg-red-50/50 text-red-900 dark:bg-red-950/20 dark:border-red-500'
+                          : 'border-gray-300 dark:border-white/20 focus:border-[#1A6B3C] dark:focus:border-emerald-500 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white'
+                      )}
+                    />
+                  </div>
+                  {errors.username ? (
+                    <p className="text-red-500 text-xs mt-1.5 font-jakarta flex items-center gap-1.5">
+                      <AlertCircle size={13} className="shrink-0" />
+                      <span>{errors.username}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] font-jakarta text-gray-500 dark:text-gray-400 mt-1.5">
+                      3-20 characters. Letters, numbers, and underscores only.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await validateUsername();
+                    if (!ok) return;
+                    pushHistory();
+                    setAcademicSubStep('department');
+                  }}
+                  className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Continue to Program</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Sub-page 2: Department */}
+            {academicSubStep === 'department' && (
+              <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
+                {DEPARTMENTS.map((dept) => {
+                  const isSelected = form.department === dept;
+                  return (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, department: dept, course: '' }));
+                        setErrors((prev) => ({ ...prev, department: '', course: '' }));
+                      }}
+                      className={cn(
+                        'w-full py-4 px-5 rounded-full border-2 text-sm font-jakarta font-semibold transition-all text-center cursor-pointer',
+                        isSelected
+                          ? 'border-2 border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 font-bold shadow-xs'
+                          : 'border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-200 hover:border-gray-400 dark:hover:border-white/30'
+                      )}
+                    >
+                      {dept}
+                    </button>
+                  );
+                })}
+
+                {errors.department && (
+                  <p className="text-red-500 text-xs font-jakarta text-center">{errors.department}</p>
+                )}
+
+                <button
+                  type="button"
+                  disabled={!form.department}
+                  onClick={() => {
+                    if (!form.department) {
+                      setErrors((prev) => ({ ...prev, department: 'Please select your department' }));
+                      return;
+                    }
+                    pushHistory();
+                    setAcademicSubStep('course');
+                  }}
+                  className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Continue to Course</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Sub-page 2: Academic Course */}
+            {academicSubStep === 'course' && (
+              <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
+                {currentCourses.length === 0 ? (
+                  <div className="p-6 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 text-center text-xs text-gray-500">
+                    No degree programs listed. Please go back and select your department.
+                  </div>
+                ) : (
+                  currentCourses.map((crs) => {
+                    const isSelected = form.course === crs;
+                    return (
+                      <button
+                        key={crs}
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, course: crs }));
+                          setErrors((prev) => ({ ...prev, course: '' }));
+                        }}
+                        className={cn(
+                          'w-full py-4 px-5 rounded-full border-2 text-sm font-jakarta font-semibold transition-all text-center cursor-pointer',
+                          isSelected
+                            ? 'border-2 border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 font-bold shadow-xs'
+                            : 'border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-200 hover:border-gray-400 dark:hover:border-white/30'
+                        )}
+                      >
+                        {crs}
+                      </button>
+                    );
+                  })
+                )}
+
+                {errors.course && (
+                  <p className="text-red-500 text-xs font-jakarta text-center">{errors.course}</p>
+                )}
+
+                <button
+                  type="button"
+                  disabled={!form.course}
+                  onClick={() => {
+                    if (!form.course) {
+                      setErrors((prev) => ({ ...prev, course: 'Please select your academic course' }));
+                      return;
+                    }
+                    pushHistory();
+                    setAcademicSubStep('year');
+                  }}
+                  className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Continue to Year Level</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Sub-page 3: Year Level */}
+            {academicSubStep === 'year' && (
+              <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
+                {['1st Year', '2nd Year', '3rd Year', '4th Year'].map((yr) => {
+                  const isSelected = !isCustomYear && form.yearLevel === yr;
+                  return (
+                    <button
+                      key={yr}
+                      type="button"
+                      onClick={() => {
+                        setIsCustomYear(false);
+                        setForm((prev) => ({ ...prev, yearLevel: yr }));
+                        setErrors((prev) => ({ ...prev, yearLevel: '' }));
+                      }}
+                      className={cn(
+                        'w-full py-4 px-5 rounded-full border-2 text-sm font-jakarta font-semibold transition-all text-center cursor-pointer',
+                        isSelected
+                          ? 'border-2 border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 font-bold shadow-xs'
+                          : 'border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-200 hover:border-gray-400 dark:hover:border-white/30'
+                      )}
+                    >
+                      {yr}
+                    </button>
+                  );
+                })}
+
+                {/* Others Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomYear(true);
+                    setForm((prev) => ({ ...prev, yearLevel: customYearInput || '' }));
+                  }}
+                  className={cn(
+                    'w-full py-4 px-5 rounded-full border-2 text-sm font-jakarta font-semibold transition-all text-center cursor-pointer',
+                    isCustomYear
+                      ? 'border-2 border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 font-bold shadow-xs'
+                      : 'border-gray-300 dark:border-white/20 bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-200 hover:border-gray-400 dark:hover:border-white/30'
+                  )}
+                >
+                  Others
+                </button>
+
+                {isCustomYear && (
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      value={customYearInput}
+                      onChange={(e) => {
+                        setCustomYearInput(e.target.value);
+                        setForm((prev) => ({ ...prev, yearLevel: e.target.value }));
+                        setErrors((prev) => ({ ...prev, yearLevel: '' }));
+                      }}
+                      placeholder="Enter year level (e.g. Irregular, 5th Year, Transferee)"
+                      className="w-full px-5 py-3.5 rounded-full border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 font-jakarta text-sm outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-400 text-gray-900 dark:text-white"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {errors.yearLevel && (
+                  <p className="text-red-500 text-xs font-jakarta text-center">{errors.yearLevel}</p>
+                )}
+
+                <button
+                  type="button"
+                  disabled={!form.yearLevel}
+                  onClick={() => {
+                    if (!form.yearLevel) {
+                      setErrors((prev) => ({ ...prev, yearLevel: 'Please select or enter your year level' }));
+                      return;
+                    }
+                    pushHistory();
+                    setAcademicSubStep('organizations');
+                  }}
+                  className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Continue to Campus Organizations</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Sub-page 4: Campus Organizations */}
+            {academicSubStep === 'organizations' && (
+              <div className="w-full max-w-md mx-auto space-y-4">
+                <div className="relative">
+                  <div
+                    onClick={() => orgInputRef.current?.focus()}
+                    className="w-full min-h-[56px] px-5 py-2.5 rounded-full border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 flex flex-wrap items-center gap-2 focus-within:border-[#1A6B3C] dark:focus-within:border-emerald-400 transition-all cursor-text"
+                  >
+                    {/* Selected Org Pills - simple rounded pill with x on right side, no color */}
+                    {form.organizations.map((org) => (
+                      <span
+                        key={org}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-300 dark:border-white/20 text-xs font-jakarta text-gray-800 dark:text-gray-200 bg-transparent"
+                      >
+                        <span>{org}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setForm((prev) => ({
+                              ...prev,
+                              organizations: prev.organizations.filter((o) => o !== org),
+                            }));
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                          title={`Remove ${org}`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+
+                    {/* Text input */}
+                    <input
+                      ref={orgInputRef}
+                      type="text"
+                      value={orgSearchQuery}
+                      onChange={(e) => {
+                        setOrgSearchQuery(e.target.value);
+                        setIsOrgDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsOrgDropdownOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const trimmed = orgSearchQuery.trim();
+                          if (!trimmed) return;
+                          if (suggestedOrgs.length > 0) {
+                            const pick = suggestedOrgs[0];
+                            if (!form.organizations.includes(pick)) {
+                              setForm((prev) => ({ ...prev, organizations: [...prev.organizations, pick] }));
+                            }
+                          } else if (!form.organizations.includes(trimmed)) {
+                            setForm((prev) => ({ ...prev, organizations: [...prev.organizations, trimmed] }));
+                          }
+                          setOrgSearchQuery('');
+                          setIsOrgDropdownOpen(false);
+                        } else if (e.key === 'Backspace' && !orgSearchQuery && form.organizations.length > 0) {
+                          setForm((prev) => ({
+                            ...prev,
+                            organizations: prev.organizations.slice(0, -1),
+                          }));
+                        }
+                      }}
+                      placeholder={form.organizations.length === 0 ? 'Type to search or add organizations...' : 'Add more...'}
+                      className="flex-1 min-w-[150px] bg-transparent font-jakarta text-sm outline-none text-gray-900 dark:text-white placeholder:text-gray-400 py-1"
+                    />
+                  </div>
+
+                  {/* Suggestions Dropdown */}
+                  {isOrgDropdownOpen && orgSearchQuery.trim().length > 0 && (
+                    <div
+                      ref={orgDropdownRef}
+                      className="absolute left-0 right-0 top-full mt-2 z-30 max-h-56 overflow-y-auto rounded-2xl bg-white dark:bg-[#111827] border border-gray-200 dark:border-white/10 shadow-xl p-1.5 custom-scrollbar"
+                    >
+                      {suggestedOrgs.map((org) => (
+                        <button
+                          key={org}
+                          type="button"
+                          onClick={() => {
+                            if (!form.organizations.includes(org)) {
+                              setForm((prev) => ({ ...prev, organizations: [...prev.organizations, org] }));
+                            }
+                            setOrgSearchQuery('');
+                            setIsOrgDropdownOpen(false);
+                            orgInputRef.current?.focus();
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-jakarta text-gray-700 dark:text-gray-200 hover:bg-[#1A6B3C]/10 hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-colors flex items-center justify-between cursor-pointer"
+                        >
+                          <span>{org}</span>
+                          <Plus size={14} className="opacity-60" />
+                        </button>
+                      ))}
+
+                      {/* Add to organizations option */}
+                      {!allOrgOptions.some((o) => o.toLowerCase() === orgSearchQuery.trim().toLowerCase()) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const trimmed = orgSearchQuery.trim();
+                            if (trimmed && !form.organizations.includes(trimmed)) {
+                              setForm((prev) => ({ ...prev, organizations: [...prev.organizations, trimmed] }));
+                            }
+                            setOrgSearchQuery('');
+                            setIsOrgDropdownOpen(false);
+                            orgInputRef.current?.focus();
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-jakarta text-[#1A6B3C] dark:text-emerald-400 hover:bg-[#1A6B3C]/10 transition-colors flex items-center gap-2 cursor-pointer border-t border-gray-100 dark:border-white/5 font-semibold"
+                        >
+                          <Plus size={14} />
+                          <span>Add "{orgSearchQuery.trim()}" to organizations</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validateStep2()) {
+                      pushHistory();
+                      setStep(3);
+                    }
+                  }}
+                  className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Continue to Interests</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================================================
+              STEP 3: PASSIONS & INTERESTS
+             ========================================================================= */}
+        {step === 3 && (
+          <div className="space-y-4 max-w-md mx-auto w-full">
+            {/* Category Filter Pills on Top */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveCategory(cat)}
+                  className={cn(
+                    'px-3.5 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-bold shrink-0 transition-all cursor-pointer',
+                    activeCategory === cat
+                      ? 'bg-[#1A6B3C] text-white shadow-xs'
+                      : 'bg-white/70 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-white'
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Scrollable container of interest tags with emoji */}
+            <div
+              ref={interestListRef}
+              className="p-1 max-h-72 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar flex flex-wrap content-start gap-2"
+            >
+              {filteredInterests.length === 0 ? (
+                <div className="w-full py-8 text-center text-xs font-jakarta text-gray-400">
+                  No interests found.
+                </div>
+              ) : (
+                filteredInterests.map(({ label }) => {
+                  const isSelected = form.interests.includes(label);
+                  const emoji = getInterestEmoji(label);
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => toggleInterest(label)}
+                      className={cn(
+                        'px-3.5 py-2 rounded-full text-xs font-jakarta font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                        isSelected
+                          ? 'border-2 border-[#1A6B3C] bg-[#1A6B3C]/10 text-[#1A6B3C] dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-300 font-semibold shadow-xs'
+                          : 'border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:border-gray-300'
+                      )}
+                    >
+                      <span className="text-sm">{emoji}</span>
+                      <span>{label}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Others custom input at bottom */}
+            <div className="flex items-center gap-2 pt-3 border-t border-gray-200/60 dark:border-white/10">
+              <input
+                type="text"
+                value={customInterest}
+                onChange={(e) => setCustomInterest(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomInterest()}
+                placeholder="Others (e.g. Robotics, Filmmaking)..."
+                className="flex-1 px-5 py-2.5 rounded-full border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-400 text-gray-900 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomInterest}
+                className="px-5 py-2.5 rounded-full bg-[#1A6B3C] text-white font-mono text-xs uppercase font-bold hover:bg-[#14532D] transition-colors cursor-pointer"
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Selected Count & Error */}
+            <div className="flex items-center justify-between text-xs font-jakarta pt-1">
+              <span className="text-gray-500">
+                Selected:{' '}
+                <strong className={form.interests.length >= 3 ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-amber-600'}>
+                  {form.interests.length}
+                </strong>{' '}
+                (minimum 3 required)
+              </span>
+              {errors.interests && <span className="text-red-500 font-medium">{errors.interests}</span>}
+            </div>
+
+            {/* Continue Button */}
+            <button
+              type="button"
+              disabled={form.interests.length < 3}
+              onClick={() => {
+                if (validateStep3()) {
+                  pushHistory();
+                  setStep(4);
+                }
+              }}
+              className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <span>Continue to Profile & Bio</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* =========================================================================
+              STEP 4: AVATAR, PROFILE & COMPLETE REGISTRATION
+             ========================================================================= */}
+        {step === 4 && (
+          <div className="space-y-6 max-w-md mx-auto w-full">
+            {/* Top: Avatar Circle */}
+            <div className="flex flex-col items-center text-center">
+              <div className="relative mb-2">
+                {customAvatarPreview ? (
+                  <img
+                    src={customAvatarPreview}
+                    alt="Custom photo"
+                    className="w-28 h-28 rounded-full object-cover border-4 border-[#1A6B3C] shadow-md"
+                  />
+                ) : (
+                  <AnonymousAvatar avatarKey={form.avatar || 'fox'} size={112} className="shadow-md" />
+                )}
+              </div>
+
+              {/* Bottom of avatar: Name */}
+              <h3 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">
+                {form.username ? `@${form.username}` : '@username'}
+              </h3>
+
+              {/* Bottom of name: Course and Year */}
+              <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                {form.course || 'Degree Program'}{form.yearLevel ? ` · ${form.yearLevel}` : ''}
+              </p>
+            </div>
+
+            {/* Below that: Avatars Selection on default using anonymous avatars */}
+            <div>
+              <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 text-center mb-3">
+                Choose anonymous avatar
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 justify-items-center max-w-xs sm:max-w-sm mx-auto">
+                {ANIMAL_KEYS.map((animal) => {
+                  const isSelected = !customAvatarPreview && form.avatar === animal;
+                  return (
+                    <button
+                      key={animal}
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, avatar: animal }));
+                        setCustomAvatarPreview(null);
+                        setCustomAvatarFile(null);
+                      }}
+                      className={cn(
+                        'p-0.5 rounded-full transition-transform cursor-pointer',
+                        isSelected
+                          ? 'ring-3 ring-[#1A6B3C] dark:ring-emerald-400 ring-offset-2 scale-110'
+                          : 'hover:scale-105 opacity-80 hover:opacity-100'
+                      )}
+                      title={animal}
+                    >
+                      <AnonymousAvatar avatarKey={animal} size={46} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Below that: Simple label upload photo on the bottom */}
+            <div className="flex flex-col items-center">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setCustomAvatarFile(file);
+                    const url = URL.createObjectURL(file);
+                    setCustomAvatarPreview(url);
+                    setForm((prev) => ({ ...prev, avatar: url }));
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (avatarInputRef.current) {
+                    avatarInputRef.current.value = '';
+                    avatarInputRef.current.click();
+                  }
+                }}
+                className="text-xs font-jakarta font-semibold text-[#1A6B3C] dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1.5 py-1"
+              >
+                <Camera size={14} />
+                <span>Upload photo</span>
+              </button>
+              {customAvatarPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomAvatarPreview(null);
+                    setCustomAvatarFile(null);
+                    setForm((prev) => ({ ...prev, avatar: 'fox' }));
+                    if (avatarInputRef.current) avatarInputRef.current.value = '';
+                  }}
+                  className="text-[11px] text-red-500 hover:underline mt-0.5 cursor-pointer"
+                >
+                  Remove custom photo
+                </button>
+              )}
+            </div>
+
+            {/* Bio Textarea */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
+                </label>
+                <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
+              </div>
+              <textarea
+                rows={2}
+                maxLength={250}
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                placeholder="Share a short intro about yourself, hobbies, or campus goals..."
+                className="w-full px-5 py-3.5 rounded-3xl border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C] resize-none text-gray-900 dark:text-white"
+              />
+            </div>
+
+            {/* Below that: One paragraph terms and policy & One check */}
+            <div className="pt-3 border-t border-gray-200/60 dark:border-white/10 space-y-2.5">
+              <p className="text-xs font-jakarta text-gray-500 dark:text-gray-400 leading-relaxed text-center sm:text-left">
+                By completing registration, you agree to our{' '}
+                <button
+                  type="button"
+                  onClick={() => openModal('terms')}
+                  className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
+                >
+                  Terms & Conditions
+                </button>{' '}
+                and{' '}
+                <button
+                  type="button"
+                  onClick={() => openModal('privacy')}
+                  className="font-bold text-[#1A6B3C] dark:text-emerald-400 underline cursor-pointer"
+                >
+                  Campus Privacy Policy
+                </button>
+                . Ally-jis is strictly exclusive to CHMSU students and requires authentic student identities and respectful peer conduct across all campus features.
+              </p>
+
+              <label className="flex items-center gap-2.5 text-xs font-jakarta cursor-pointer text-gray-700 dark:text-gray-300 pt-1">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms && agreedToPrivacy}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAgreedToTerms(checked);
+                    setAgreedToPrivacy(checked);
+                    setErrors((prev) => ({ ...prev, terms: '', privacy: '' }));
+                  }}
+                  className="w-4 h-4 rounded text-[#1A6B3C] focus:ring-[#1A6B3C] accent-[#1A6B3C] cursor-pointer"
+                />
+                <span className="font-semibold text-gray-800 dark:text-gray-200">
+                  I agree to the Terms & Conditions and Privacy Policy
+                </span>
+              </label>
+              {(errors.terms || errors.privacy) && (
+                <p className="text-red-500 text-xs font-jakarta">{errors.terms || errors.privacy}</p>
+              )}
+            </div>
+
+            {/* Complete Registration Button */}
+            <button
+              type="button"
+              disabled={isSubmitting || !(agreedToTerms && agreedToPrivacy)}
+              onClick={handleCompleteRegistration}
+              className="w-full mt-4 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>Complete Registration</span>
+                  <Check size={16} />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </main>
 
       {/* ── IMAGE ENLARGE / ZOOM MODAL ── */}

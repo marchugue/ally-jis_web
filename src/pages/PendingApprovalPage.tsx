@@ -135,14 +135,33 @@ export default function PendingApprovalPage() {
                     Email verified
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                    Student ID submitted
+                    {Boolean(session?.user?.user_metadata?.student_id_url) ? (
+                      <>
+                        <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                        Student ID submitted
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} className="text-amber-500 shrink-0" />
+                        Student ID required
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-sm text-amber-500 font-medium">
                     <Clock size={16} className="shrink-0" />
                     Waiting for admin approval…
                   </div>
                 </div>
+
+                {!Boolean(session?.user?.user_metadata?.student_id_url) && (
+                  <button
+                    onClick={() => navigate('/register?uploadId=true&idSubStep=front')}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#1A6B3C] hover:bg-[#155a33] text-white text-sm font-semibold transition-colors"
+                  >
+                    <Upload size={15} />
+                    Upload Student ID Now
+                  </button>
+                )}
 
                 <button
                   onClick={checkStatus}
@@ -167,7 +186,7 @@ export default function PendingApprovalPage() {
                 </div>
 
                 <button
-                  onClick={() => navigate('/onboarding?reupload=1')}
+                  onClick={() => navigate('/register?uploadId=true&idSubStep=front')}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
                 >
                   <Upload size={15} />

@@ -60,10 +60,18 @@ function WelcomeRoute() {
     );
   }
 
-  // If cookies are allowed and user has an active session, automatically route into dashboard
+  // If cookies are allowed and user has an active session, automatically route into appropriate page
   if (cookiesAllowed && !loading && (user || session)) {
+    const activeMeta = user?.user_metadata || session?.user?.user_metadata;
+    const isExternal = activeMeta?.email_type === 'external';
+    const hasStudentId = Boolean(activeMeta?.student_id_url);
+    const isApproved = Boolean(activeMeta?.is_approved);
+
+    if (isExternal && !hasStudentId && !isApproved) {
+      return <Navigate to="/register?uploadId=true&idSubStep=front" replace />;
+    }
     if (needsOnboarding) {
-      return <Navigate to="/onboarding" replace />;
+      return <Navigate to="/register?step=2" replace />;
     }
     if (isPendingApproval) {
       return <Navigate to="/pending-approval" replace />;
@@ -156,6 +164,11 @@ function App() {
           <Route path="/confirmation-page" element={
             <PageTransition>
               {/* Legacy redirect: old magic-link URLs → new OTP page */}
+              <ConfirmPage />
+            </PageTransition>
+          } />
+          <Route path="/confirm" element={
+            <PageTransition>
               <ConfirmPage />
             </PageTransition>
           } />

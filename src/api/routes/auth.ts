@@ -23,6 +23,17 @@ export async function register(payload: RegisterPayload): Promise<RegisterRespon
   return result;
 }
 
+export async function checkEmail(
+  email: string,
+  excludeId?: string
+): Promise<{ available: boolean; message?: string }> {
+  const params = new URLSearchParams({ email });
+  if (excludeId) params.set('excludeId', excludeId);
+  return request<{ available: boolean; message?: string }>(`/auth/check-email?${params}`, {
+    auth: false,
+  });
+}
+
 export async function logout(): Promise<void> {
   try {
     await request<void>('/auth/logout', { method: 'POST' });
@@ -285,4 +296,22 @@ export function sendBeaconCancelRegistration(
       keepalive: true,
     }).catch(() => {});
   }
+}
+
+// ─── Google OAuth ────────────────────────────────────────────────────────────
+
+/**
+ * Exchanges / verifies a Google OAuth session with the backend,
+ * ensuring CHMSU email verification and returning the AuthSession.
+ */
+export async function oauthGoogle(accessToken: string, refreshToken?: string): Promise<AuthSession> {
+  const session = await request<AuthSession>('/auth/oauth/google', {
+    method: 'POST',
+    auth: false,
+    body: { accessToken, refreshToken },
+  });
+  if (session?.accessToken) {
+    setStoredToken(session.accessToken);
+  }
+  return session;
 }

@@ -109,7 +109,7 @@ export default function DiscoverPage() {
       const conversationId = roomReady.conversationId;
       clearRoomReady();
       toast.success('✨ Match Connected! Chatting with your anonymous ally.');
-      navigate('/messages', { state: { conversationId } });
+      navigate(`/messages?conversationId=${encodeURIComponent(conversationId)}`, { state: { conversationId } });
     }
   }, [roomReady, clearRoomReady, navigate]);
 

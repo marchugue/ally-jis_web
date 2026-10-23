@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, ChevronDown, ChevronLeft, Flag, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, ChevronDown, ChevronLeft, Flag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { COMMUNITY_STANDARDS, ReportViolation } from '@/data/CommunityStandards';
+import { getCommunityStandards, ReportViolation } from '@/data/CommunityStandards';
 import { apiClient } from '@/api/client';
 import type { FeedPost } from '@/types/feed';
 import { notify } from '@/components/ui/sonner';
@@ -15,6 +16,8 @@ interface ReportPostModalProps {
 type SubmitState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function ReportPostModal({ post, onClose, onReported }: ReportPostModalProps) {
+  const categories = getCommunityStandards('post');
+
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
   const [selectedViolation, setSelectedViolation] = useState<ReportViolation | null>(null);
   const [details, setDetails] = useState('');
@@ -22,7 +25,6 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
   const [errorMessage, setErrorMessage] = useState('');
 
   const authorName = post.author?.full_name || post.author?.username || 'Ally member';
-  const authorHandle = post.author?.username ? `@${post.author.username}` : '';
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategoryId((prev) => (prev === categoryId ? null : categoryId));
@@ -53,31 +55,40 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+  if (typeof document === 'undefined') return null;
+
+  const title = `Report post from ${authorName}`;
+  const postPreview = post.content
+    ? post.content
+    : post.media && post.media.length > 0
+    ? `[Post with ${post.media.length} image(s)]`
+    : 'Shared Post';
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
         onClick={onClose}
       />
 
       {/* Modal card */}
-      <div className="relative bg-white dark:bg-[#161D19] border border-gray-100 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-white dark:bg-[#111827] border border-transparent dark:border-white/10 rounded-3xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {submitState === 'success' ? (
-          <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
-              <CheckCircle2 size={32} />
+          <div className="p-8 flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center mb-4">
+              <CheckCircle2 size={26} className="text-emerald-500" />
             </div>
-            <h3 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white mb-2">
-              Report Submitted
+            <h3 className="font-jakarta font-bold text-gray-900 dark:text-white mb-1">
+              Report submitted
             </h3>
-            <p className="font-jakarta text-sm text-gray-500 dark:text-white/60 mb-6 leading-relaxed">
-              Thank you for helping keep the Ally community safe. We take all reports seriously and will investigate this post according to our Community Guidelines.
+            <p className="font-jakarta text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
+              Thanks for letting us know. Our team will review this post from {authorName} according to our Community Guidelines.
             </p>
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-3 px-4 rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white font-jakarta font-semibold text-sm hover:opacity-95 transition-opacity"
+              className="w-full bg-[#1A6B3C] hover:bg-[#15592F] text-white font-jakarta font-semibold text-sm py-3 rounded-xl transition-colors"
             >
               Done
             </button>
@@ -97,15 +108,15 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
                 </button>
               ) : (
                 <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center flex-shrink-0">
-                  <Flag size={16} className="text-red-500 dark:text-red-400" />
+                  <Flag size={16} className="text-red-400" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-sm">
-                  Report Post
+                <h3 className="font-jakarta font-bold text-gray-900 dark:text-white text-sm truncate">
+                  {title}
                 </h3>
-                <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 truncate">
-                  Posted by {authorName} {authorHandle}
+                <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500">
+                  {selectedViolation ? 'Confirm your report reason' : "What's going on?"}
                 </p>
               </div>
               <button
@@ -118,49 +129,32 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
               </button>
             </div>
 
-            {/* Post Snippet Preview */}
-            <div className="px-5 pt-3 pb-2 bg-gray-50/70 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/40 mb-1">
-                Reported Content
-              </p>
-              <p className="text-xs text-gray-700 dark:text-white/80 line-clamp-2 italic">
-                "{post.content ? post.content : (post.media && post.media.length > 0 ? `[Post with ${post.media.length} image(s)]` : 'Shared Post')}"
-              </p>
-            </div>
+            {/* Reported post preview */}
+            {postPreview && (
+              <div className="px-5 pt-3 pb-2 bg-gray-50/70 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 flex-shrink-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/40 mb-1">
+                  Reported Post
+                </p>
+                <p className="text-xs text-gray-700 dark:text-white/80 line-clamp-3 italic break-words">
+                  "{postPreview}"
+                </p>
+              </div>
+            )}
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
-              {submitState === 'error' && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/30 flex items-start gap-2.5 text-xs text-red-600 dark:text-red-400">
-                  <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
-                  <span>{errorMessage || 'Failed to submit report. Please try again.'}</span>
-                </div>
-              )}
-
+            <div className="flex-1 overflow-y-auto p-4">
               {selectedViolation ? (
-                <div className="space-y-4">
-                  <div className="bg-[#1A6B3C]/5 dark:bg-emerald-500/10 border border-[#1A6B3C]/15 dark:border-emerald-500/20 rounded-2xl p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#1A6B3C] dark:text-emerald-400">
-                        Selected Reason
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedViolation(null)}
-                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white/80 underline"
-                      >
-                        Change
-                      </button>
-                    </div>
-                    <p className="font-jakarta font-bold text-sm text-gray-900 dark:text-white mt-1">
+                <div>
+                  <div className="bg-[#1A6B3C]/5 dark:bg-emerald-500/10 border border-[#1A6B3C]/15 dark:border-emerald-500/20 rounded-2xl p-4 mb-4">
+                    <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white">
                       {selectedViolation.label}
                     </p>
-                    <p className="font-jakarta text-xs text-gray-500 dark:text-white/60 mt-0.5">
+                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                       {selectedViolation.description}
                     </p>
                   </div>
 
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
                       {selectedViolation.requiresDetails
                         ? 'Tell us what happened (required)'
@@ -170,84 +164,67 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
                       value={details}
                       onChange={(e) => setDetails(e.target.value)}
                       rows={3}
+                      maxLength={1000}
                       placeholder="Provide any context that will help us evaluate this report..."
                       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-colors"
                     />
                   </div>
 
-                  <div className="pt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedViolation(null)}
-                      disabled={submitState === 'loading'}
-                      className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={submitState === 'loading' || detailsMissing}
-                      className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                    >
-                      {submitState === 'loading' ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin" />
-                          Submitting…
-                        </>
-                      ) : (
-                        'Submit Report'
-                      )}
-                    </button>
-                  </div>
+                  {/* Inline error */}
+                  {submitState === 'error' && (
+                    <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5 mb-3">
+                      <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
+                      <p className="font-jakarta text-xs text-red-600 dark:text-red-300">
+                        {errorMessage || 'Something went wrong. Please try again.'}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 leading-relaxed px-1">
+                    Our team will review this report. {authorName} won't be notified that you submitted it.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 dark:text-white/60 mb-2">
-                    Why are you reporting this post? Select the category that best matches the issue.
-                  </p>
-                  {COMMUNITY_STANDARDS.map((category) => {
+                <div className="border border-gray-100 dark:border-white/10 rounded-2xl overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
+                  {categories.map((category) => {
                     const isOpen = openCategoryId === category.id;
                     return (
-                      <div
-                        key={category.id}
-                        className="rounded-2xl border border-gray-100 dark:border-white/10 overflow-hidden bg-white dark:bg-white/[0.02]"
-                      >
+                      <div key={category.id}>
                         <button
                           type="button"
                           onClick={() => toggleCategory(category.id)}
-                          className="w-full flex items-center justify-between p-3.5 text-left hover:bg-gray-50/80 dark:hover:bg-white/[0.03] transition-colors"
+                          className="w-full flex items-center gap-2 px-4 py-3.5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                         >
-                          <div>
-                            <p className="font-jakarta font-semibold text-xs text-gray-900 dark:text-white">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white">
                               {category.label}
                             </p>
-                            <p className="font-jakarta text-[11px] text-gray-400 dark:text-white/40">
+                            <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 leading-snug mt-0.5">
                               {category.description}
                             </p>
                           </div>
                           <ChevronDown
-                            size={16}
+                            size={15}
                             className={cn(
-                              'text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2',
-                              isOpen && 'rotate-180 text-gray-700 dark:text-white'
+                              'text-gray-300 dark:text-gray-600 flex-shrink-0 transition-transform',
+                              isOpen && 'rotate-180',
                             )}
                           />
                         </button>
 
                         {isOpen && (
-                          <div className="p-2 border-t border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.01] space-y-1">
+                          <div className="bg-gray-50/60 dark:bg-white/5 px-3 pb-2">
                             {category.violations.map((violation) => (
                               <button
                                 key={violation.id}
                                 type="button"
                                 onClick={() => setSelectedViolation(violation)}
-                                className="w-full text-left p-2.5 rounded-xl hover:bg-white dark:hover:bg-white/10 hover:shadow-xs border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all"
+                                className="w-full text-left px-3 py-2.5 rounded-xl mb-1 hover:bg-white dark:hover:bg-white/10 transition-colors"
                               >
-                                <p className="font-jakarta font-medium text-xs text-gray-900 dark:text-white">
+                                <p className="font-jakarta text-sm text-gray-800 dark:text-gray-200 font-medium">
                                   {violation.label}
                                 </p>
-                                <p className="font-jakarta text-[11px] text-gray-400 dark:text-white/40">
+                                <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">
                                   {violation.description}
                                 </p>
                               </button>
@@ -260,9 +237,29 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
                 </div>
               )}
             </div>
+
+            {/* Footer */}
+            {selectedViolation && (
+              <div className="p-4 border-t border-gray-100 dark:border-white/10 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitState === 'loading' || detailsMissing}
+                  className={cn(
+                    'w-full font-jakarta font-semibold text-sm py-3 rounded-xl transition-colors',
+                    submitState === 'loading' || detailsMissing
+                      ? 'bg-red-300 text-white cursor-not-allowed'
+                      : 'bg-red-500 hover:bg-red-600 text-white',
+                  )}
+                >
+                  {submitState === 'loading' ? 'Submitting…' : submitState === 'error' ? 'Retry' : 'Submit Report'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

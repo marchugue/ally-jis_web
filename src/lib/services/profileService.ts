@@ -75,6 +75,11 @@ export const profileService = {
     return result.available;
   },
 
+  async checkEmail(email: string, excludeId?: string) {
+    const result = await apiClient.checkEmail(email, excludeId);
+    return result;
+  },
+
   async deleteProfile() {
     await apiClient.deleteProfile();
   },

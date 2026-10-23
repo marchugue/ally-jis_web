@@ -11,10 +11,11 @@ export const WEB_REGISTER_CACHE_KEY = 'ally_register_cache_v1';
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface WebRegisterCachedData {
-  phase: 'select-email' | 'form';
+  phase?: 'form' | 'select-email';
   emailType: 'chmsu' | 'external';
   step: number; // 1 to 4
   idSubStep: 'none' | 'front' | 'back' | 'review';
+  academicSubStep?: 'username' | 'department' | 'course' | 'year' | 'organizations';
   registeredUserId: string | null;
   showOtpView: boolean;
   otpDigits: string[];
@@ -141,4 +142,49 @@ export function dataUrlToFile(dataUrl: string, filename: string): File | null {
   } catch {
     return null;
   }
+}
+
+export async function rotateImageFile(file: File, degrees: number): Promise<File | Blob> {
+  const normDeg = ((degrees % 360) + 360) % 360;
+  if (normDeg === 0 || !file.type.startsWith('image/')) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      const isQuarterTurn = normDeg === 90 || normDeg === 270;
+      canvas.width = isQuarterTurn ? img.height : img.width;
+      canvas.height = isQuarterTurn ? img.width : img.height;
+
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((normDeg * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const rotated = new File([blob], file.name, { type: file.type || 'image/jpeg' });
+            resolve(rotated);
+          } else {
+            resolve(file);
+          }
+        },
+        file.type || 'image/jpeg',
+        0.92
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
+  });
 }

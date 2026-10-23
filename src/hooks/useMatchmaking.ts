@@ -79,6 +79,9 @@ export function useMatchmaking(): UseMatchmakingResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const roomReadyRef = useRef<string | null>(null);
+  const pendingMatchIdRef = useRef<string | null>(null);
+
   const refreshStatus = useCallback(async () => {
     try {
       const status = await apiClient.getMatchmakingStatus();
@@ -96,6 +99,24 @@ export function useMatchmaking(): UseMatchmakingResult {
       setIdentity(status.identity);
       if (status.dailyMatchCount !== undefined) setDailyMatchCount(status.dailyMatchCount);
 
+      // Check if a match that was pending has now transitioned to 'chatting' with conversation_id
+      const pendingId = pendingMatchIdRef.current;
+      const readyChatMatch = matches.find(
+        (m) =>
+          m.status === 'chatting' &&
+          m.conversation_id &&
+          (pendingId ? m.id === pendingId : true)
+      );
+
+      if (readyChatMatch && readyChatMatch.conversation_id && roomReadyRef.current !== readyChatMatch.conversation_id) {
+        roomReadyRef.current = readyChatMatch.conversation_id;
+        setRoomReady({
+          matchId: readyChatMatch.id,
+          conversationId: readyChatMatch.conversation_id,
+          identity: (readyChatMatch as any).identity || status.identity || undefined,
+        });
+      }
+
       // Streak from the most-recent active match
       const newest = matches[0];
       if (newest) setStreak(newest.day_streak || 0);
@@ -111,72 +132,98 @@ export function useMatchmaking(): UseMatchmakingResult {
   }, [refreshStatus]);
 
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    let activeSocket = getSocket();
 
-    const onLifecycleEvent = () => void refreshStatus();
-    const onRoomReady = (payload: { matchId: string; conversationId: string; identity?: MatchIdentityView }) => {
-      setRoomReady(payload);
-      void refreshStatus();
-    };
-    const onMatchFound = (payload?: { matchId?: string; compatibilityScore?: number; identity?: MatchIdentityView }) => {
-      if (payload?.identity) setIdentity(payload.identity);
-      void refreshStatus();
-    };
-    const onStreakUpdated = (payload: { conversationId?: string; matchId?: string; currentStreak?: number; dayStreak?: number }) => {
-      if (payload.currentStreak !== undefined || payload.dayStreak !== undefined) {
-        setStreak(payload.currentStreak ?? payload.dayStreak ?? 0);
-      }
-    };
-    const onStageUpdated = (payload: { stage: number; dayStreak: number; matchId?: string }) => {
-      setActiveMatches((prev) =>
-        prev.map((m) =>
-          !payload.matchId || m.id === payload.matchId
-            ? { ...m, current_stage: payload.stage, day_streak: payload.dayStreak }
-            : m
-        )
-      );
-      setJustUnlockedStage(payload.stage);
-    };
-    const onPartnerDeclined = () => {
-      setEnded({ reason: 'Your match declined the chat.', by: 'partner' });
-      void refreshStatus();
-    };
-    const onMatchTimedOut = () => {
-      setEnded({ reason: 'Nobody accepted in time.', by: 'timeout' });
-      void refreshStatus();
-    };
-    const onChatExpired = () => {
-      setEnded({ reason: 'The chat expired before either of you said hello.', by: 'timeout' });
-      void refreshStatus();
-    };
-    const onMatchEnded = () => {
-      setEnded({ reason: 'Your match ended the chat.', by: 'partner' });
-      void refreshStatus();
+    const bindSocket = (sock: NonNullable<ReturnType<typeof getSocket>>) => {
+      const onLifecycleEvent = () => void refreshStatus();
+      const onRoomReady = (payload: { matchId: string; conversationId: string; identity?: MatchIdentityView }) => {
+        if (payload?.conversationId) {
+          roomReadyRef.current = payload.conversationId;
+        }
+        setRoomReady(payload);
+        void refreshStatus();
+      };
+      const onMatchFound = (payload?: { matchId?: string; compatibilityScore?: number; identity?: MatchIdentityView }) => {
+        if (payload?.matchId) {
+          pendingMatchIdRef.current = payload.matchId;
+        }
+        if (payload?.identity) setIdentity(payload.identity);
+        void refreshStatus();
+      };
+      const onStreakUpdated = (payload: { conversationId?: string; matchId?: string; currentStreak?: number; dayStreak?: number }) => {
+        if (payload.currentStreak !== undefined || payload.dayStreak !== undefined) {
+          setStreak(payload.currentStreak ?? payload.dayStreak ?? 0);
+        }
+      };
+      const onStageUpdated = (payload: { stage: number; dayStreak: number; matchId?: string }) => {
+        setActiveMatches((prev) =>
+          prev.map((m) =>
+            !payload.matchId || m.id === payload.matchId
+              ? { ...m, current_stage: payload.stage, day_streak: payload.dayStreak }
+              : m
+          )
+        );
+        setJustUnlockedStage(payload.stage);
+      };
+      const onPartnerDeclined = () => {
+        setEnded({ reason: 'Your match declined the chat.', by: 'partner' });
+        void refreshStatus();
+      };
+      const onMatchTimedOut = () => {
+        setEnded({ reason: 'Nobody accepted in time.', by: 'timeout' });
+        void refreshStatus();
+      };
+      const onChatExpired = () => {
+        setEnded({ reason: 'The chat expired before either of you said hello.', by: 'timeout' });
+        void refreshStatus();
+      };
+      const onMatchEnded = () => {
+        setEnded({ reason: 'Your match ended the chat.', by: 'partner' });
+        void refreshStatus();
+      };
+
+      sock.on('matchmaking:match_found', onMatchFound);
+      sock.on('matchmaking:room_ready', onRoomReady);
+      sock.on('matchmaking:partner_accepted', onLifecycleEvent);
+      sock.on('matchmaking:match_confirmed', onLifecycleEvent);
+      sock.on('conversation:streak_updated', onStreakUpdated);
+      sock.on('matchmaking:stage_updated', onStageUpdated);
+      sock.on('matchmaking:partner_declined', onPartnerDeclined);
+      sock.on('matchmaking:match_timed_out', onMatchTimedOut);
+      sock.on('matchmaking:chat_expired', onChatExpired);
+      sock.on('matchmaking:match_ended', onMatchEnded);
+
+      return () => {
+        sock.off('matchmaking:match_found', onMatchFound);
+        sock.off('matchmaking:room_ready', onRoomReady);
+        sock.off('matchmaking:partner_accepted', onLifecycleEvent);
+        sock.off('matchmaking:match_confirmed', onLifecycleEvent);
+        sock.off('conversation:streak_updated', onStreakUpdated);
+        sock.off('matchmaking:stage_updated', onStageUpdated);
+        sock.off('matchmaking:partner_declined', onPartnerDeclined);
+        sock.off('matchmaking:match_timed_out', onMatchTimedOut);
+        sock.off('matchmaking:chat_expired', onChatExpired);
+        sock.off('matchmaking:match_ended', onMatchEnded);
+      };
     };
 
-    socket.on('matchmaking:match_found', onMatchFound);
-    socket.on('matchmaking:room_ready', onRoomReady);
-    socket.on('matchmaking:partner_accepted', onLifecycleEvent);
-    socket.on('matchmaking:match_confirmed', onLifecycleEvent);
-    socket.on('conversation:streak_updated', onStreakUpdated);
-    socket.on('matchmaking:stage_updated', onStageUpdated);
-    socket.on('matchmaking:partner_declined', onPartnerDeclined);
-    socket.on('matchmaking:match_timed_out', onMatchTimedOut);
-    socket.on('matchmaking:chat_expired', onChatExpired);
-    socket.on('matchmaking:match_ended', onMatchEnded);
+    let unbind: (() => void) | undefined;
+    if (activeSocket) {
+      unbind = bindSocket(activeSocket);
+    } else {
+      // Retry socket discovery if not initialized at the exact moment this hook mounted
+      const retryTimer = setInterval(() => {
+        activeSocket = getSocket();
+        if (activeSocket) {
+          clearInterval(retryTimer);
+          unbind = bindSocket(activeSocket);
+        }
+      }, 1000);
+      return () => clearInterval(retryTimer);
+    }
 
     return () => {
-      socket.off('matchmaking:match_found', onMatchFound);
-      socket.off('matchmaking:room_ready', onRoomReady);
-      socket.off('matchmaking:partner_accepted', onLifecycleEvent);
-      socket.off('matchmaking:match_confirmed', onLifecycleEvent);
-      socket.off('conversation:streak_updated', onStreakUpdated);
-      socket.off('matchmaking:stage_updated', onStageUpdated);
-      socket.off('matchmaking:partner_declined', onPartnerDeclined);
-      socket.off('matchmaking:match_timed_out', onMatchTimedOut);
-      socket.off('matchmaking:chat_expired', onChatExpired);
-      socket.off('matchmaking:match_ended', onMatchEnded);
+      unbind?.();
     };
   }, [refreshStatus]);
 
@@ -219,6 +266,21 @@ export function useMatchmaking(): UseMatchmakingResult {
   // The match currently waiting for accept/decline (only one at a time from backend)
   const pendingMatch = activeMatches.find((m) => m.status === 'pending') ?? null;
 
+  useEffect(() => {
+    if (pendingMatch?.id) {
+      pendingMatchIdRef.current = pendingMatch.id;
+    }
+  }, [pendingMatch?.id]);
+
+  // Active fast polling while a match is pending (so when the other party accepts, redirect happens promptly even without sockets)
+  useEffect(() => {
+    if (!pendingMatch) return;
+    const interval = setInterval(() => {
+      void refreshStatus();
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [pendingMatch, refreshStatus]);
+
   const accept = useCallback(async () => {
     if (!pendingMatch) return;
     setError(null);
@@ -227,8 +289,9 @@ export function useMatchmaking(): UseMatchmakingResult {
       setActiveMatches((prev) =>
         prev.map((m) => (m.id === pendingMatch.id ? result : m))
       );
-      setIdentity(result.identity);
+      if (result.identity) setIdentity(result.identity);
       if (result.status === 'chatting' && result.conversation_id) {
+        roomReadyRef.current = result.conversation_id;
         setRoomReady({
           matchId: result.id,
           conversationId: result.conversation_id,
@@ -320,7 +383,9 @@ export function useMatchmaking(): UseMatchmakingResult {
     justUnlockedStage,
     dismissStageUnlock,
     roomReady,
-    clearRoomReady: () => setRoomReady(null),
+    clearRoomReady: () => {
+      setRoomReady(null);
+    },
     isInQueue: !!queueEntry,
     activePreferences,
     joinQueue,

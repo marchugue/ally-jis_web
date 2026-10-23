@@ -150,6 +150,7 @@ export const apiClient = {
   // ─── Auth ───────────────────────────────────────────────────────────────
   login: auth.login,
   register: auth.register,
+  checkEmail: auth.checkEmail,
   logout: auth.logout,
   forgotPassword: auth.forgotPassword,
   verifyPasswordResetOtp: auth.verifyPasswordResetOtp,
@@ -169,6 +170,8 @@ export const apiClient = {
   uploadStudentId: auth.uploadStudentId,
   cancelRegistration: auth.cancelRegistration,
   sendBeaconCancelRegistration: auth.sendBeaconCancelRegistration,
+  oauthGoogle: auth.oauthGoogle,
+
 
   // ─── Profiles ───────────────────────────────────────────────────────────
   getMyProfile: profiles.getMyProfile,

@@ -408,7 +408,7 @@ function ReportDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [notes, setNotes] = useState(stripReferenceTag(report?.internal_notes));
+  const [notes, setNotes] = useState(report?.internal_notes ?? '');
   const [warnMessage, setWarnMessage] = useState('');
   const [suspendDays, setSuspendDays] = useState('7');
   const [busy, setBusy] = useState(false);
@@ -427,7 +427,7 @@ function ReportDetailModal({
   const isMessageReport = kind === 'message';
   const post = report.post;
   const message = report.message;
-  const reporterDetails = stripReferenceTag(report.internal_notes);
+  const reporterDetails = report.reporter_notes || stripReferenceTag(report.internal_notes);
 
   const ensurePointerEvents = () => {
     setTimeout(() => {
@@ -597,7 +597,7 @@ function ReportDetailModal({
 
           {/* REPORTED MESSAGE REVIEW CARD (Displayed if message report) */}
           {isMessageReport && (
-            <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/40 bg-amber-50/30 dark:bg-amber-950/10 p-4 space-y-3">
+            <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/40 bg-amber-50/20 dark:bg-amber-950/10 p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300">
@@ -608,101 +608,162 @@ function ReportDetailModal({
                       Reported Chat Message
                     </h4>
                     <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      {message?.created_at ? new Date(message.created_at).toLocaleString() : 'Message details'}
+                      {message?.created_at ? new Date(message.created_at).toLocaleString() : 'Message details'} · Preserved permanently
                     </p>
                   </div>
                 </div>
 
-                {/* Message Status Badge */}
-                {message?.is_deleted ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
-                    <AlertTriangle size={11} /> Message Deleted
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
-                    Flagged Message
-                  </span>
-                )}
+                {/* Message Status Badges */}
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {message?.is_deleted || message?.is_deleted_in_chat ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
+                      <AlertTriangle size={11} /> Deleted in Chat by Sender
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                      Flagged Message
+                    </span>
+                  )}
+                  {message?.is_preserved && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                      <CheckCircle2 size={11} /> Snapshot Preserved
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Message Sender Info Snapshot */}
-              {message && (
-                <div className="flex items-center gap-2.5 pt-1">
-                  <AvatarDisplay
-                    src={message.sender_avatar}
-                    name={message.sender_name || message.sender_username || 'Sender'}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                      {message.sender_name || message.sender_username || 'Sender'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      @{message.sender_username || report.reported_username}
-                    </p>
-                  </div>
+              {/* Preservation notice if message was deleted in live chat */}
+              {(message?.is_deleted || message?.is_deleted_in_chat) && (
+                <div className="p-2.5 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>
+                    This message was deleted by the user from live chat. The exact original text and attachments captured at report time are displayed below for review.
+                  </span>
                 </div>
               )}
 
-              {/* Message Content Bubble */}
-              <div className="bg-white dark:bg-[#1A2234] rounded-xl p-3.5 border border-amber-200/50 dark:border-white/5 text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap shadow-xs">
-                {message?.content ? (
-                  message.content
-                ) : message?.is_deleted ? (
-                  <span className="italic text-gray-400 dark:text-white/40">[This message has been deleted or removed]</span>
-                ) : message?.image_url ? (
-                  <span className="italic text-gray-400 dark:text-white/40">[Message contains image only]</span>
-                ) : (
-                  <span className="italic text-gray-400 dark:text-white/40">[No message content]</span>
-                )}
-              </div>
+              {/* Authentic Message Bubble Showcase */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#111827] border border-gray-200/80 dark:border-white/10 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-white/40">
+                  Flagged Message Bubble
+                </p>
 
-              {/* Message Image Attachment */}
-              {message?.image_url && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-gray-500 dark:text-white/50">
-                    Attached Image:
-                  </p>
-                  <div
-                    onClick={() => setPreviewImage(message.image_url!)}
-                    className="relative max-w-xs rounded-xl overflow-hidden aspect-video bg-black/5 cursor-pointer group border border-gray-200/60 dark:border-white/10"
-                  >
-                    <img src={message.image_url} alt="Attached" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                      <Eye size={14} /> View Full
+                <div className="flex items-start gap-2.5 pt-1">
+                  <AvatarDisplay
+                    src={message?.sender_avatar}
+                    name={message?.sender_name || message?.sender_username || 'Sender'}
+                    className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 shrink-0 mt-0.5"
+                  />
+                  <div className="flex flex-col max-w-[85%] min-w-0">
+                    <div className="flex items-baseline gap-1.5 mb-1 px-1">
+                      <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                        {message?.sender_name || message?.sender_username || 'Sender'}
+                      </span>
+                      {message?.sender_username && (
+                        <span className="text-[10px] text-gray-400">@{message.sender_username}</span>
+                      )}
+                    </div>
+
+                    {/* Authentic Chat Bubble Style matching ChatWindow */}
+                    <div className="rounded-2xl rounded-tl-xs px-4 py-2.5 bg-gray-100 dark:bg-[#1E293B] text-gray-900 dark:text-gray-100 text-xs shadow-xs border-2 border-amber-400/80 dark:border-amber-500/80 ring-2 ring-amber-400/20">
+                      {message?.image_url && (
+                        <div
+                          onClick={() => setPreviewImage(message.image_url!)}
+                          className="mb-2 rounded-xl overflow-hidden aspect-video max-w-sm bg-black/5 cursor-pointer group relative border border-gray-200 dark:border-white/10"
+                        >
+                          <img src={message.image_url} alt="Attached" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                            <Eye size={14} /> View Full
+                          </div>
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap break-words leading-relaxed font-jakarta">
+                        {message?.content ? (
+                          message.content
+                        ) : message?.image_url ? (
+                          <span className="italic text-gray-400">[Image only]</span>
+                        ) : (
+                          <span className="italic text-gray-400">[No message content]</span>
+                        )}
+                      </p>
+                      <div className="flex items-center justify-end gap-1.5 mt-1.5 pt-1 border-t border-gray-200/50 dark:border-white/5 text-[10px] text-gray-400 dark:text-white/40">
+                        <span>
+                          {message?.created_at
+                            ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : ''}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Surrounding Context Dialogue */}
+              {/* Surrounding Context Dialogue: Authentic Chat Thread */}
               {message?.context && message.context.length > 1 && (
                 <div className="pt-2 border-t border-amber-200/50 dark:border-white/5 space-y-2">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                    Conversation Context ({message.context.length} messages)
-                  </p>
-                  <div className="space-y-1.5 max-h-56 overflow-y-auto p-2 rounded-xl bg-white/60 dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Surrounding Conversation Thread ({message.context.length} messages)
+                    </p>
+                    <span className="text-[10px] text-gray-400">Captured at report</span>
+                  </div>
+
+                  <div className="space-y-3 max-h-72 overflow-y-auto p-3.5 rounded-2xl bg-white dark:bg-[#0c121e] border border-gray-200/70 dark:border-white/5">
                     {message.context.map((ctxMsg) => {
                       const isFlagged = ctxMsg.id === message.id;
+                      const isReportedUser = ctxMsg.sender_id === report.reported_user_id;
+
                       return (
                         <div
                           key={ctxMsg.id}
-                          className={`p-2 rounded-lg text-xs transition-colors ${
-                            isFlagged
-                              ? 'bg-amber-100/80 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/50 font-medium'
-                              : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5'
-                          }`}
+                          className={`flex items-start gap-2.5 ${isReportedUser ? 'flex-row' : 'flex-row-reverse'}`}
                         >
-                          <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-white/40 mb-1">
-                            <span className="font-semibold text-gray-700 dark:text-white/80">
-                              {ctxMsg.sender_name || `@${ctxMsg.sender_username}` || 'User'}
-                              {isFlagged && ' (Reported)'}
-                            </span>
-                            <span>{new Date(ctxMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <AvatarDisplay
+                            src={ctxMsg.sender_avatar}
+                            name={ctxMsg.sender_name || ctxMsg.sender_username || 'User'}
+                            className="w-7 h-7 rounded-full border border-gray-200 dark:border-white/10 shrink-0 mt-0.5"
+                          />
+                          <div className={`flex flex-col max-w-[80%] min-w-0 ${isReportedUser ? 'items-start' : 'items-end'}`}>
+                            <div className="flex items-baseline gap-1.5 mb-1 px-1">
+                              <span className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
+                                {ctxMsg.sender_name || ctxMsg.sender_username || 'User'}
+                              </span>
+                              {isFlagged && (
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
+                                  Flagged
+                                </span>
+                              )}
+                            </div>
+
+                            <div
+                              className={`rounded-2xl px-3.5 py-2 text-xs shadow-xs transition-all ${
+                                isReportedUser
+                                  ? isFlagged
+                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-gray-900 dark:text-gray-100 rounded-tl-xs border-2 border-amber-400 dark:border-amber-600 ring-2 ring-amber-400/20'
+                                    : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100 rounded-tl-xs border border-gray-200/60 dark:border-white/5'
+                                  : 'bg-[#1A6B3C] dark:bg-emerald-600 text-white rounded-tr-xs'
+                              }`}
+                            >
+                              {ctxMsg.image_url && (
+                                <div
+                                  onClick={() => setPreviewImage(ctxMsg.image_url!)}
+                                  className="mb-1.5 rounded-lg overflow-hidden aspect-video max-w-xs bg-black/10 cursor-pointer group relative"
+                                >
+                                  <img src={ctxMsg.image_url} alt="" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <p className="whitespace-pre-wrap break-words leading-relaxed font-jakarta">
+                                {ctxMsg.content || (ctxMsg.image_url ? '' : <span className="italic opacity-60">[Empty message]</span>)}
+                              </p>
+                              <div
+                                className={`flex items-center justify-end text-[9px] mt-1 ${
+                                  isReportedUser ? 'text-gray-400 dark:text-white/40' : 'text-emerald-100'
+                                }`}
+                              >
+                                <span>{new Date(ctxMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
-                            {ctxMsg.content || (ctxMsg.image_url ? '[Image]' : '[Deleted]')}
-                          </p>
                         </div>
                       );
                     })}
@@ -726,7 +787,7 @@ function ReportDetailModal({
 
           {/* REPORTED POST REVIEW CARD (Displayed if post report) */}
           {isPostReport && (
-            <div className="rounded-2xl border-2 border-purple-200 dark:border-purple-800/40 bg-purple-50/30 dark:bg-purple-950/10 p-4 space-y-3">
+            <div className="rounded-2xl border-2 border-purple-200 dark:border-purple-800/40 bg-purple-50/20 dark:bg-purple-950/10 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-700 dark:text-purple-300">
@@ -737,22 +798,39 @@ function ReportDetailModal({
                       Reported Post Content
                     </h4>
                     <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      {post?.created_at ? new Date(post.created_at).toLocaleString() : 'Post details'}
+                      {post?.created_at ? new Date(post.created_at).toLocaleString() : 'Post details'} · Preserved permanently
                     </p>
                   </div>
                 </div>
 
-                {/* Post Status Badge */}
-                {post?.is_deleted ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
-                    <AlertTriangle size={11} /> Post Deleted
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
-                    Active on Feed
-                  </span>
-                )}
+                {/* Post Status Badges */}
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {post?.is_deleted || post?.is_deleted_from_feed ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
+                      <AlertTriangle size={11} /> Deleted by Author
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                      Active on Feed
+                    </span>
+                  )}
+                  {post?.is_preserved && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
+                      <CheckCircle2 size={11} /> Snapshot Preserved
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Notice if post was deleted from feed */}
+              {(post?.is_deleted || post?.is_deleted_from_feed) && (
+                <div className="p-2.5 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>
+                    This post was deleted by the author from the feed. The full content and attached media captured at report time are preserved below for review.
+                  </span>
+                </div>
+              )}
 
               {/* Author Info Snapshot */}
               {post && (
@@ -774,11 +852,9 @@ function ReportDetailModal({
               )}
 
               {/* Post Text Content */}
-              <div className="bg-white dark:bg-[#1A2234] rounded-xl p-3.5 border border-gray-100 dark:border-white/5 text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+              <div className="bg-white dark:bg-[#1A2234] rounded-xl p-3.5 border border-gray-100 dark:border-white/5 text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap font-jakarta">
                 {post?.content ? (
                   post.content
-                ) : post?.is_deleted ? (
-                  <span className="italic text-gray-400 dark:text-white/40">[This post has been deleted or removed]</span>
                 ) : (
                   <span className="italic text-gray-400 dark:text-white/40">[Post contains media only]</span>
                 )}
@@ -822,8 +898,8 @@ function ReportDetailModal({
                 </span>
               </div>
 
-              {/* Post Action: DELETE POST BUTTON */}
-              {!post?.is_deleted && (
+              {/* Post Action: DELETE POST BUTTON (Only if still on live feed) */}
+              {!post?.is_deleted && !post?.is_deleted_from_feed && (
                 <div className="pt-2">
                   <button
                     type="button"
@@ -832,7 +908,7 @@ function ReportDetailModal({
                     className="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-jakarta font-semibold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Trash2 size={14} />
-                    Delete Reported Post
+                    Delete Reported Post From Feed
                   </button>
                 </div>
               )}
@@ -841,9 +917,30 @@ function ReportDetailModal({
 
           {/* Internal Notes */}
           <div>
-            <label className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide block mb-1">
-              Internal Admin Notes
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
+                Internal Admin Notes
+              </label>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await apiClient.adminSetReportNotes(report.id, notes);
+                    notify.success('Notes saved');
+                    onChanged();
+                  } catch (err: any) {
+                    notify.error('Could not save notes', err.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                className="text-[11px] font-semibold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50"
+              >
+                Save Notes
+              </button>
+            </div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

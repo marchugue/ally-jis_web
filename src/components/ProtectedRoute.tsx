@@ -55,8 +55,14 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   // ── External-email student pending admin approval ─────────────────────
   // Once onboarding is complete, hard-lock to /pending-approval until an admin
-  // verifies their student identity.
-  if (isPendingApproval && location.pathname !== '/pending-approval') {
+  // verifies their student identity. Allow /register and /onboarding through for ID upload.
+  if (
+    isPendingApproval &&
+    !needsOnboarding &&
+    location.pathname !== '/pending-approval' &&
+    location.pathname !== '/register' &&
+    location.pathname !== '/onboarding'
+  ) {
     return <Navigate to="/pending-approval" replace />;
   }
 
