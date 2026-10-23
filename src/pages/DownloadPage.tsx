@@ -5,11 +5,11 @@ import { ArrowLeft, Download, CheckCircle2, Smartphone, FileCode2, ArrowUpRight,
 import { Footer } from '@/components/Footer';
 
 export default function DownloadPage() {
-  const apkFileName = 'ally-jis-app-v1.0.apk';
+  const apkFileName = 'ally-jis-app-2.0.apk';
   // Direct Cloudflare R2 CDN link (bypasses cross-origin redirect lag & suppression in mobile Chrome)
-  const directR2Url = 'https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app-v1.0.apk';
+  const directR2Url = 'https://pub-21734b6a6db44e4bbb01a1a37662f875.r2.dev/ally-jis-app2.0.apk';
   // Custom Domain fallback / mirror link
-  const domainMirrorUrl = 'https://www.ally-jis.com/download/ally-jis-app-v1.0.apk';
+  const domainMirrorUrl = 'https://www.ally-jis.com/download/ally-jis-app-v2.0.apk';
 
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -104,7 +104,7 @@ export default function DownloadPage() {
               className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1A6B3C]/20 dark:border-white/10 pb-4"
             >
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#1A6B3C]/70 dark:text-emerald-400/80">
-                Official Android Client • Official Release v1.0
+                Official Android Client • Official Release v2.0
               </span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-[#E8A838] font-bold">
                 Direct Web Distribution • ally-jis.com
@@ -325,7 +325,7 @@ export default function DownloadPage() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">Version</span>
-                  <span className="font-bold text-gray-900 dark:text-white">v1.0.0 (Official Release)</span>
+                  <span className="font-bold text-gray-900 dark:text-white">v2.0.0 (Official Release)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#1A6B3C]/10 dark:border-white/10">
                   <span className="text-gray-500 dark:text-gray-400 uppercase">CDN Delivery</span>
