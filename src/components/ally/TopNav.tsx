@@ -329,7 +329,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
 
       {/* ── Bottom mobile nav: mirrors mobile app TAB_THEME closely ── */}
       {!shouldHideBottomNav && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-[#111827] border-t border-[#E8E6E1] dark:border-white/10 z-50 px-2 pb-safe shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-[#0D131F] border-t border-[#E8E6E1] dark:border-white/10 z-50 px-2 pb-safe shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
           <div className="flex items-center justify-between h-[58px]">
             {navLinks.map(({ path, label, outlineSrc, solidSrc, activeState, hoverState }) => {
               const isActive = isLinkActive(path);
@@ -373,7 +373,7 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                       stroke="regular"
                     />
                     {label === 'Notifications' && unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white dark:ring-[#111827]">
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#E8A838] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white dark:ring-[#0D131F]">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}

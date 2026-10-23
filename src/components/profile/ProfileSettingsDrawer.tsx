@@ -385,7 +385,7 @@ export function ProfileSettingsDrawer({
       {/* Slide-in Drawer Container (Flat, edge-to-edge on mobile, no card borders) */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-full sm:w-[400px] md:w-[440px] bg-white dark:bg-[#121212] text-gray-900 dark:text-white shadow-2xl flex flex-col border-l border-gray-200/80 dark:border-white/10 transition-transform duration-300 ease-out animate-in slide-in-from-right duration-300'
+          'fixed inset-y-0 right-0 z-50 w-full sm:w-[400px] md:w-[440px] bg-white dark:bg-[#0D131F] text-gray-900 dark:text-white shadow-2xl flex flex-col border-l border-gray-200/80 dark:border-white/10 transition-transform duration-300 ease-out animate-in slide-in-from-right duration-300'
         )}
         role="dialog"
         aria-modal="true"
@@ -843,7 +843,7 @@ export function ProfileSettingsDrawer({
         </div>
 
         {/* ── Fixed Bottom Bar for Drawer ── */}
-        <div className="p-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#121212] flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 font-jakarta flex-shrink-0">
+        <div className="p-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#0D131F] flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 font-jakarta flex-shrink-0">
           <button
             type="button"
             onClick={() => handleNavigate('/settings')}

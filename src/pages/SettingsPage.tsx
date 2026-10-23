@@ -609,7 +609,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex-1 flex min-h-0 h-full w-full bg-[#F7F8FA] dark:bg-[#070A10] text-gray-900 dark:text-[#E2E8F0] overflow-hidden font-sans">
+    <div className="flex-1 flex min-h-0 h-full w-full bg-[#F7F4EF] dark:bg-[#090D16] text-gray-900 dark:text-[#EDEDED] overflow-hidden font-sans">
 
       {/* Account Deletion Modal */}
       <AccountDeletionModal
@@ -619,13 +619,13 @@ export default function SettingsPage() {
       />
 
       {/* ── MOBILE SETTINGS VIEW (Visible on < md screens, identical to mobile app settings UI) ── */}
-      <div className="md:hidden flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-[#F7F8FA] dark:bg-[#0B0F17]">
+      <div className="md:hidden flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-[#F7F4EF] dark:bg-[#090D16]">
         {/* Top Header with Back Navigation */}
         <div className="px-5 pt-4 pb-1 flex items-center justify-between flex-shrink-0">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="w-[38px] h-[38px] rounded-full bg-white dark:bg-[#1A2333] border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-xs hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-gray-900 dark:text-white"
+            className="w-[38px] h-[38px] rounded-full bg-white dark:bg-[#0D131F] border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-xs hover:bg-gray-50 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer text-gray-900 dark:text-white"
             aria-label="Go back"
           >
             <ArrowLeft size={18} />
@@ -912,7 +912,7 @@ export default function SettingsPage() {
       <div className="hidden md:flex flex-1 min-h-0 h-full w-full overflow-hidden">
         {/* Left Sidebar Panel */}
         <div
-          className="w-full md:w-[320px] lg:w-[360px] bg-white dark:bg-[#111827] flex flex-col overflow-hidden min-h-0 flex-shrink-0 border-r border-gray-200/80 dark:border-white/10"
+          className="w-full md:w-[320px] lg:w-[360px] bg-white dark:bg-[#0D131F] flex flex-col overflow-hidden min-h-0 flex-shrink-0 border-r border-gray-200/80 dark:border-white/10"
         >
         {/* Sidebar Header */}
         <div className="p-4 flex items-center justify-between flex-shrink-0 border-b border-gray-100 dark:border-white/10 gap-2">
@@ -931,7 +931,7 @@ export default function SettingsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search settings..."
-              className="w-full bg-gray-100 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2 text-xs font-jakarta text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 transition-all border border-transparent dark:border-white/5"
+              className="w-full bg-gray-100 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2 text-xs font-jakarta text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 transition-all border border-transparent dark:border-white/10"
             />
           </div>
         </div>
@@ -953,7 +953,7 @@ export default function SettingsPage() {
                   className={cn(
                     'w-full text-left p-4 flex items-start gap-3.5 transition-colors relative cursor-pointer',
                     isActive
-                      ? 'bg-[#1A6B3C]/8 dark:bg-emerald-950/40 border-l-4 border-[#1A6B3C] dark:border-emerald-500'
+                      ? 'bg-[#1A6B3C]/8 dark:bg-emerald-500/10 border-l-4 border-[#1A6B3C] dark:border-emerald-400'
                       : 'hover:bg-gray-50/80 dark:hover:bg-white/5 border-l-4 border-transparent'
                   )}
                 >
@@ -986,12 +986,12 @@ export default function SettingsPage() {
       {/* ── Right Content View Pane (Full-width space expansion) ── */}
       <div
         className={cn(
-          'flex-1 bg-[#FAF9F6] dark:bg-[#070A10] flex flex-col overflow-hidden min-h-0',
+          'flex-1 bg-[#F9F8F6] dark:bg-[#090D16] flex flex-col overflow-hidden min-h-0',
           !isMobileDetailOpen && 'hidden md:flex'
         )}
       >
         {/* Top Header Bar for Right Pane */}
-        <div className="px-6 py-4 bg-white dark:bg-[#111827] border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between flex-shrink-0 shadow-xs">
+        <div className="px-6 py-4 bg-white dark:bg-[#0D131F] border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between flex-shrink-0 shadow-xs">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileDetailOpen(false)}
@@ -1698,8 +1698,8 @@ export default function SettingsPage() {
 
       {/* ── Mobile Activity Log Modal ── */}
       {showActivityLogModal && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF9F6] dark:bg-[#070A10]">
-          <div className="px-5 py-4 bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#F9F8F6] dark:bg-[#090D16]">
+          <div className="px-5 py-4 bg-white dark:bg-[#0D131F] border-b border-gray-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <button
                 type="button"

@@ -178,15 +178,15 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-[#F7F4EF] dark:bg-[#0F1512] font-jakarta antialiased transition-colors">
+    <div className="h-screen flex flex-col md:flex-row bg-[#F7F4EF] dark:bg-[#090D16] font-jakarta antialiased transition-colors">
       {/* Desktop Sidebar (hidden on mobile) */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-white dark:bg-[#161D19] border-r border-gray-200/80 dark:border-white/5 flex-col shadow-xs">
+      <aside className="hidden md:flex w-64 shrink-0 bg-white dark:bg-[#0D131F] border-r border-gray-200/80 dark:border-white/10 flex-col shadow-xs">
         {renderNavContent()}
       </aside>
 
       {/* Mobile Drawer (Sheet) */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-72 bg-white dark:bg-[#161D19] border-r border-gray-200/80 dark:border-white/10">
+        <SheetContent side="left" className="p-0 w-72 bg-white dark:bg-[#0D131F] border-r border-gray-200/80 dark:border-white/10">
           {renderNavContent()}
         </SheetContent>
       </Sheet>
@@ -194,7 +194,7 @@ export function AdminLayout() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Sticky Header */}
-        <header className="h-16 shrink-0 border-b border-gray-200/80 dark:border-white/5 bg-white/90 dark:bg-[#161D19]/90 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30">
+        <header className="h-16 shrink-0 border-b border-gray-200/80 dark:border-white/10 bg-white/90 dark:bg-[#0D131F]/90 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30">
           {/* Mobile Menu Button + Page Title */}
           <div className="flex items-center gap-3">
             <button
