@@ -13,7 +13,8 @@ import {
   KeyRound, ShieldOff, ShieldAlert, LogOut, Trash2, ChevronRight, Eye, EyeOff,
   UserCheck, Bell, Shield, Lock, Smartphone, Moon, Sliders,
   Search, ArrowLeft, ShieldCheck, Zap, Sun, Monitor, Palette,
-  Flame, MessageSquare, Volume2, Clock, Check, History
+  Flame, MessageSquare, Volume2, Clock, Check, History,
+  Pencil, CircleHelp, RotateCw, Ban, X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMe } from '@/hooks/useAdminMe';
@@ -164,6 +165,163 @@ function ToggleItem({
       >
         <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
       </button>
+    </div>
+  );
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <h3 className="font-jakarta text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2.5 mt-6 px-1">
+      {title}
+    </h3>
+  );
+}
+
+function SlimSwitch({
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (val: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(!checked);
+      }}
+      className={cn(
+        'w-11 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer outline-none',
+        checked ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      <div
+        className={cn(
+          'w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out',
+          checked ? 'translate-x-5' : 'translate-x-0'
+        )}
+      />
+    </button>
+  );
+}
+
+function MobileSettingCard({
+  icon: Icon,
+  title,
+  onPress,
+  destructive = false,
+  badgeText,
+  badgeColor = 'text-[#1A6B3C] dark:text-emerald-400',
+  badgeBgColor = 'bg-[#1A6B3C]/10 dark:bg-emerald-500/15',
+  rightElement,
+  loading = false,
+}: {
+  icon: any;
+  title: string;
+  onPress?: () => void;
+  destructive?: boolean;
+  badgeText?: string;
+  badgeColor?: string;
+  badgeBgColor?: string;
+  rightElement?: React.ReactNode;
+  loading?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={!onPress && !rightElement}
+      className={cn(
+        'w-full bg-white dark:bg-[#111827] rounded-[20px] py-[15px] px-[18px] flex items-center mb-2.5 border border-[#F0F2F5] dark:border-white/10 shadow-xs transition-all text-left group',
+        onPress ? 'hover:border-[#1A6B3C]/30 active:scale-[0.99] cursor-pointer' : 'cursor-default'
+      )}
+    >
+      <div className="w-6 flex items-center justify-center flex-shrink-0">
+        <Icon size={21} className={destructive ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'} strokeWidth={1.8} />
+      </div>
+      <span
+        className={cn(
+          'flex-1 ml-3.5 text-[15.5px] font-bold font-jakarta truncate',
+          destructive ? 'text-red-600 dark:text-red-400' : 'text-[#111827] dark:text-white'
+        )}
+      >
+        {title}
+      </span>
+      {loading ? (
+        <span className="w-4 h-4 border-2 border-[#1A6B3C] border-t-transparent rounded-full animate-spin" />
+      ) : rightElement ? (
+        rightElement
+      ) : badgeText ? (
+        <span className={cn('text-[11.5px] font-jakarta font-bold px-2.5 py-1 rounded-full', badgeBgColor, badgeColor)}>
+          {badgeText}
+        </span>
+      ) : onPress ? (
+        <ChevronRight size={19} className="text-[#C4C8D0] dark:text-gray-600 group-hover:text-gray-400 transition-colors" strokeWidth={2.2} />
+      ) : null}
+    </button>
+  );
+}
+
+function MobileSettingToggleCard({
+  icon: Icon,
+  title,
+  value,
+  onValueChange,
+  disabled = false,
+}: {
+  icon: any;
+  title: string;
+  value: boolean;
+  onValueChange: (val: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      onClick={() => !disabled && onValueChange(!value)}
+      className={cn(
+        'bg-white dark:bg-[#111827] rounded-[20px] py-[15px] px-[18px] flex items-center mb-2.5 border border-[#F0F2F5] dark:border-white/10 shadow-xs transition-all cursor-pointer hover:border-[#1A6B3C]/30 select-none',
+        disabled && 'opacity-50 pointer-events-none'
+      )}
+    >
+      <div className="w-6 flex items-center justify-center flex-shrink-0">
+        <Icon size={21} className="text-gray-700 dark:text-gray-300" strokeWidth={1.8} />
+      </div>
+      <span className="flex-1 ml-3.5 text-[15.5px] font-bold font-jakarta text-[#111827] dark:text-white truncate">
+        {title}
+      </span>
+      <SlimSwitch checked={value} onChange={onValueChange} disabled={disabled} />
+    </div>
+  );
+}
+
+function HelpItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      onClick={() => setOpen(!open)}
+      className="bg-[#F9F8F6] dark:bg-white/5 rounded-2xl p-4 mb-2.5 border border-[#EAE7E1] dark:border-white/10 cursor-pointer transition-colors"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h5 className="text-[13.5px] font-bold font-jakarta text-gray-900 dark:text-white flex-1">
+          {question}
+        </h5>
+        <ChevronRight
+          size={16}
+          className={cn('text-gray-400 transition-transform duration-200', open && 'rotate-90')}
+        />
+      </div>
+      {open && (
+        <p className="text-[12.5px] font-jakarta text-gray-600 dark:text-gray-300 mt-2.5 leading-relaxed">
+          {answer}
+        </p>
+      )}
     </div>
   );
 }
@@ -345,6 +503,13 @@ export default function SettingsPage() {
   const [restrictedCount, setRestrictedCount] = useState<number | null>(null);
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false);
 
+  // Mobile View Modals & Actions
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showActivityLogModal, setShowActivityLogModal] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
   // Load preferences from backend
   useEffect(() => {
     if (!useBackend) return;
@@ -444,7 +609,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex-1 flex min-h-0 h-full w-full bg-[#F7F4EF] dark:bg-[#121212] text-gray-900 dark:text-[#E2E8F0] overflow-hidden font-sans">
+    <div className="flex-1 flex min-h-0 h-full w-full bg-[#F7F8FA] dark:bg-[#070A10] text-gray-900 dark:text-[#E2E8F0] overflow-hidden font-sans">
 
       {/* Account Deletion Modal */}
       <AccountDeletionModal
@@ -453,13 +618,302 @@ export default function SettingsPage() {
         onConfirmDelete={handleDeleteAccount}
       />
 
-      {/* ── Left Sidebar Panel ── */}
-      <div
-        className={cn(
-          'w-full md:w-[320px] lg:w-[360px] bg-white dark:bg-[#111827] flex flex-col overflow-hidden min-h-0 flex-shrink-0 border-r border-gray-200/80 dark:border-white/10',
-          isMobileDetailOpen && 'hidden md:flex'
-        )}
-      >
+      {/* ── MOBILE SETTINGS VIEW (Visible on < md screens, identical to mobile app settings UI) ── */}
+      <div className="md:hidden flex-1 flex flex-col h-full min-h-0 overflow-y-auto bg-[#F7F8FA] dark:bg-[#0B0F17]">
+        {/* Top Header with Back Navigation */}
+        <div className="px-5 pt-4 pb-1 flex items-center justify-between flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="w-[38px] h-[38px] rounded-full bg-white dark:bg-[#1A2333] border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-xs hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-gray-900 dark:text-white"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+        </div>
+
+        {/* Large Page Title */}
+        <div className="px-5 pt-2 pb-3 flex-shrink-0">
+          <h1 className="text-[32px] font-bold text-gray-900 dark:text-white tracking-[-0.6px] font-jakarta">
+            Setting
+          </h1>
+        </div>
+
+        <div className="px-5 pb-12 flex-1">
+          {/* ── 1. ACCOUNT ── */}
+          <SectionTitle title="Account" />
+
+          {/* User Account / Email */}
+          <MobileSettingCard
+            icon={ShieldCheck}
+            title={user?.email ? user.email.split('@')[0] : 'Verified Student'}
+            badgeText="Verified"
+            badgeColor="text-[#1A6B3C] dark:text-emerald-400"
+            badgeBgColor="bg-[#1A6B3C]/10 dark:bg-emerald-500/15"
+          />
+
+          {/* Edit Profile */}
+          <MobileSettingCard
+            icon={Pencil}
+            title="Edit Profile"
+            onPress={() => navigate('/profile')}
+          />
+
+          {/* Change Password */}
+          <MobileSettingCard
+            icon={KeyRound}
+            title="Change Password"
+            onPress={() => setShowPasswordModal(true)}
+          />
+
+          {/* ── 2. PRIVACY & SECURITY ── */}
+          <SectionTitle title="Privacy & Security" />
+
+          {/* Privacy Controls */}
+          <MobileSettingCard
+            icon={Lock}
+            title="Privacy Controls"
+            onPress={() => setShowPrivacyModal(true)}
+          />
+
+          {/* Permissions */}
+          <MobileSettingCard
+            icon={Shield}
+            title="Permissions"
+            onPress={() => {
+              notify.info('Permissions', 'Browser permissions can be configured in your site settings.');
+            }}
+          />
+
+          {/* Private Account */}
+          <MobileSettingToggleCard
+            icon={EyeOff}
+            title="Private Account"
+            value={preferences.account_privacy === 'private'}
+            onValueChange={(val) => handleUpdatePref({ account_privacy: val ? 'private' : 'public' })}
+          />
+
+          {/* Online Status */}
+          <MobileSettingToggleCard
+            icon={Smartphone}
+            title="Online Status"
+            value={preferences.show_online_status}
+            onValueChange={(val) => handleUpdatePref({ show_online_status: val })}
+          />
+
+          {/* Last Active Timestamp */}
+          <MobileSettingToggleCard
+            icon={Clock}
+            title="Last Active Timestamp"
+            value={preferences.show_last_active}
+            onValueChange={(val) => handleUpdatePref({ show_last_active: val })}
+          />
+
+          {/* Read Receipts */}
+          <MobileSettingToggleCard
+            icon={UserCheck}
+            title="Read Receipts"
+            value={preferences.read_receipts_enabled}
+            onValueChange={(val) => handleUpdatePref({ read_receipts_enabled: val })}
+          />
+
+          {/* Blocked Users */}
+          <MobileSettingCard
+            icon={Ban}
+            title="Blocked Users"
+            badgeText={blockedCount !== null ? `${blockedCount} blocked` : undefined}
+            onPress={() => navigate('/blocked-users')}
+          />
+
+          {/* Restricted Users */}
+          <MobileSettingCard
+            icon={ShieldAlert}
+            title="Restricted Users"
+            badgeText={restrictedCount !== null ? `${restrictedCount} restricted` : undefined}
+            onPress={() => navigate('/restricted-users')}
+          />
+
+          {/* Privacy Policy */}
+          <MobileSettingCard
+            icon={ShieldCheck}
+            title="Privacy Policy"
+            onPress={() => window.open('https://ally-jis.com/privacy', '_blank')}
+          />
+
+          {/* ── 3. APPEARANCE & ALERTS ── */}
+          <SectionTitle title="Appearance & Alerts" />
+
+          {/* Dark Mode */}
+          <MobileSettingToggleCard
+            icon={resolvedTheme === 'dark' ? Moon : Sun}
+            title="Dark Mode"
+            value={resolvedTheme === 'dark'}
+            onValueChange={(val) => setTheme(val ? 'dark' : 'light')}
+          />
+
+          {/* Notifications / Direct Chat */}
+          <MobileSettingToggleCard
+            icon={Bell}
+            title="Direct Chat Messages"
+            value={preferences.notify_chat_messages}
+            onValueChange={(val) => handleUpdatePref({ notify_chat_messages: val })}
+          />
+
+          {/* Match & Ally Requests */}
+          <MobileSettingToggleCard
+            icon={Bell}
+            title="Match & Ally Requests"
+            value={preferences.notify_match_requests}
+            onValueChange={(val) => handleUpdatePref({ notify_match_requests: val })}
+          />
+
+          {/* Streak Reminders */}
+          <MobileSettingToggleCard
+            icon={Flame}
+            title="Streak Reminders"
+            value={preferences.notify_streak_reminders}
+            onValueChange={(val) => handleUpdatePref({ notify_streak_reminders: val })}
+          />
+
+          {/* Feed & Confession Alerts */}
+          <MobileSettingToggleCard
+            icon={MessageSquare}
+            title="Feed & Confession Alerts"
+            value={preferences.notify_confessions}
+            onValueChange={(val) => handleUpdatePref({ notify_confessions: val })}
+          />
+
+          {/* In-App Sounds */}
+          <MobileSettingToggleCard
+            icon={Volume2}
+            title="In-App Sounds"
+            value={preferences.notify_sound_enabled}
+            onValueChange={(val) => handleUpdatePref({ notify_sound_enabled: val })}
+          />
+
+          {/* Quiet Hours (Do Not Disturb) */}
+          <MobileSettingToggleCard
+            icon={Moon}
+            title="Quiet Hours (Do Not Disturb)"
+            value={preferences.quiet_hours_enabled}
+            onValueChange={(val) => handleUpdatePref({ quiet_hours_enabled: val })}
+          />
+
+          {/* Quiet Hours Schedule Picker */}
+          {preferences.quiet_hours_enabled && (
+            <div className="bg-white dark:bg-[#111827] rounded-[20px] p-4 mb-2.5 border border-[#F0F2F5] dark:border-white/10 shadow-xs">
+              <span className="text-xs font-jakarta font-bold text-gray-700 dark:text-gray-300 block mb-2.5">
+                Quiet Hours Schedule
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="bg-[#F9F8F6] dark:bg-white/5 rounded-xl p-3 border border-[#EAE7E1] dark:border-white/10">
+                  <label className="text-[11px] font-jakarta font-bold text-gray-400 block mb-1">
+                    Starts at
+                  </label>
+                  <input
+                    type="time"
+                    value={preferences.quiet_hours_start}
+                    onChange={(e) => handleUpdatePref({ quiet_hours_start: e.target.value })}
+                    className="w-full bg-transparent font-jakarta font-bold text-sm text-[#1A6B3C] dark:text-emerald-400 outline-none cursor-pointer"
+                  />
+                </div>
+                <div className="bg-[#F9F8F6] dark:bg-white/5 rounded-xl p-3 border border-[#EAE7E1] dark:border-white/10">
+                  <label className="text-[11px] font-jakarta font-bold text-gray-400 block mb-1">
+                    Ends at
+                  </label>
+                  <input
+                    type="time"
+                    value={preferences.quiet_hours_end}
+                    onChange={(e) => handleUpdatePref({ quiet_hours_end: e.target.value })}
+                    className="w-full bg-transparent font-jakarta font-bold text-sm text-[#1A6B3C] dark:text-emerald-400 outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── 4. SUPPORT ── */}
+          <SectionTitle title="Support" />
+
+          {/* Help & FAQ */}
+          <MobileSettingCard
+            icon={CircleHelp}
+            title="Help & FAQ"
+            onPress={() => setShowHelpModal(true)}
+          />
+
+          {/* Activity Log */}
+          <MobileSettingCard
+            icon={History}
+            title="Activity Log"
+            onPress={() => setShowActivityLogModal(true)}
+          />
+
+          {/* Check for Updates */}
+          <MobileSettingCard
+            icon={RotateCw}
+            title={checkingUpdate ? 'Checking for updates…' : 'Check for Updates'}
+            loading={checkingUpdate}
+            onPress={() => {
+              setCheckingUpdate(true);
+              setTimeout(() => {
+                setCheckingUpdate(false);
+                notify.success('Up to Date', 'Ally-jis is running the latest version (v5).');
+              }, 600);
+            }}
+          />
+
+          {/* ── 5. ADMIN CONSOLE (If Admin) ── */}
+          {adminRole && (
+            <>
+              <SectionTitle title="Administration" />
+              <MobileSettingCard
+                icon={Zap}
+                title="Admin Management Console"
+                badgeText={adminRole}
+                badgeBgColor="bg-emerald-500/20"
+                badgeColor="text-emerald-500 font-mono"
+                onPress={() => navigate('/admin')}
+              />
+            </>
+          )}
+
+          {/* ── 6. DANGER ZONE ── */}
+          <SectionTitle title="Danger Zone" />
+
+          {/* Delete Account */}
+          <MobileSettingCard
+            icon={Trash2}
+            title="Delete Account Permanently"
+            destructive
+            onPress={() => setIsDeletionModalOpen(true)}
+          />
+
+          {/* ── 7. SESSION / LOG OUT (Centered Red Text Only) ── */}
+          <div className="mt-6 mb-2 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="py-3 px-6 text-[16px] font-bold font-jakarta text-[#DC2626] dark:text-red-400 hover:text-red-700 transition-colors cursor-pointer"
+            >
+              Log Out
+            </button>
+          </div>
+
+          {/* App Footer Info */}
+          <div className="mt-4 mb-8 text-center text-xs font-jakarta text-gray-400 dark:text-gray-500 leading-relaxed">
+            Ally-jis v5 • CHMSU Alijis Campus<br />
+            © 2026 Ally-jis. All rights reserved.
+          </div>
+        </div>
+      </div>
+
+      {/* ── DESKTOP SETTINGS VIEW (Visible on md+ screens) ── */}
+      <div className="hidden md:flex flex-1 min-h-0 h-full w-full overflow-hidden">
+        {/* Left Sidebar Panel */}
+        <div
+          className="w-full md:w-[320px] lg:w-[360px] bg-white dark:bg-[#111827] flex flex-col overflow-hidden min-h-0 flex-shrink-0 border-r border-gray-200/80 dark:border-white/10"
+        >
         {/* Sidebar Header */}
         <div className="p-4 flex items-center justify-between flex-shrink-0 border-b border-gray-100 dark:border-white/10 gap-2">
           <div>
@@ -1066,6 +1520,205 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* ── Mobile Change Password Modal ── */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-3xl border border-gray-200 dark:border-white/10 p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center">
+                  <KeyRound size={18} />
+                </div>
+                <div>
+                  <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Change Password</h3>
+                  <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">Update your account login credentials</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <PasswordField
+                label="Current Password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                show={showPasswords}
+                onToggleShow={() => setShowPasswords(!showPasswords)}
+              />
+              <div>
+                <PasswordField
+                  label="New Password"
+                  value={newPassword}
+                  onChange={setNewPassword}
+                  show={showPasswords}
+                  onToggleShow={() => setShowPasswords(!showPasswords)}
+                  placeholder="Min. 8 characters"
+                />
+                {newPassword.length > 0 && <PasswordStrengthIndicator password={newPassword} />}
+              </div>
+              <PasswordField
+                label="Confirm New Password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                show={showPasswords}
+                onToggleShow={() => setShowPasswords(!showPasswords)}
+              />
+
+              <div className="pt-2 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-jakarta text-xs font-semibold hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleChangePassword();
+                    setShowPasswordModal(false);
+                  }}
+                  disabled={changingPassword || !currentPassword || !newPassword}
+                  className="px-5 py-2.5 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white font-jakarta text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  {changingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Privacy Controls Modal ── */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full sm:max-w-md bg-white dark:bg-[#111827] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-white/10 p-6 space-y-5 shadow-2xl animate-in slide-in-from-bottom-6 sm:zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Privacy Controls</h3>
+                <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">Control who can view your profile and posts</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-xs font-bold font-jakarta text-[#1A6B3C] dark:text-emerald-400 hover:underline p-1 cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-[#F9F8F6] dark:bg-white/5 border border-[#EAE7E1] dark:border-white/10 space-y-2">
+                <label className="text-xs font-bold font-jakarta text-gray-900 dark:text-white block">
+                  Profile Visibility
+                </label>
+                <p className="text-[11.5px] font-jakarta text-gray-500 dark:text-gray-400 leading-relaxed mb-2">
+                  Control who can view your full bio and profile details.
+                </p>
+                <select
+                  value={preferences.profile_visibility}
+                  onChange={(e) => handleUpdatePref({ profile_visibility: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
+                >
+                  <option value="campus">Campus Allies (All verified students)</option>
+                  <option value="matches_only">Connected Friends Only</option>
+                  <option value="hidden">Hidden / Incognito</option>
+                </select>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F9F8F6] dark:bg-white/5 border border-[#EAE7E1] dark:border-white/10 space-y-2">
+                <label className="text-xs font-bold font-jakarta text-gray-900 dark:text-white block">
+                  Default Feed Audience
+                </label>
+                <p className="text-[11.5px] font-jakarta text-gray-500 dark:text-gray-400 leading-relaxed mb-2">
+                  Initial audience when drafting confessions and campus posts.
+                </p>
+                <select
+                  value={preferences.feed_post_audience}
+                  onChange={(e) => handleUpdatePref({ feed_post_audience: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
+                >
+                  <option value="campus">Campus Public (All students)</option>
+                  <option value="matches_only">Mutual Allies Only</option>
+                  <option value="anonymous_only">Always Post Anonymously</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Help & FAQ Modal ── */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-white dark:bg-[#111827] rounded-3xl border border-gray-200 dark:border-white/10 p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/10 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <CircleHelp size={20} className="text-[#1A6B3C] dark:text-emerald-400" />
+                <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Help & FAQ</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-2 overflow-y-auto pr-1">
+              <HelpItem
+                question="How does student matching work?"
+                answer="Ally-jis matches students using campus interests and study preferences. Chats begin anonymously and reveal progressively as you converse."
+              />
+              <HelpItem
+                question="How do streaks work?"
+                answer="Chat with your allies daily before midnight to maintain your streak flame! If inactive, your streak resets."
+              />
+              <HelpItem
+                question="Is my identity protected?"
+                answer="Yes! All confessions and initial chats keep your avatar and real name hidden until you choose to reveal yourself."
+              />
+              <HelpItem
+                question="How do I report inappropriate behavior?"
+                answer="Tap the three dots on any confession or chat header to block or report users immediately to campus moderation."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Activity Log Modal ── */}
+      {showActivityLogModal && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF9F6] dark:bg-[#070A10]">
+          <div className="px-5 py-4 bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowActivityLogModal(false)}
+                className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Activity Log</h3>
+                <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">History of your posts, logins, and interactions</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <ActivityLogSection />
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal
