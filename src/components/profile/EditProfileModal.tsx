@@ -1,7 +1,9 @@
 // src/components/profile/EditProfileModal.tsx
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Camera,
   Loader2,
@@ -54,9 +56,25 @@ export function EditProfileModal({
   useBackend,
   userId,
 }: EditProfileModalProps) {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<TabKey>('general');
   const [isSaving, setIsSaving] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  useEffect(() => {
+    if (open && isMobile) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [open, isMobile, onClose]);
   const [orgSearch, setOrgSearch] = useState('');
   const [interestSearch, setInterestSearch] = useState('');
   const [presetAvatars, setPresetAvatars] = useState<PresetAvatarRow[]>([]);
@@ -458,132 +476,207 @@ export function EditProfileModal({
     </button>
   );
 
-  return (
-    <>
-      {/* ══════ MOBILE FULL-SCREEN SHEET (< md) ══════ */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col bg-[#F7F4EF] dark:bg-[#111111]">
-          {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 px-4 py-3 flex items-center justify-between shadow-2xs flex-shrink-0">
-            <button type="button" onClick={onClose}
-              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-800 dark:text-gray-200 active:scale-95 transition-all cursor-pointer" aria-label="Cancel">
-              <ArrowLeft size={18} />
-            </button>
-            <span className="font-jakarta text-base font-bold text-gray-900 dark:text-white">Edit Profile</span>
-            <button type="button" onClick={handleSubmit(onSave)}
-              disabled={isSaving || !isInterestsValid || usernameStatus === 'taken'}
-              className={cn('px-4 py-1.5 rounded-xl font-jakarta text-sm font-bold transition-all cursor-pointer',
-                isSaving || !isInterestsValid || usernameStatus === 'taken' ? 'text-gray-400 dark:text-gray-600' : 'text-[#1A6B3C] dark:text-emerald-400 active:scale-95')}>
-              {isSaving ? <Loader2 size={18} className="animate-spin text-[#1A6B3C] dark:text-emerald-400" /> : 'Save'}
+  if (!open) return null;
+
+  const mobileSheet = (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-[#F7F4EF] dark:bg-[#111111] animate-in fade-in duration-200">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 px-4 py-3 flex items-center justify-between shadow-2xs flex-shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-800 dark:text-gray-200 active:scale-95 transition-all cursor-pointer"
+          aria-label="Cancel"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <span className="font-jakarta text-base font-bold text-gray-900 dark:text-white">Edit Profile</span>
+        <button
+          type="button"
+          onClick={handleSubmit(onSave)}
+          disabled={isSaving || !isInterestsValid || usernameStatus === 'taken'}
+          className={cn(
+            'px-4 py-1.5 rounded-xl font-jakarta text-sm font-bold transition-all cursor-pointer',
+            isSaving || !isInterestsValid || usernameStatus === 'taken'
+              ? 'text-gray-400 dark:text-gray-600'
+              : 'text-[#1A6B3C] dark:text-emerald-400 active:scale-95'
+          )}
+        >
+          {isSaving ? <Loader2 size={18} className="animate-spin text-[#1A6B3C] dark:text-emerald-400" /> : 'Save'}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {/* Avatar hero */}
+        <div className="bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 px-4 pt-6 pb-5 flex flex-col items-center">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full border-2 border-[#E8F5E9] dark:border-emerald-500/30 overflow-hidden flex items-center justify-center shadow-md bg-white dark:bg-[#181818]">
+              {showRealAvatar ? (
+                <AvatarDisplay
+                  src={currentAvatarUrl}
+                  name={profile.username || profile.name}
+                  className="w-full h-full object-cover rounded-full"
+                  textClassName="text-3xl"
+                />
+              ) : (
+                <AnonymousAvatar
+                  avatarKey={resolvedAvatarKey}
+                  size={96}
+                  className="w-full h-full rounded-full"
+                />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAvatarTab('upload')}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-[#1A6B3C] dark:bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white dark:border-[#181818] shadow-md active:scale-95 transition-all cursor-pointer"
+              aria-label="Change avatar"
+            >
+              <Camera size={15} color="#fff" />
             </button>
           </div>
+          <p className="font-jakarta text-sm font-semibold text-[#1A6B3C] dark:text-emerald-400 mt-3">Change photo</p>
+          <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Tap camera icon to upload or choose a preset below</p>
+        </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {/* Avatar hero */}
-            <div className="bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 px-4 pt-6 pb-5 flex flex-col items-center">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full border-2 border-[#E8F5E9] dark:border-emerald-500/30 overflow-hidden flex items-center justify-center shadow-md bg-white dark:bg-[#181818]">
-                  {showRealAvatar
-                    ? <AvatarDisplay src={currentAvatarUrl} name={profile.username || profile.name} className="w-full h-full object-cover rounded-full" textClassName="text-3xl" />
-                    : <AnonymousAvatar avatarKey={resolvedAvatarKey} size={96} className="w-full h-full rounded-full" />}
-                </div>
-                <button type="button" onClick={() => setAvatarTab('upload')}
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-[#1A6B3C] dark:bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white dark:border-[#181818] shadow-md active:scale-95 transition-all cursor-pointer" aria-label="Change avatar">
-                  <Camera size={15} color="#fff" />
-                </button>
-              </div>
-              <p className="font-jakarta text-sm font-semibold text-[#1A6B3C] dark:text-emerald-400 mt-3">Change photo</p>
-              <p className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Tap camera icon to upload or choose a preset below</p>
-            </div>
-
-            {/* Mobile tab switcher */}
-            <div className="bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 flex">
-              {tabs.map(({ key, shortLabel, icon: Icon, badge, badgeAlert }) => (
-                <button key={key} type="button" onClick={() => setActiveTab(key)}
-                  className={cn('flex-1 py-3 font-jakarta text-xs font-bold flex flex-col items-center gap-0.5 border-b-2 transition-all cursor-pointer',
-                    activeTab === key ? 'border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400' : 'border-transparent text-gray-400 dark:text-gray-500')}>
-                  <Icon size={16} />
-                  <span>{shortLabel}</span>
-                  {badge !== undefined && (
-                    <span className={cn('text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full leading-none',
-                      badgeAlert ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400' : 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400')}>
-                      {badge}
-                    </span>
+        {/* Mobile tab switcher */}
+        <div className="bg-white dark:bg-[#181818] border-b border-[#E8E6E1] dark:border-white/10 flex">
+          {tabs.map(({ key, shortLabel, icon: Icon, badge, badgeAlert }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={cn(
+                'flex-1 py-3 font-jakarta text-xs font-bold flex flex-col items-center gap-0.5 border-b-2 transition-all cursor-pointer',
+                activeTab === key
+                  ? 'border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400'
+                  : 'border-transparent text-gray-400 dark:text-gray-500'
+              )}
+            >
+              <Icon size={16} />
+              <span>{shortLabel}</span>
+              {badge !== undefined && (
+                <span
+                  className={cn(
+                    'text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full leading-none',
+                    badgeAlert
+                      ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                      : 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
                   )}
-                </button>
-              ))}
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Form body */}
+        <div className="p-4 pb-32">{FormContent}</div>
+      </div>
+
+      {/* Sticky footer */}
+      <div className="sticky bottom-0 bg-white dark:bg-[#181818] border-t border-[#E8E6E1] dark:border-white/10 px-4 py-3 flex-shrink-0">
+        <SaveBtn full />
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return typeof document !== 'undefined' ? createPortal(mobileSheet, document.body) : mobileSheet;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-2xl w-full max-h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-2xl bg-white dark:bg-[#181818]">
+        {/* Header */}
+        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-white/10 flex-shrink-0 bg-white dark:bg-[#181818]">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-16 h-16 rounded-full border-2 border-[#E8F5E9] dark:border-emerald-500/30 overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-[#222222] shadow-md">
+              {showRealAvatar ? (
+                <AvatarDisplay
+                  src={currentAvatarUrl}
+                  name={profile.username || profile.name}
+                  className="w-full h-full object-cover rounded-full"
+                  textClassName="text-2xl"
+                />
+              ) : (
+                <AnonymousAvatar
+                  avatarKey={resolvedAvatarKey}
+                  size={64}
+                  className="w-full h-full rounded-full"
+                />
+              )}
             </div>
-
-            {/* Form body */}
-            <div className="p-4 pb-32">{FormContent}</div>
+            <div>
+              <DialogTitle className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">Edit Profile</DialogTitle>
+              <DialogDescription className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">Update your identity, academic details, and campus interests.</DialogDescription>
+            </div>
           </div>
+          {/* Tab nav */}
+          <div className="flex border-b border-gray-100 dark:border-white/10 gap-1 -mx-6 px-6">
+            {tabs.map(({ key, label, icon: Icon, badge, badgeAlert }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key as TabKey)}
+                className={cn(
+                  'py-3 px-3 font-jakarta text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all -mb-px cursor-pointer whitespace-nowrap',
+                  activeTab === key
+                    ? 'border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400 font-bold'
+                    : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                )}
+              >
+                <Icon size={14} />
+                <span>{label}</span>
+                {badge !== undefined && (
+                  <span
+                    className={cn(
+                      'px-1.5 rounded-full text-[10px] font-bold font-mono',
+                      activeTab === key
+                        ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
+                        : badgeAlert
+                        ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                        : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                    )}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </DialogHeader>
 
-          {/* Sticky footer */}
-          <div className="sticky bottom-0 bg-white dark:bg-[#181818] border-t border-[#E8E6E1] dark:border-white/10 px-4 py-3 flex-shrink-0">
-            <SaveBtn full />
+        {/* Scrollable form body */}
+        <div className="overflow-y-auto custom-scrollbar p-6 flex-1 min-h-0 bg-[#FAFAF9] dark:bg-[#161616]">
+          {FormContent}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#181818] flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="text-xs font-jakarta hidden sm:block">
+            {!isInterestsValid ? (
+              <span className="text-amber-600 dark:text-amber-400 font-medium">Pick at least 3 interests to save</span>
+            ) : usernameStatus === 'taken' ? (
+              <span className="text-red-500 font-medium">Username already taken</span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">All changes will be saved to your profile</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 font-jakarta text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <SaveBtn />
           </div>
         </div>
-      )}
-
-      {/* ══════ DESKTOP DIALOG (≥ md) ══════ */}
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="hidden md:flex sm:max-w-2xl w-full max-h-[92vh] flex-col p-0 overflow-hidden rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-2xl bg-white dark:bg-[#181818]">
-          {/* Header */}
-          <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-white/10 flex-shrink-0 bg-white dark:bg-[#181818]">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="w-16 h-16 rounded-full border-2 border-[#E8F5E9] dark:border-emerald-500/30 overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-[#222222] shadow-md">
-                {showRealAvatar
-                  ? <AvatarDisplay src={currentAvatarUrl} name={profile.username || profile.name} className="w-full h-full object-cover rounded-full" textClassName="text-2xl" />
-                  : <AnonymousAvatar avatarKey={resolvedAvatarKey} size={64} className="w-full h-full rounded-full" />}
-              </div>
-              <div>
-                <DialogTitle className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">Edit Profile</DialogTitle>
-                <DialogDescription className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">Update your identity, academic details, and campus interests.</DialogDescription>
-              </div>
-            </div>
-            {/* Tab nav */}
-            <div className="flex border-b border-gray-100 dark:border-white/10 gap-1 -mx-6 px-6">
-              {tabs.map(({ key, label, icon: Icon, badge, badgeAlert }) => (
-                <button key={key} type="button" onClick={() => setActiveTab(key as TabKey)}
-                  className={cn('py-3 px-3 font-jakarta text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all -mb-px cursor-pointer whitespace-nowrap',
-                    activeTab === key ? 'border-[#1A6B3C] dark:border-emerald-400 text-[#1A6B3C] dark:text-emerald-400 font-bold' : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')}>
-                  <Icon size={14} />
-                  <span>{label}</span>
-                  {badge !== undefined && (
-                    <span className={cn('px-1.5 rounded-full text-[10px] font-bold font-mono',
-                      activeTab === key ? 'bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400'
-                        : badgeAlert ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400')}>
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </DialogHeader>
-
-          {/* Scrollable form body */}
-          <div className="overflow-y-auto custom-scrollbar p-6 flex-1 min-h-0 bg-[#FAFAF9] dark:bg-[#161616]">
-            {FormContent}
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-[#181818] flex items-center justify-between gap-3 flex-shrink-0">
-            <div className="text-xs font-jakarta hidden sm:block">
-              {!isInterestsValid ? <span className="text-amber-600 dark:text-amber-400 font-medium">Pick at least 3 interests to save</span>
-                : usernameStatus === 'taken' ? <span className="text-red-500 font-medium">Username already taken</span>
-                : <span className="text-gray-400 dark:text-gray-500">All changes will be saved to your profile</span>}
-            </div>
-            <div className="flex items-center gap-2.5 ml-auto">
-              <button type="button" onClick={onClose} disabled={isSaving}
-                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 font-jakarta text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer">
-                Cancel
-              </button>
-              <SaveBtn />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
