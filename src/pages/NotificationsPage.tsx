@@ -1303,6 +1303,18 @@ export default function NotificationsPage() {
                             </button>
                           );
                         })}
+                        <div className="pt-2 pb-1 border-t border-gray-100 dark:border-white/5 mt-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowFilterDropdown(false);
+                              navigate('/requests');
+                            }}
+                            className="text-xs font-jakarta font-semibold text-[#1A6B3C] dark:text-emerald-400 hover:underline inline-block cursor-pointer py-1"
+                          >
+                            View all requests
+                          </button>
+                        </div>
                       </div>
                     </>
                   )}

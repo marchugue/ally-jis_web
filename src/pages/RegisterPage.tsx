@@ -140,7 +140,8 @@ const STEPS = [
   { num: 1, label: 'Basic Info', icon: GraduationCap, hint: 'Your identity on the platform' },
   { num: 2, label: 'Academic', icon: GraduationCap, hint: 'Your course & year at CHMSU' },
   { num: 3, label: 'Interests', icon: Sparkles, hint: 'Powers your campus matches!' },
-  { num: 4, label: 'Avatar & Bio', icon: FileText, hint: 'Pick your emoji avatar & intro' },
+  { num: 4, label: 'Bio', icon: FileText, hint: 'Write a short intro about yourself' },
+  { num: 5, label: 'Avatar & Agreement', icon: Shield, hint: 'Pick your avatar & agree to terms' },
 ];
 
 // Helper: check file types and format size
@@ -245,7 +246,7 @@ export default function RegisterPage() {
   // ── Navigation State (Always starts directly in form, email selection removed) ──
   const initialEmailType = (searchParams.get('emailType') as 'chmsu' | 'external') || 'chmsu';
   const startStepParam = Number(searchParams.get('startStep') || searchParams.get('step'));
-  const hasInitialStep = startStepParam >= 2 && startStepParam <= 4;
+  const hasInitialStep = startStepParam >= 2 && startStepParam <= 5;
   const startIdSubStepParam = searchParams.get('idSubStep') as 'front' | 'back' | 'review' | null;
   const isUploadIdRequested = searchParams.get('uploadId') === 'true' || searchParams.get('reupload') === '1' || Boolean(startIdSubStepParam);
 
@@ -822,7 +823,7 @@ export default function RegisterPage() {
     return true;
   };
 
-  const validateStep4 = (): boolean => {
+  const validateStep5 = (): boolean => {
     const errs: Record<string, string> = {};
     if (!agreedToTerms) errs.terms = 'You must agree to the Terms & Conditions.';
     if (!agreedToPrivacy) errs.privacy = 'You must agree to the Privacy Policy.';
@@ -1113,9 +1114,9 @@ export default function RegisterPage() {
   };
 
 
-  // ── Final Profile Submission (Step 4) ─────────────────────────────────────
+  // ── Final Profile Submission (Step 5) ─────────────────────────────────────
   const handleCompleteRegistration = async () => {
-    if (!validateStep4()) return;
+    if (!validateStep5()) return;
 
     setIsSubmitting(true);
     try {
@@ -1228,6 +1229,10 @@ export default function RegisterPage() {
     if (stepRef.current === 1 && showOtpViewRef.current) {
       setShowOtpView(false);
       saveWebRegisterCache({ showOtpView: false });
+      return true;
+    }
+    if (stepRef.current === 5) {
+      setStep(4);
       return true;
     }
     if (stepRef.current === 4) {
@@ -1501,19 +1506,19 @@ export default function RegisterPage() {
 
         {/* Progression Bar on top, aligned with back link */}
         {idSubStep === 'none' && !showOtpView && (
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            {[1, 2, 3, 4].map((num) => (
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {[1, 2, 3, 4, 5].map((num) => (
               <div
                 key={num}
                 className={cn(
                   'h-1.5 sm:h-2 rounded-full transition-all duration-300',
                   num === step
-                    ? 'w-10 sm:w-16 bg-[#1A6B3C] dark:bg-emerald-500 shadow-xs'
+                    ? 'w-7 sm:w-12 bg-[#1A6B3C] dark:bg-emerald-500 shadow-xs'
                     : num < step
-                      ? 'w-8 sm:w-12 bg-[#1A6B3C] dark:bg-emerald-500'
-                      : 'w-8 sm:w-12 bg-gray-200 dark:bg-white/10'
+                      ? 'w-5 sm:w-8 bg-[#1A6B3C] dark:bg-emerald-500'
+                      : 'w-5 sm:w-8 bg-gray-200 dark:bg-white/10'
                 )}
-                title={`Step ${num} of 4`}
+                title={`Step ${num} of 5`}
               />
             ))}
           </div>
@@ -1576,7 +1581,9 @@ export default function RegisterPage() {
                                 : 'Campus Organizations'
                         : step === 3
                           ? 'Select your Interests'
-                          : 'Your Profile'}
+                          : step === 4
+                            ? 'Write your Bio'
+                            : 'Your Profile Avatar'}
           </h1>
           <p className="font-jakarta text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
             {showOtpView
@@ -1601,7 +1608,9 @@ export default function RegisterPage() {
                                 : 'Add your student organizations or clubs (optional)'
                         : step === 3
                           ? 'Choose at least 3 interests to power your campus connections'
-                          : 'Review how fellow CHMSU students will see you'}
+                          : step === 4
+                            ? 'Share a short intro about yourself, hobbies, or campus goals (optional)'
+                            : 'Choose how fellow CHMSU students will see you and review campus rules'}
           </p>
         </div>
         {/* =========================================================================
@@ -3117,16 +3126,70 @@ export default function RegisterPage() {
               }}
               className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <span>Continue to Profile & Bio</span>
+              <span>Continue to Bio</span>
               <ArrowRight size={16} />
             </button>
           </div>
         )}
 
         {/* =========================================================================
-              STEP 4: AVATAR, PROFILE & COMPLETE REGISTRATION
+              STEP 4: BIO (Structured same like inputting username)
              ========================================================================= */}
         {step === 4 && (
+          <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+            {/* Center decorative element matching username style */}
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/10 flex items-center justify-center text-[#1A6B3C] dark:text-emerald-400 mb-2 border-2 border-[#1A6B3C]/20 dark:border-emerald-500/20 shadow-xs">
+                <FileText size={36} />
+              </div>
+              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 italic max-w-xs line-clamp-2 px-2">
+                {form.bio.trim() ? `“${form.bio.trim()}”` : '“Share what makes you unique on campus…”'}
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  Campus Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
+                </label>
+                <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
+              </div>
+              <div className="relative">
+                <textarea
+                  rows={4}
+                  maxLength={250}
+                  value={form.bio}
+                  onChange={(e) => {
+                    setForm((prev) => ({ ...prev, bio: e.target.value.slice(0, 250) }));
+                    setErrors((prev) => ({ ...prev, bio: '' }));
+                  }}
+                  placeholder="Share a short intro about yourself, hobbies, or campus goals..."
+                  className="w-full px-5 py-3.5 rounded-3xl border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 font-jakarta text-sm outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 resize-none text-gray-900 dark:text-white transition-all"
+                />
+              </div>
+              <p className="text-[11px] font-jakarta text-gray-500 dark:text-gray-400 mt-1.5">
+                Up to 250 characters. You can update this anytime from your profile settings.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                pushHistory();
+                setStep(5);
+              }}
+              className="w-full mt-2 bg-[#1A6B3C] dark:bg-emerald-600 text-white font-mono text-xs uppercase tracking-wider font-bold py-4 rounded-full hover:bg-[#14532D] dark:hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Continue to Avatar</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* =========================================================================
+              STEP 5: AVATAR TOGETHER WITH TERMS & POLICY
+             ========================================================================= */}
+        {step === 5 && (
           <div className="space-y-6 max-w-md mx-auto w-full">
             {/* Top: Avatar Circle */}
             <div className="flex flex-col items-center text-center">
@@ -3229,24 +3292,6 @@ export default function RegisterPage() {
                   Remove custom photo
                 </button>
               )}
-            </div>
-
-            {/* Bio Textarea */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block font-jakarta text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                  Bio <span className="font-normal text-gray-400 lowercase">(optional)</span>
-                </label>
-                <span className="text-[11px] font-mono text-gray-400">{form.bio.length}/250</span>
-              </div>
-              <textarea
-                rows={2}
-                maxLength={250}
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                placeholder="Share a short intro about yourself, hobbies, or campus goals..."
-                className="w-full px-5 py-3.5 rounded-3xl border-2 border-gray-300 dark:border-white/20 bg-white/80 dark:bg-white/5 font-jakarta text-xs outline-none focus:border-[#1A6B3C] resize-none text-gray-900 dark:text-white"
-              />
             </div>
 
             {/* Below that: One paragraph terms and policy & One check */}

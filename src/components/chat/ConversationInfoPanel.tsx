@@ -181,10 +181,10 @@ function ConversationInfoContent({
     if (!conversation.participantId || isAnonymous) return;
     apiClient.checkIsRestricted(conversation.participantId)
       .then((res) => setIsRestrictedByMe(res.restrictedByMe))
-      .catch(() => {});
+      .catch(() => { });
     apiClient.checkIsMuted(conversation.participantId)
       .then((res) => setIsMuted(res.muted))
-      .catch(() => {});
+      .catch(() => { });
   }, [conversation.participantId, isAnonymous]);
 
   const handleToggleMute = async () => {
@@ -306,14 +306,12 @@ function ConversationInfoContent({
               e.stopPropagation();
               handleToggleMute();
             }}
-            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${
-              isMuted ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
-            } ${muteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${isMuted ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+              } ${muteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                isMuted ? 'translate-x-5' : ''
-              }`}
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isMuted ? 'translate-x-5' : ''
+                }`}
             />
           </button>
         </div>
@@ -338,14 +336,12 @@ function ConversationInfoContent({
               e.stopPropagation();
               onIcebreakersToggle(!icebreakersEnabled);
             }}
-            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${
-              icebreakersEnabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
-            } ${icebreakersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-11 h-6 rounded-full flex-shrink-0 relative transition-colors ${icebreakersEnabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+              } ${icebreakersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                icebreakersEnabled ? 'translate-x-5' : ''
-              }`}
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${icebreakersEnabled ? 'translate-x-5' : ''
+                }`}
             />
           </button>
         </div>
@@ -434,8 +430,8 @@ function ConversationInfoContent({
           onClick={() => setShowDeleteModal(true)}
           className="w-full flex items-center gap-3.5 px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-white/5 transition-colors"
         >
-          <Trash2 size={18} className="text-black dark:text-white fill-current shrink-0" />
-          <span className="font-jakarta font-medium text-sm text-black dark:text-white truncate">
+          <Trash2 size={18} className="text-black dark:text-red fill-current shrink-0" />
+          <span className="font-jakarta font-medium text-sm text-black dark:text-red truncate">
             Delete conversation
           </span>
         </button>
