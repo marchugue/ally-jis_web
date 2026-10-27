@@ -180,6 +180,14 @@ export function deleteReportedPost(reportId: string, postId?: string) {
   return request<{ success: boolean }>(`/admin/reports/${reportId}/post`, { method: 'DELETE', body: { postId } });
 }
 
+export function removeReportedMessage(reportId: string) {
+  return request<{ success: boolean }>(`/admin/reports/${reportId}/remove-message`, { method: 'POST' });
+}
+
+export function removeReportedMedia(reportId: string) {
+  return request<{ success: boolean }>(`/admin/reports/${reportId}/remove-media`, { method: 'POST' });
+}
+
 // ─── Global Search ───────────────────────────────────────────────────────
 
 export function search(q: string) {

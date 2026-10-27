@@ -534,6 +534,16 @@ export default function PostDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
+              {notificationType === 'admin_warning' && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                  <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-jakarta font-bold text-sm text-amber-600 dark:text-amber-400">Content Moderation Notice</h3>
+                    <p className="font-jakarta text-xs text-amber-700/90 dark:text-amber-300/90 mt-0.5">You were redirected to this reported post because of an administrative warning. Its visibility is restricted to you and administrators.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Main Post Card */}
               <FeedPostCard
                 post={post}

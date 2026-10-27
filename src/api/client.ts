@@ -247,6 +247,8 @@ export const apiClient = {
   adminBanReportedUser: admin.banReportedUser,
   adminSuspendReportedUser: admin.suspendReportedUser,
   adminDeleteReportedPost: admin.deleteReportedPost,
+  adminRemoveReportedMessage: admin.removeReportedMessage,
+  adminRemoveReportedMedia: admin.removeReportedMedia,
 
   // ─── Admin: Global Search ────────────────────────────────────────────────
   adminSearch: admin.search,

@@ -1,7 +1,7 @@
 // src/components/feed/FeedPostCard.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2 } from 'lucide-react';
+import { MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2, ShieldAlert } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
@@ -32,6 +32,17 @@ function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaC
   if (!media || media.length === 0) return null;
 
   const sorted = [...media].sort((a, b) => a.position - b.position);
+
+  // If any photo is removed by moderation, show standard gray background paragraph notice
+  if (sorted.some((m) => m.url === '[removed]')) {
+    return (
+      <div className="mt-3 p-4 rounded-xl bg-gray-100 dark:bg-[#1E293B] border border-gray-200 dark:border-white/10 text-center">
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-jakarta italic">
+          This photo was removed for violating community standards.
+        </p>
+      </div>
+    );
+  }
 
   if (sorted.length === 1) {
     return (
@@ -189,6 +200,17 @@ export default function FeedPostCard({
         className
       )}
     >
+      {/* Flagged / Restricted Visibility Banner */}
+      {(post.is_flagged || post.is_restricted) && (
+        <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
+          <ShieldAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-amber-600 dark:text-amber-400">Flagged Content (Restricted Visibility)</p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">This post received an administrative warning. Its visibility is restricted to you and administrators.</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
@@ -319,22 +341,30 @@ export default function FeedPostCard({
       {/* Content */}
       {post.content && (
         <div className="mt-2.5">
-          <p
-            className={cn(
-              "font-jakarta text-[14.5px] sm:text-[15px] text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap break-words",
-              isLongContent && !isContentExpanded && "line-clamp-3"
-            )}
-          >
-            {post.content}
-          </p>
-          {isLongContent && (
-            <button
-              type="button"
-              onClick={() => setIsContentExpanded(!isContentExpanded)}
-              className="font-jakarta text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 mt-1 hover:underline cursor-pointer focus:outline-none"
-            >
-              {isContentExpanded ? 'Show less' : '...more'}
-            </button>
+          {post.content === 'This message was removed' ? (
+            <p className="font-jakarta text-[14px] italic text-gray-400 dark:text-gray-500 py-1">
+              This message was removed
+            </p>
+          ) : (
+            <>
+              <p
+                className={cn(
+                  "font-jakarta text-[14.5px] sm:text-[15px] text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap break-words",
+                  isLongContent && !isContentExpanded && "line-clamp-3"
+                )}
+              >
+                {post.content}
+              </p>
+              {isLongContent && (
+                <button
+                  type="button"
+                  onClick={() => setIsContentExpanded(!isContentExpanded)}
+                  className="font-jakarta text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 mt-1 hover:underline cursor-pointer focus:outline-none"
+                >
+                  {isContentExpanded ? 'Show less' : '...more'}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

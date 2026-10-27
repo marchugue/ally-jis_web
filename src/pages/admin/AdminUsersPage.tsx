@@ -7,7 +7,7 @@ import {
   Search, MoreHorizontal, ShieldCheck, ShieldOff, Ban, Clock,
   KeyRound, LogOut as LogOutIcon, Trash2, BadgeCheck, X, Loader2,
   CheckCircle2, XCircle, CreditCard, ExternalLink, Calendar,
-  Building2, GraduationCap, Mail, UserCheck, ImageOff, RotateCw
+  Building2, GraduationCap, Mail, UserCheck, ImageOff, RotateCw, Maximize2
 } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import type { AdminUserDetail, AdminUserListItem, ListUsersQuery, PendingVerificationItem } from '@/api/client';
@@ -311,21 +311,19 @@ export default function AdminUsersPage() {
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl w-full sm:w-auto">
           <button
             onClick={() => handleTabChange('users')}
-            className={`flex-1 sm:flex-none px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
-              activeTab === 'users'
-                ? 'bg-white dark:bg-white/10 text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
-                : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
-            }`}
+            className={`flex-1 sm:flex-none px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${activeTab === 'users'
+              ? 'bg-white dark:bg-white/10 text-[#1A6B3C] dark:text-emerald-400 shadow-xs'
+              : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
+              }`}
           >
             All Users
           </button>
           <button
             onClick={() => handleTabChange('pending')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
-              activeTab === 'pending'
-                ? 'bg-white dark:bg-white/10 text-amber-600 dark:text-amber-400 shadow-xs'
-                : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
-            }`}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${activeTab === 'pending'
+              ? 'bg-white dark:bg-white/10 text-amber-600 dark:text-amber-400 shadow-xs'
+              : 'text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white'
+              }`}
           >
             <CreditCard size={14} /> Verification Needed
             {pendingCount > 0 && (
@@ -359,18 +357,17 @@ export default function AdminUsersPage() {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-sm outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-all shadow-xs"
               />
             </div>
-            
+
             {/* Filter pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
               {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setStatus(f.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${
-                    status === f.value
-                      ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-xs font-semibold'
-                      : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/10'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 active:scale-[0.96] ${status === f.value
+                    ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-xs font-semibold'
+                    : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/10'
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -434,7 +431,7 @@ export default function AdminUsersPage() {
                               </div>
                             </div>
                           </td>
-                          
+
                           <td className="px-5 py-3.5 text-gray-600 dark:text-white/70">
                             <p className="text-xs font-medium text-gray-800 dark:text-white/80">{u.department ?? 'No Department'}</p>
                             <p className="text-[11px] text-gray-400 dark:text-white/40">{u.course ?? 'No Course'} {u.year_level ? `· Year ${u.year_level}` : ''}</p>
@@ -736,11 +733,10 @@ function FlippableIdPreview({
             <CreditCard size={14} className="text-[#1A6B3C] dark:text-emerald-400" /> Uploaded Student ID
           </p>
           <span
-            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-              side === 'front'
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
-            }`}
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${side === 'front'
+              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+              }`}
           >
             {side === 'front' ? 'Front Side' : 'Back Side'}
           </span>
@@ -757,6 +753,19 @@ function FlippableIdPreview({
             <RotateCw size={12} className="transition-transform duration-300" />
             <span>Flip ID</span>
           </button>
+
+          {/* Fullscreen Button */}
+          {onEnlarge && (
+            <button
+              type="button"
+              onClick={() => onEnlarge(side)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors cursor-pointer"
+              title="Open Fullscreen Viewer"
+            >
+              <Maximize2 size={12} />
+              <span>Fullscreen</span>
+            </button>
+          )}
 
           {/* View Original Link for current active side */}
           {currentUrl && (
@@ -811,7 +820,7 @@ function FlippableIdPreview({
                   <RotateCw size={10} /> Flip to Back
                 </div>
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 pointer-events-none">
-                  <ExternalLink size={14} /> Click to Enlarge
+                  <Maximize2 size={14} /> Click for Fullscreen & 3D Flip
                 </div>
               </>
             ) : frontUrl && frontErr ? (
@@ -858,7 +867,7 @@ function FlippableIdPreview({
                   <RotateCw size={10} /> Flip to Front
                 </div>
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 pointer-events-none">
-                  <ExternalLink size={14} /> Click to Enlarge
+                  <Maximize2 size={14} /> Click for Fullscreen & 3D Flip
                 </div>
               </>
             ) : backUrl && backErr ? (
@@ -892,6 +901,330 @@ function FlippableIdPreview({
   );
 }
 
+export interface StudentVerificationModalTarget {
+  id: string;
+  username?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  department?: string | null;
+  course?: string | null;
+  year_level?: string | null;
+  student_id_url?: string | null;
+  student_id_back_url?: string | null;
+  student_verification_status?: string | null;
+  created_at?: string;
+}
+
+export function FullscreenStudentVerificationModal({
+  open,
+  student,
+  initialSide = 'front',
+  onClose,
+  onApprove,
+  onReject,
+  processing = false,
+}: {
+  open: boolean;
+  student: StudentVerificationModalTarget | null;
+  initialSide?: 'front' | 'back';
+  onClose: () => void;
+  onApprove?: () => Promise<void> | void;
+  onReject?: () => Promise<void> | void;
+  processing?: boolean;
+}) {
+  const [side, setSide] = useState<'front' | 'back'>(initialSide);
+  const [frontErr, setFrontErr] = useState(false);
+  const [backErr, setBackErr] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSide(initialSide);
+      setFrontErr(false);
+      setBackErr(false);
+    }
+  }, [open, initialSide, student?.id]);
+
+  const toggleFlip = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setSide((s) => (s === 'front' ? 'back' : 'front'));
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        onClose();
+      } else if (e.code === 'Space' || e.key === ' ' || e.key.toLowerCase() === 'f') {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          e.stopPropagation();
+          setSide((s) => (s === 'front' ? 'back' : 'front'));
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSide('front');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setSide('back');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [open, onClose]);
+
+  if (!open || !student) return null;
+
+  const currentUrl = side === 'front' ? student.student_id_url : student.student_id_back_url;
+  const isPending = student.student_verification_status === 'pending';
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Student ID Verification Fullscreen Viewer"
+      className="fixed inset-0 z-[99999] bg-[#090e0b]/95 backdrop-blur-2xl flex flex-col text-white select-none animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      {/* ── Top Bar ── */}
+      <header className="px-4 sm:px-6 py-3 border-b border-white/10 bg-black/50 backdrop-blur-md flex items-center justify-between gap-4 flex-wrap z-10 shrink-0">
+        {/* Student identity */}
+        <div className="flex items-center gap-3 min-w-0">
+          <StudentAvatar src={student.avatar_url} name={getStudentDisplayName(student)} size="md" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-white text-sm sm:text-base truncate">
+                {getStudentDisplayName(student)}
+              </span>
+              {student.username && student.username.toLowerCase() !== 'anonymous' && (
+                <span className="text-xs text-white/50 font-mono">@{student.username}</span>
+              )}
+              {isPending ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wide">
+                  Pending Verification
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
+                  Verified Student
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-white/50 truncate flex items-center gap-2">
+              <span>{student.email}</span>
+              {(student.course || student.department) && (
+                <>
+                  <span>•</span>
+                  <span className="text-white/70">{student.course ?? student.department}</span>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Center / Side indicator toggle */}
+        <div className="flex items-center p-1 rounded-xl bg-white/10 border border-white/10 text-xs">
+          <button
+            type="button"
+            onClick={() => setSide('front')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${side === 'front'
+              ? 'bg-emerald-600 text-white font-semibold shadow-md'
+              : 'text-white/60 hover:text-white'
+              }`}
+          >
+            <CreditCard size={13} />
+            <span>Front Side</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSide('back')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${side === 'back'
+              ? 'bg-emerald-600 text-white font-semibold shadow-md'
+              : 'text-white/60 hover:text-white'
+              }`}
+          >
+            <CreditCard size={13} />
+            <span>Back Side</span>
+          </button>
+        </div>
+
+        {/* Actions & controls */}
+        <div className="flex items-center gap-2">
+          {onApprove && (
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={processing}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-950/40 disabled:opacity-50 cursor-pointer"
+              title="Approve student ID verification"
+            >
+              {processing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+              <span>Approve ID</span>
+            </button>
+          )}
+
+          {onReject && (
+            <button
+              type="button"
+              onClick={onReject}
+              disabled={processing}
+              className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-red-950/40 disabled:opacity-50 cursor-pointer"
+              title="Reject student ID verification"
+            >
+              <XCircle size={14} />
+              <span>Reject</span>
+            </button>
+          )}
+
+          {currentUrl && (
+            <a
+              href={currentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              title="Open full original file in new tab"
+            >
+              <ExternalLink size={13} />
+              <span className="hidden md:inline">Original</span>
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Exit Fullscreen (Esc)"
+          >
+            <X size={15} />
+            <span className="hidden sm:inline text-[10px] text-white/50 font-mono">ESC</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── 3D Stage / Center Canvas ── */}
+      <main
+        className="flex-1 relative flex items-center justify-center p-4 md:p-8 overflow-hidden"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div
+          className="relative w-full max-w-4xl h-[66vh] md:h-[74vh] flex items-center justify-center cursor-pointer group"
+          style={{ perspective: '1600px' }}
+          onClick={toggleFlip}
+          title="Click to flip ID card"
+        >
+          <div
+            className="w-full h-full relative transition-transform duration-600 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            style={{
+              transformStyle: 'preserve-3d',
+              transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+            }}
+          >
+            {/* ── Front Face ── */}
+            <div
+              className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/15 bg-black/75 shadow-2xl flex flex-col items-center justify-center p-3 select-none"
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+              }}
+            >
+              {student.student_id_url && !frontErr ? (
+                <>
+                  <img
+                    src={student.student_id_url}
+                    alt="Uploaded Student ID Front"
+                    onError={() => setFrontErr(true)}
+                    className="w-full h-full object-contain rounded-xl select-none"
+                    draggable={false}
+                  />
+                  <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-white text-xs font-bold tracking-wider flex items-center gap-1.5 shadow-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    FRONT SIDE
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-8 space-y-3">
+                  <CreditCard size={56} className="mx-auto text-white/30" />
+                  <p className="text-base font-semibold text-white">No Front ID Image Available</p>
+                  <p className="text-xs text-white/40">The student has not uploaded a front ID scan.</p>
+                </div>
+              )}
+            </div>
+
+            {/* ── Back Face ── */}
+            <div
+              className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/15 bg-black/75 shadow-2xl flex flex-col items-center justify-center p-3 select-none"
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                transform: 'rotateY(180deg)',
+              }}
+            >
+              {student.student_id_back_url && !backErr ? (
+                <>
+                  <img
+                    src={student.student_id_back_url}
+                    alt="Uploaded Student ID Back"
+                    onError={() => setBackErr(true)}
+                    className="w-full h-full object-contain rounded-xl select-none"
+                    draggable={false}
+                  />
+                  <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-white text-xs font-bold tracking-wider flex items-center gap-1.5 shadow-md">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    BACK SIDE
+                  </div>
+                  <div className="absolute bottom-4 inset-x-0 mx-auto w-fit px-4 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-white/80 text-xs font-medium flex items-center gap-2 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity shadow-lg">
+                    <RotateCw size={12} className="text-emerald-400" />
+                    Click card or press <kbd className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-mono">Space</kbd> to flip to Front
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-8 space-y-3 max-w-md">
+                  <CreditCard size={56} className="mx-auto text-emerald-400/50" />
+                  <p className="text-lg font-bold text-white">No Back Side Uploaded</p>
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    The student only submitted the front side of their Student ID or Certificate of Registration (COR).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSide('front');
+                    }}
+                    className="mt-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50"
+                  >
+                    <RotateCw size={13} />
+                    Flip to Front Side
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* ── Bottom Controls Bar ── */}
+
+    </div>,
+    document.body
+  );
+}
+
 function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null; onClose: () => void; onUpdate: () => void }) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [processing, setProcessing] = useState<'approve' | 'reject' | null>(null);
@@ -909,23 +1242,6 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
     if (!userId) { setDetail(null); return; }
     reload(userId);
   }, [userId]);
-
-  // Capture Escape key globally in capture phase to close lightbox ONLY without closing the Sheet
-  useEffect(() => {
-    if (!lightboxOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        setLightboxOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [lightboxOpen]);
 
   const handleVerification = async (type: 'approve' | 'reject') => {
     if (!detail) return;
@@ -994,11 +1310,10 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
 
               {/* Email Verification Badges */}
               <div className="flex flex-wrap gap-2">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 ${
-                  detail.email_type === 'chmsu'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                }`}>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 ${detail.email_type === 'chmsu'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                  }`}>
                   {detail.email_type === 'chmsu' ? '🎓 CHMSU Campus Email' : '📧 External Email Address'}
                 </span>
                 {detail.admin_verified && (
@@ -1020,189 +1335,102 @@ function UserDetailSheet({ userId, onClose, onUpdate }: { userId: string | null;
                 />
               </div>
 
-            {/* Approve / Reject Controls */}
-            {detail.student_verification_status === 'pending' && (
-              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl space-y-2.5">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                  Verification Pending Review
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleVerification('approve')}
-                    disabled={!!processing}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
-                  >
-                    {processing === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                    Approve Student ID
-                  </button>
-                  <button
-                    onClick={() => handleVerification('reject')}
-                    disabled={!!processing}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
-                  >
-                    <XCircle size={14} /> Reject
-                  </button>
+              {/* Approve / Reject Controls */}
+              {detail.student_verification_status === 'pending' && (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl space-y-2.5">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                    Verification Pending Review
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleVerification('approve')}
+                      disabled={!!processing}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                    >
+                      {processing === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                      Approve Student ID
+                    </button>
+                    <button
+                      onClick={() => handleVerification('reject')}
+                      disabled={!!processing}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                    >
+                      <XCircle size={14} /> Reject
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Activity Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-3.5 border border-gray-100 dark:border-white/5">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{detail.postsCount}</p>
+                  <p className="text-xs text-gray-400 dark:text-white/40">Feed Posts</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-3.5 border border-gray-100 dark:border-white/5">
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{detail.reportsAgainstCount}</p>
+                  <p className="text-xs text-gray-400 dark:text-white/40">Reports Received</p>
                 </div>
               </div>
-            )}
 
-            {/* Activity Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-3.5 border border-gray-100 dark:border-white/5">
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{detail.postsCount}</p>
-                <p className="text-xs text-gray-400 dark:text-white/40">Feed Posts</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-3.5 border border-gray-100 dark:border-white/5">
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{detail.reportsAgainstCount}</p>
-                <p className="text-xs text-gray-400 dark:text-white/40">Reports Received</p>
-              </div>
-            </div>
-
-            {/* Field Breakdown */}
-            <div className="space-y-2 text-xs bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5">
-              <div className="flex justify-between pb-2">
-                <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
-                  <Building2 size={13} /> Department
-                </span>
-                <span className="font-semibold text-gray-800 dark:text-white/90">{detail.department ?? '—'}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
-                  <GraduationCap size={13} /> Course
-                </span>
-                <span className="font-semibold text-gray-800 dark:text-white/90">{detail.course ?? '—'}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-gray-400 dark:text-white/40">Year Level</span>
-                <span className="font-semibold text-gray-800 dark:text-white/90">{detail.year_level ?? '—'}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
-                  <Calendar size={13} /> Joined Date
-                </span>
-                <span className="font-semibold text-gray-800 dark:text-white/90">
-                  {new Date(detail.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between pt-2">
-                <span className="text-gray-400 dark:text-white/40">Last Presence</span>
-                <span className="font-semibold text-gray-800 dark:text-white/90">
-                  {detail.last_seen_at ? new Date(detail.last_seen_at).toLocaleString() : 'Never'}
-                </span>
-              </div>
-            </div>
-
-            {/* Bio */}
-            {detail.bio && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase mb-1">Biography</p>
-                <p className="text-xs text-gray-700 dark:text-white/80 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                  {detail.bio}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-
-      {/* Student ID Lightbox Modal — Rendered outside Sheet via Portal */}
-      {lightboxOpen && (detail?.student_id_url || detail?.student_id_back_url) && createPortal(
-        <div
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setLightboxOpen(false);
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="relative max-w-4xl w-full max-h-[90vh] overflow-hidden rounded-2xl bg-[#161D19] p-3.5 border border-white/10 shadow-2xl space-y-2.5 cursor-default"
-          >
-            <div className="flex items-center justify-between px-2 text-white flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <CreditCard size={16} className="text-emerald-400" />
-                <span className="text-sm font-semibold">
-                  {getStudentDisplayName(detail)} — Uploaded Student ID
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-900/60 border border-emerald-700 text-emerald-300 uppercase">
-                  {lightboxSide === 'front' ? 'Front Side' : 'Back Side'}
-                </span>
+              {/* Field Breakdown */}
+              <div className="space-y-2 text-xs bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5">
+                <div className="flex justify-between pb-2">
+                  <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
+                    <Building2 size={13} /> Department
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">{detail.department ?? '—'}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
+                    <GraduationCap size={13} /> Course
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">{detail.course ?? '—'}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-400 dark:text-white/40">Year Level</span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">{detail.year_level ?? '—'}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-400 dark:text-white/40 flex items-center gap-1.5">
+                    <Calendar size={13} /> Joined Date
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">
+                    {new Date(detail.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2">
+                  <span className="text-gray-400 dark:text-white/40">Last Presence</span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">
+                    {detail.last_seen_at ? new Date(detail.last_seen_at).toLocaleString() : 'Never'}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Flip Button in Lightbox */}
-                <button
-                  type="button"
-                  onClick={() => setLightboxSide((s) => (s === 'front' ? 'back' : 'front'))}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RotateCw size={12} /> Flip to {lightboxSide === 'front' ? 'Back' : 'Front'}
-                </button>
-
-                {/* View Original in Lightbox */}
-                {(lightboxSide === 'front' ? detail.student_id_url : detail.student_id_back_url) && (
-                  <a
-                    href={(lightboxSide === 'front' ? detail.student_id_url : detail.student_id_back_url) || ''}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-emerald-300 transition-colors flex items-center gap-1"
-                  >
-                    Original <ExternalLink size={12} />
-                  </a>
-                )}
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setLightboxOpen(false);
-                  }}
-                  className="px-3 py-1 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <X size={14} /> Close
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center min-h-[300px] max-h-[78vh]">
-              {lightboxSide === 'front' && detail.student_id_url ? (
-                <img
-                  src={detail.student_id_url}
-                  alt="Uploaded Student ID Front"
-                  className="w-full h-full max-h-[78vh] object-contain rounded-lg"
-                />
-              ) : lightboxSide === 'back' && detail.student_id_back_url ? (
-                <img
-                  src={detail.student_id_back_url}
-                  alt="Uploaded Student ID Back"
-                  className="w-full h-full max-h-[78vh] object-contain rounded-lg"
-                />
-              ) : (
-                <div className="p-8 text-center text-white/60 space-y-2">
-                  <CreditCard size={40} className="mx-auto opacity-40 text-emerald-400" />
-                  <p className="text-sm font-semibold text-white">No Back Side Uploaded</p>
-                  <p className="text-xs text-white/40">The student only submitted the front side of their ID / COR.</p>
-                  <button
-                    type="button"
-                    onClick={() => setLightboxSide('front')}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors inline-flex items-center gap-1.5 mt-2 cursor-pointer"
-                  >
-                    <RotateCw size={12} /> Flip to Front
-                  </button>
+              {/* Bio */}
+              {detail.bio && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase mb-1">Biography</p>
+                  <p className="text-xs text-gray-700 dark:text-white/80 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                    {detail.bio}
+                  </p>
                 </div>
               )}
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Student ID Fullscreen 3D Flippable Modal */}
+      <FullscreenStudentVerificationModal
+        open={lightboxOpen && !!(detail?.student_id_url || detail?.student_id_back_url)}
+        student={detail}
+        initialSide={lightboxSide}
+        onClose={() => setLightboxOpen(false)}
+        onApprove={detail?.student_verification_status === 'pending' ? () => handleVerification('approve') : undefined}
+        onReject={detail?.student_verification_status === 'pending' ? () => handleVerification('reject') : undefined}
+        processing={!!processing}
+      />
     </>
   );
 }
@@ -1213,12 +1441,14 @@ function PendingVerificationCard({
   onApprove,
   onReject,
   onOpenDetail,
+  onOpenFullscreen,
 }: {
   item: PendingVerificationItem;
   processing: boolean;
   onApprove: () => void;
   onReject: () => void;
   onOpenDetail?: () => void;
+  onOpenFullscreen?: (side?: 'front' | 'back') => void;
 }) {
   const [side, setSide] = useState<'front' | 'back'>('front');
 
@@ -1245,15 +1475,22 @@ function PendingVerificationCard({
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           >
             {item.student_id_url ? (
-              <a href={item.student_id_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative group">
+              <div
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenFullscreen ? onOpenFullscreen('front') : toggleSide(e);
+                }}
+                className="block w-full h-full relative group cursor-pointer"
+              >
                 <img src={item.student_id_url} alt="Student ID Front" className="w-full h-44 object-cover group-hover:opacity-90 transition-opacity" />
                 <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold">
                   FRONT
                 </div>
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                  Open Full Size <ExternalLink size={12} />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                  <Maximize2 size={13} /> Fullscreen Review
                 </div>
-              </a>
+              </div>
             ) : (
               <div className="w-full h-44 bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center text-gray-400">
                 <CreditCard size={38} className="mb-2 opacity-50" />
@@ -1272,15 +1509,22 @@ function PendingVerificationCard({
             }}
           >
             {item.student_id_back_url ? (
-              <a href={item.student_id_back_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative group">
+              <div
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenFullscreen ? onOpenFullscreen('back') : toggleSide(e);
+                }}
+                className="block w-full h-full relative group cursor-pointer"
+              >
                 <img src={item.student_id_back_url} alt="Student ID Back" className="w-full h-44 object-cover group-hover:opacity-90 transition-opacity" />
                 <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold">
                   BACK
                 </div>
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                  Open Full Size <ExternalLink size={12} />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                  <Maximize2 size={13} /> Fullscreen Review
                 </div>
-              </a>
+              </div>
             ) : (
               <div className="w-full h-44 bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center text-gray-400 p-3 text-center">
                 <CreditCard size={32} className="mb-1 opacity-50" />
@@ -1290,6 +1534,22 @@ function PendingVerificationCard({
             )}
           </div>
         </div>
+
+        {/* Top right Fullscreen review button */}
+        {onOpenFullscreen && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenFullscreen(side);
+            }}
+            className="absolute top-2 right-2 px-2 py-1 rounded-md bg-black/70 backdrop-blur-xs text-white hover:bg-black/90 text-[10px] font-semibold flex items-center gap-1 z-10 transition-colors cursor-pointer shadow-sm"
+            title="Open Fullscreen Review"
+          >
+            <Maximize2 size={10} /> Fullscreen
+          </button>
+        )}
 
         {/* Flip toggle badge button */}
         <button
@@ -1354,6 +1614,8 @@ function PendingVerificationsPanel({
   onSelectUser?: (id: string) => void;
 }) {
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [fullscreenStudent, setFullscreenStudent] = useState<PendingVerificationItem | null>(null);
+  const [fullscreenSide, setFullscreenSide] = useState<'front' | 'back'>('front');
 
   const handle = async (id: string, type: 'approve' | 'reject') => {
     setProcessingId(id);
@@ -1392,17 +1654,41 @@ function PendingVerificationsPanel({
   }
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => (
-        <PendingVerificationCard
-          key={item.id}
-          item={item}
-          processing={processingId === item.id}
-          onApprove={() => handle(item.id, 'approve')}
-          onReject={() => handle(item.id, 'reject')}
-          onOpenDetail={() => onSelectUser?.(item.id)}
-        />
-      ))}
-    </div>
+    <>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <PendingVerificationCard
+            key={item.id}
+            item={item}
+            processing={processingId === item.id}
+            onApprove={() => handle(item.id, 'approve')}
+            onReject={() => handle(item.id, 'reject')}
+            onOpenDetail={() => onSelectUser?.(item.id)}
+            onOpenFullscreen={(side) => {
+              setFullscreenStudent(item);
+              setFullscreenSide(side || 'front');
+            }}
+          />
+        ))}
+      </div>
+
+      <FullscreenStudentVerificationModal
+        open={!!fullscreenStudent}
+        student={fullscreenStudent}
+        initialSide={fullscreenSide}
+        onClose={() => setFullscreenStudent(null)}
+        onApprove={async () => {
+          if (!fullscreenStudent) return;
+          await handle(fullscreenStudent.id, 'approve');
+          setFullscreenStudent(null);
+        }}
+        onReject={async () => {
+          if (!fullscreenStudent) return;
+          await handle(fullscreenStudent.id, 'reject');
+          setFullscreenStudent(null);
+        }}
+        processing={processingId === fullscreenStudent?.id}
+      />
+    </>
   );
 }

@@ -207,6 +207,13 @@ function App() {
               <MaintenancePage />
             </PageTransition>
           } />
+          <Route path="/pending-approval" element={
+            <ProtectedRoute>
+              <PageTransition>
+                <PendingApprovalPage />
+              </PageTransition>
+            </ProtectedRoute>
+          } />
 
           <Route element={
             <ProtectedRoute>
@@ -268,11 +275,6 @@ function App() {
             <Route path="/settings" element={
               <PageTransition>
                 <SettingsPage />
-              </PageTransition>
-            } />
-            <Route path="/pending-approval" element={
-              <PageTransition>
-                <PendingApprovalPage />
               </PageTransition>
             } />
             <Route path="/post/:postId" element={

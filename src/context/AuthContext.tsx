@@ -153,13 +153,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       verified,
       // isPendingApproval: external-email student whose identity hasn't been
-      // approved by admin yet. Uses backend-computed is_approved flag —
-      // single source of truth, not reconstructed from multiple fields.
+      // approved by admin yet. Robustly checks multiple sources of truth.
       isPendingApproval: Boolean(
         session &&
         verified &&
-        session.user?.user_metadata?.email_type === 'external' &&
-        !session.user?.user_metadata?.is_approved
+        (
+          session.user?.user_metadata?.email_type === 'external' ||
+          (!session.user?.user_metadata?.email_type && session.user?.email && !session.user.email.toLowerCase().endsWith('@chmsu.edu.ph'))
+        ) &&
+        !(
+          session.user?.user_metadata?.is_approved ||
+          session.user?.user_metadata?.admin_verified ||
+          session.user?.user_metadata?.student_verification_status === 'approved' ||
+          session.user?.user_metadata?.chmsu_auto_verified
+        )
       ),
       // needsOnboarding: logged-in, verified, but profile not fully completed yet.
       // All students (CHMSU and external) must complete onboarding steps first.
@@ -174,6 +181,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // where session is set but verified is still false, causing ProtectedRoute
       // to redirect to /login while LoginPage redirects back → infinite loop.
       completeLogin: (newSession: AuthSession, isVerified: boolean) => {
+        if (newSession.accessToken) {
+          try { apiClient.setAccessToken(newSession.accessToken); } catch {}
+        }
         setSession(newSession);
         setVerified(isVerified);
         // Socket must be alive before MessagesPage mounts and tries to subscribe.

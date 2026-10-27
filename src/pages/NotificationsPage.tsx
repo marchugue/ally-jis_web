@@ -736,6 +736,13 @@ export default function NotificationsPage() {
       } else {
         navigate('/dashboard');
       }
+    } else if (notif.type === 'admin_warning' || notif.type === 'safety' || notif.type === 'emergency') {
+      const pId = notif.postId || (notif as any).post_id || notif.targetId;
+      if (pId && !pId.startsWith('user_') && !pId.startsWith('notif_')) {
+        navigate(`/post/${pId}?type=admin_warning`);
+      } else {
+        toast.info(notif.title, { description: notif.description });
+      }
     }
   };
 

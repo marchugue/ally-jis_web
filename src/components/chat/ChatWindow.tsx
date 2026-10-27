@@ -263,9 +263,10 @@ const MessageBubble = memo(function MessageBubble({
   }, [msg.imageUrl, (msg as any).image_url]);
 
   const hasMedia = images.length > 0;
+  const isMediaRemoved = images.some((img) => img === '[removed]');
   const primaryMedia = images[0] || '';
   const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
-  const isImageOnly = Boolean(hasMedia && !msg.content?.trim());
+  const isImageOnly = Boolean(hasMedia && !isMediaRemoved && !msg.content?.trim());
   const isMediaLocked = Boolean(imagesLocked && hasMedia);
   const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
   const isGameInvite = Boolean(msg.game_invite || (msg.content && msg.content.includes('Game invite:')));
@@ -326,8 +327,9 @@ const MessageBubble = memo(function MessageBubble({
     return null;
   }
 
-  // Deleted for everyone — render tombstone placeholder.
-  const isMsgDeleted = Boolean(msg.isDeleted || (msg as any).is_deleted);
+  // Deleted for everyone or removed by moderation — render tombstone placeholder.
+  const isMsgRemoved = msg.content === 'This message was removed';
+  const isMsgDeleted = Boolean(msg.isDeleted || (msg as any).is_deleted || isMsgRemoved);
   if (isMsgDeleted) {
     return (
       <div
@@ -370,7 +372,7 @@ const MessageBubble = memo(function MessageBubble({
               : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 rounded-bl-none',
           )}
         >
-          This message was deleted
+          {isMsgRemoved ? 'This message was removed' : 'This message was deleted'}
         </div>
       </div>
     );
@@ -408,6 +410,19 @@ const MessageBubble = memo(function MessageBubble({
 
   const bubbleContent = (
     <div className="flex flex-col relative min-w-0 max-w-full" style={{ maxWidth: '100%' }}>
+      {/* Moderation Warning Flag */}
+      {Boolean((msg as any).is_flagged || msg.content?.includes('<!--flagged')) && (
+        <div
+          className={cn(
+            'flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 mb-1 px-1',
+            isMe ? 'self-end' : 'self-start'
+          )}
+        >
+          <AlertCircle size={12} className="text-amber-500 shrink-0" />
+          <span>Flagged by Moderation</span>
+        </div>
+      )}
+
       {/* Desktop hover: small flat card with only the time */}
       {!isSending && !isFailed && (
         <div
@@ -467,8 +482,17 @@ const MessageBubble = memo(function MessageBubble({
           />
         )}
 
+        {/* Removed Media State */}
+        {!isMediaLocked && hasMedia && isMediaRemoved && (
+          <div className="w-[240px] max-w-full p-3.5 rounded-xl bg-gray-200 dark:bg-[#1E293B] border border-gray-300 dark:border-white/10 my-1 text-center select-none">
+            <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
+              This photo was removed for violating community standards.
+            </p>
+          </div>
+        )}
+
         {/* Single Media or Stacked Cards UI */}
-        {!isMediaLocked && hasMedia && images.length === 1 && (
+        {!isMediaLocked && hasMedia && !isMediaRemoved && images.length === 1 && (
           isVideoUrl ? (
             <div className={cn('rounded-xl overflow-hidden', !isImageOnly && 'mb-2')}>
               <video
@@ -491,7 +515,7 @@ const MessageBubble = memo(function MessageBubble({
           )
         )}
 
-        {!isMediaLocked && hasMedia && images.length > 1 && (
+        {!isMediaLocked && hasMedia && !isMediaRemoved && images.length > 1 && (
           <div
             onClick={() => {
               if (longPress.didLongPress()) return;

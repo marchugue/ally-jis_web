@@ -1,6 +1,6 @@
 // src/pages/admin/AdminReportsPage.tsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Loader2,
@@ -20,9 +20,17 @@ import {
   X,
   Copy,
   AlertTriangle,
+  RotateCw,
+  CreditCard,
+  ChevronDown,
+  Check,
+  ImageOff,
+  MessageSquareX,
+  Maximize2,
+  Layers,
 } from 'lucide-react';
 import { apiClient } from '@/api/client';
-import type { AdminReportListItem, ReportStatus, ReportStatusCounts } from '@/api/client';
+import type { AdminReportListItem, ReportStatus, ReportStatusCounts, AdminUserDetail } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -96,6 +104,15 @@ function getReporterDisplayName(r: AdminReportListItem): string {
     return r.reporter_email.split('@')[0];
   }
   return 'Student Reporter';
+}
+
+function getStudentAcademicInfo(detail: AdminUserDetail | null, r: AdminReportListItem): string {
+  const parts: string[] = [];
+  if (detail?.department) parts.push(detail.department);
+  if (detail?.course) parts.push(detail.course);
+  if (detail?.year_level) parts.push(`Year ${detail.year_level}`);
+  if (parts.length > 0) return parts.join(' · ');
+  return detail?.email_type === 'chmsu' ? 'CHMSU Verified Student' : 'Student Account';
 }
 
 export default function AdminReportsPage() {
@@ -408,17 +425,120 @@ function ReportDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [notes, setNotes] = useState(report?.internal_notes ?? '');
+  const [studentDetail, setStudentDetail] = useState<AdminUserDetail | null>(null);
+  const [loadingStudent, setLoadingStudent] = useState(false);
+  const [side, setSide] = useState<'front' | 'back'>('front');
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [activeTab, setActiveTab] = useState<'id_card' | 'evidence'>('id_card');
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
+  // Action form state inside the single CTA action modal
+  const [selectedAction, setSelectedAction] = useState<
+    'resolve' | 'reviewing' | 'reject' | 'warn' | 'suspend' | 'ban' | 'delete_post' | 'remove_message' | 'remove_media'
+  >('resolve');
+  const [notes, setNotes] = useState('');
   const [warnMessage, setWarnMessage] = useState('');
   const [suspendDays, setSuspendDays] = useState('7');
   const [busy, setBusy] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
-    setNotes(report?.internal_notes ?? '');
+    if (!report) {
+      setStudentDetail(null);
+      return;
+    }
+    setNotes(report.internal_notes ?? '');
     setWarnMessage('');
+    setSide('front');
+    setCurrentPhotoIndex(0);
+    setActionModalOpen(false);
     setPreviewImage(null);
+    setSelectedAction('resolve');
+
+    const kind = getReportKind(report);
+    const hasFlaggedContent = kind === 'post' || kind === 'message';
+
+    if (report.reported_user_id) {
+      setLoadingStudent(true);
+      apiClient
+        .adminGetUserDetail(report.reported_user_id)
+        .then((detail) => {
+          setStudentDetail(detail);
+          // If student has no ID photo uploaded but report has flagged post/message evidence, default to evidence tab
+          if (!detail.student_id_url && !detail.student_id_back_url && hasFlaggedContent) {
+            setActiveTab('evidence');
+          } else {
+            setActiveTab('id_card');
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load student detail', err);
+          setStudentDetail(null);
+          if (hasFlaggedContent) setActiveTab('evidence');
+        })
+        .finally(() => setLoadingStudent(false));
+    } else {
+      setStudentDetail(null);
+      if (hasFlaggedContent) setActiveTab('evidence');
+    }
   }, [report]);
+
+  // Clean up pointer events & body scrolling
+  const ensurePointerEvents = () => {
+    setTimeout(() => {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+    }, 50);
+  };
+
+  useEffect(() => {
+    if (report) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    };
+  }, [report]);
+
+  // Flipping is ONLY for Student ID card, not for post evidence!
+  const toggleFlip = (e?: React.MouseEvent) => {
+    if (activeTab !== 'id_card') return;
+    e?.preventDefault();
+    e?.stopPropagation();
+    setIsFlipping(true);
+    setSide((s) => (s === 'front' ? 'back' : 'front'));
+    setTimeout(() => setIsFlipping(false), 500);
+  };
+
+  // Keyboard navigation: Escape closes, Space or F toggles flip (only in id_card tab)
+  useEffect(() => {
+    if (!report) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (previewImage) {
+          setPreviewImage(null);
+        } else if (actionModalOpen) {
+          setActionModalOpen(false);
+        } else {
+          onClose();
+        }
+      } else if ((e.key === 'f' || e.key === 'F' || e.key === ' ') && activeTab === 'id_card') {
+        e.preventDefault();
+        toggleFlip();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [report, actionModalOpen, previewImage, side, activeTab, onClose]);
 
   if (!report) return null;
 
@@ -429,613 +549,951 @@ function ReportDetailModal({
   const message = report.message;
   const reporterDetails = report.reporter_notes || stripReferenceTag(report.internal_notes);
 
-  const ensurePointerEvents = () => {
-    setTimeout(() => {
-      document.body.style.pointerEvents = '';
-    }, 50);
-  };
+  const frontIdUrl = studentDetail?.student_id_url;
+  const backIdUrl = studentDetail?.student_id_back_url;
+  const hasIdImages = Boolean(frontIdUrl || backIdUrl);
+  const hasEvidence = isPostReport || isMessageReport;
 
-  const setStatus = async (status: ReportStatus) => {
+  // Determine active image URL for "Open Original"
+  let activeImageUrl: string | null = null;
+  if (activeTab === 'id_card') {
+    activeImageUrl = side === 'front' ? frontIdUrl || null : backIdUrl || null;
+  } else if (activeTab === 'evidence') {
+    if (isPostReport && post?.media && post.media.length > 0) {
+      activeImageUrl = post.media[currentPhotoIndex]?.url || post.media[0].url;
+    } else if (isMessageReport && message?.image_url) {
+      activeImageUrl = message.image_url;
+    }
+  }
+
+  // Handle single action execution
+  const handleApplyAction = async () => {
     setBusy(true);
     try {
-      await apiClient.adminSetReportStatus(report.id, status, notes);
-      notify.success(`Marked as ${status}`);
+      // 1. If internal notes changed, update them
+      if (notes !== (report.internal_notes ?? '')) {
+        await apiClient.adminSetReportNotes(report.id, notes);
+      }
+
+      // 2. Perform selected moderation action
+      if (selectedAction === 'resolve') {
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success('Report resolved', 'Investigation marked as resolved.');
+      } else if (selectedAction === 'reviewing') {
+        await apiClient.adminSetReportStatus(report.id, 'reviewing', notes);
+        notify.success('Marked In Review', 'Report is now under active investigation.');
+      } else if (selectedAction === 'reject') {
+        await apiClient.adminSetReportStatus(report.id, 'rejected', notes);
+        notify.success('Report rejected', 'Report dismissed as unwarranted or false.');
+      } else if (selectedAction === 'warn') {
+        if (!warnMessage.trim()) {
+          notify.error('Warning message required', 'Please select a template or enter warning text.');
+          setBusy(false);
+          return;
+        }
+        await apiClient.adminWarnReportedUser(report.id, warnMessage.trim());
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success('Warning issued', 'Official warning sent to student and report resolved.');
+      } else if (selectedAction === 'suspend') {
+        let untilDate: string | null = null;
+        if (suspendDays !== 'permanent') {
+          const d = new Date();
+          d.setDate(d.getDate() + Number(suspendDays));
+          untilDate = d.toISOString();
+        }
+        await apiClient.adminSuspendReportedUser(report.id, untilDate);
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success(
+          suspendDays === 'permanent' ? 'Account permanently suspended' : `Account suspended for ${suspendDays} days`,
+          'Report resolved.'
+        );
+      } else if (selectedAction === 'ban') {
+        await apiClient.adminBanReportedUser(report.id);
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success('Account permanently banned', 'User has been banned and report marked resolved.');
+      } else if (selectedAction === 'delete_post') {
+        const targetPostId = report.post_id || post?.id;
+        if (targetPostId) {
+          await apiClient.adminDeleteReportedPost(report.id, targetPostId);
+          await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+          notify.success('Post deleted from feed', 'Reported post removed and report resolved.');
+        }
+      } else if (selectedAction === 'remove_message') {
+        await apiClient.adminRemoveReportedMessage(report.id);
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success('Message removed', 'The reported message has been replaced with the removed state.');
+      } else if (selectedAction === 'remove_media') {
+        await apiClient.adminRemoveReportedMedia(report.id);
+        await apiClient.adminSetReportStatus(report.id, 'resolved', notes);
+        notify.success('Media removed', 'The reported photo has been removed and replaced with guidelines notice.');
+      }
+
       onChanged();
+      setActionModalOpen(false);
       onClose();
     } catch (err: any) {
-      notify.error('Could not update report', err.message);
+      notify.error('Action failed', err.message);
     } finally {
       setBusy(false);
       ensurePointerEvents();
     }
   };
 
-  const doAction = async (label: string, action: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await action();
-      notify.success(label);
-      onChanged();
-    } catch (err: any) {
-      notify.error(`Could not ${label.toLowerCase()}`, err.message);
-    } finally {
-      setBusy(false);
-      ensurePointerEvents();
-    }
-  };
-
-  const handleDeletePost = async () => {
-    if (!report.post_id && !post?.id) return;
-    const targetPostId = report.post_id || post?.id;
-
-    if (!window.confirm('Are you sure you want to delete this reported post? This action cannot be undone.')) {
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await apiClient.adminDeleteReportedPost(report.id, targetPostId);
-      notify.success('Post deleted', 'The reported post has been removed.');
-      onChanged();
-    } catch (err: any) {
-      notify.error('Failed to delete post', err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleSuspend = async () => {
-    let untilDate: string | null = null;
-    if (suspendDays !== 'permanent') {
-      const d = new Date();
-      d.setDate(d.getDate() + Number(suspendDays));
-      untilDate = d.toISOString();
-    }
-
-    const label = suspendDays === 'permanent' ? 'Account suspended indefinitely' : `Account suspended for ${suspendDays} days`;
-    await doAction(label, () => apiClient.adminSuspendReportedUser(report.id, untilDate));
-  };
-
-  const handleWarn = async () => {
-    if (!warnMessage.trim()) return;
-    await doAction('Warning issued', () => apiClient.adminWarnReportedUser(report.id, warnMessage.trim()));
-    setWarnMessage('');
-  };
-
-  return (
-    <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#161D19] p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
-        <DialogHeader className="pb-3 border-b border-gray-100 dark:border-white/5">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="font-fraunces text-xl font-bold text-gray-900 dark:text-white">
-              Report Investigation
-            </DialogTitle>
-            {isPostReport ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
-                <FileText size={12} /> Post Report
-              </span>
-            ) : isMessageReport ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
-                <MessageSquare size={12} /> Message Report
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
-                <User size={12} /> User Report
-              </span>
-            )}
-          </div>
-          <DialogDescription className="text-xs text-gray-400 dark:text-white/40 text-left">
-            Review report details, examine flagged content, and take moderation action.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="mt-4 space-y-5 text-sm">
-          {/* Header Summary Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-1.5">Reported Account</p>
-              <div className="flex items-center gap-2">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-[#070A0F] text-white flex flex-col select-none overflow-hidden font-jakarta animate-in fade-in duration-200">
+      {/* ── TOP HEADER BAR ── */}
+      <header className="shrink-0 border-b border-white/10 bg-[#0C1118]/95 backdrop-blur-xl px-4 sm:px-6 py-3 z-30 shadow-md">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Left Cluster: Reported Student + Reporter + Violations */}
+          <div className="flex items-center gap-4 sm:gap-6 flex-wrap min-w-0 flex-1">
+            {/* 1. Who is that Student */}
+            <div className="flex items-center gap-3 pr-4 sm:pr-6 border-r border-white/10 min-w-0">
+              <div className="relative shrink-0">
                 <AvatarDisplay
-                  src={report.reported_avatar}
+                  src={studentDetail?.avatar_url || report.reported_avatar}
                   name={getReportedDisplayName(report)}
-                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 shrink-0"
+                  className="w-10 h-10 rounded-full border-2 border-white/20 shadow-sm"
                 />
-                <div className="min-w-0">
-                  <p className="font-bold text-gray-900 dark:text-white text-xs truncate">
-                    {getReportedDisplayName(report)}
-                  </p>
-                  {report.reported_username && report.reported_username.toLowerCase() !== 'anonymous' && (
-                    <p className="text-[10px] text-gray-400 truncate">@{report.reported_username}</p>
-                  )}
-                  {report.reported_email && (
-                    <p className="text-[10px] text-gray-400 truncate">{report.reported_email}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-              <p className="text-[11px] font-medium text-gray-400 dark:text-white/40 mb-1.5">Submitted By</p>
-              <div className="flex items-center gap-2">
-                <AvatarDisplay
-                  src={report.reporter_avatar}
-                  name={getReporterDisplayName(report)}
-                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="font-bold text-gray-900 dark:text-white text-xs truncate">
-                    {getReporterDisplayName(report)}
-                  </p>
-                  {report.reporter_username && report.reporter_username.toLowerCase() !== 'anonymous' && (
-                    <p className="text-[10px] text-gray-400 truncate">@{report.reporter_username}</p>
-                  )}
-                  {report.reporter_email && (
-                    <p className="text-[10px] text-gray-400 truncate">{report.reporter_email}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Violation Claim */}
-          <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 space-y-1">
-            <p className="text-xs font-medium text-gray-400 dark:text-white/40">Violation Claim</p>
-            <p className="font-bold text-gray-900 dark:text-white">{report.violation_label}</p>
-            <p className="text-xs text-gray-500 dark:text-white/60">
-              {report.category_label} · Submitted {new Date(report.created_at).toLocaleString()}
-            </p>
-            {reporterDetails && (
-              <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-white/5">
-                <p className="text-[11px] font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
-                  Reporter Description / Details
-                </p>
-                <p className="text-xs text-gray-700 dark:text-white/80 mt-0.5 whitespace-pre-wrap">
-                  "{reporterDetails}"
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* REPORTED MESSAGE REVIEW CARD (Displayed if message report) */}
-          {isMessageReport && (
-            <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/40 bg-amber-50/20 dark:bg-amber-950/10 p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300">
-                    <MessageSquare size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">
-                      Reported Chat Message
-                    </h4>
-                    <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      {message?.created_at ? new Date(message.created_at).toLocaleString() : 'Message details'} · Preserved permanently
-                    </p>
-                  </div>
-                </div>
-
-                {/* Message Status Badges */}
-                <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  {message?.is_deleted || message?.is_deleted_in_chat ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
-                      <AlertTriangle size={11} /> Deleted in Chat by Sender
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
-                      Flagged Message
-                    </span>
-                  )}
-                  {message?.is_preserved && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
-                      <CheckCircle2 size={11} /> Snapshot Preserved
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Preservation notice if message was deleted in live chat */}
-              {(message?.is_deleted || message?.is_deleted_in_chat) && (
-                <div className="p-2.5 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
-                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                  <span>
-                    This message was deleted by the user from live chat. The exact original text and attachments captured at report time are displayed below for review.
-                  </span>
-                </div>
-              )}
-
-              {/* Authentic Message Bubble Showcase */}
-              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#111827] border border-gray-200/80 dark:border-white/10 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-white/40">
-                  Flagged Message Bubble
-                </p>
-
-                <div className="flex items-start gap-2.5 pt-1">
-                  <AvatarDisplay
-                    src={message?.sender_avatar}
-                    name={message?.sender_name || message?.sender_username || 'Sender'}
-                    className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 shrink-0 mt-0.5"
-                  />
-                  <div className="flex flex-col max-w-[85%] min-w-0">
-                    <div className="flex items-baseline gap-1.5 mb-1 px-1">
-                      <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                        {message?.sender_name || message?.sender_username || 'Sender'}
-                      </span>
-                      {message?.sender_username && (
-                        <span className="text-[10px] text-gray-400">@{message.sender_username}</span>
-                      )}
-                    </div>
-
-                    {/* Authentic Chat Bubble Style matching ChatWindow */}
-                    <div className="rounded-2xl rounded-tl-xs px-4 py-2.5 bg-gray-100 dark:bg-[#1E293B] text-gray-900 dark:text-gray-100 text-xs shadow-xs border-2 border-amber-400/80 dark:border-amber-500/80 ring-2 ring-amber-400/20">
-                      {message?.image_url && (
-                        <div
-                          onClick={() => setPreviewImage(message.image_url!)}
-                          className="mb-2 rounded-xl overflow-hidden aspect-video max-w-sm bg-black/5 cursor-pointer group relative border border-gray-200 dark:border-white/10"
-                        >
-                          <img src={message.image_url} alt="Attached" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                            <Eye size={14} /> View Full
-                          </div>
-                        </div>
-                      )}
-                      <p className="whitespace-pre-wrap break-words leading-relaxed font-jakarta">
-                        {message?.content ? (
-                          message.content
-                        ) : message?.image_url ? (
-                          <span className="italic text-gray-400">[Image only]</span>
-                        ) : (
-                          <span className="italic text-gray-400">[No message content]</span>
-                        )}
-                      </p>
-                      <div className="flex items-center justify-end gap-1.5 mt-1.5 pt-1 border-t border-gray-200/50 dark:border-white/5 text-[10px] text-gray-400 dark:text-white/40">
-                        <span>
-                          {message?.created_at
-                            ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : ''}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Surrounding Context Dialogue: Authentic Chat Thread */}
-              {message?.context && message.context.length > 1 && (
-                <div className="pt-2 border-t border-amber-200/50 dark:border-white/5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Surrounding Conversation Thread ({message.context.length} messages)
-                    </p>
-                    <span className="text-[10px] text-gray-400">Captured at report</span>
-                  </div>
-
-                  <div className="space-y-3 max-h-72 overflow-y-auto p-3.5 rounded-2xl bg-white dark:bg-[#0c121e] border border-gray-200/70 dark:border-white/5">
-                    {message.context.map((ctxMsg) => {
-                      const isFlagged = ctxMsg.id === message.id;
-                      const isReportedUser = ctxMsg.sender_id === report.reported_user_id;
-
-                      return (
-                        <div
-                          key={ctxMsg.id}
-                          className={`flex items-start gap-2.5 ${isReportedUser ? 'flex-row' : 'flex-row-reverse'}`}
-                        >
-                          <AvatarDisplay
-                            src={ctxMsg.sender_avatar}
-                            name={ctxMsg.sender_name || ctxMsg.sender_username || 'User'}
-                            className="w-7 h-7 rounded-full border border-gray-200 dark:border-white/10 shrink-0 mt-0.5"
-                          />
-                          <div className={`flex flex-col max-w-[80%] min-w-0 ${isReportedUser ? 'items-start' : 'items-end'}`}>
-                            <div className="flex items-baseline gap-1.5 mb-1 px-1">
-                              <span className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
-                                {ctxMsg.sender_name || ctxMsg.sender_username || 'User'}
-                              </span>
-                              {isFlagged && (
-                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
-                                  Flagged
-                                </span>
-                              )}
-                            </div>
-
-                            <div
-                              className={`rounded-2xl px-3.5 py-2 text-xs shadow-xs transition-all ${
-                                isReportedUser
-                                  ? isFlagged
-                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-gray-900 dark:text-gray-100 rounded-tl-xs border-2 border-amber-400 dark:border-amber-600 ring-2 ring-amber-400/20'
-                                    : 'bg-gray-100 dark:bg-[#1E293B] text-gray-800 dark:text-gray-100 rounded-tl-xs border border-gray-200/60 dark:border-white/5'
-                                  : 'bg-[#1A6B3C] dark:bg-emerald-600 text-white rounded-tr-xs'
-                              }`}
-                            >
-                              {ctxMsg.image_url && (
-                                <div
-                                  onClick={() => setPreviewImage(ctxMsg.image_url!)}
-                                  className="mb-1.5 rounded-lg overflow-hidden aspect-video max-w-xs bg-black/10 cursor-pointer group relative"
-                                >
-                                  <img src={ctxMsg.image_url} alt="" className="w-full h-full object-cover" />
-                                </div>
-                              )}
-                              <p className="whitespace-pre-wrap break-words leading-relaxed font-jakarta">
-                                {ctxMsg.content || (ctxMsg.image_url ? '' : <span className="italic opacity-60">[Empty message]</span>)}
-                              </p>
-                              <div
-                                className={`flex items-center justify-end text-[9px] mt-1 ${
-                                  isReportedUser ? 'text-gray-400 dark:text-white/40' : 'text-emerald-100'
-                                }`}
-                              >
-                                <span>{new Date(ctxMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Message ID Footer */}
-              <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-white/40 pt-1 border-t border-amber-200/50 dark:border-white/5">
-                <span className="text-[10px] font-mono opacity-70">
-                  MSG ID: {(report.message_id || message?.id || '').slice(0, 8)}…
-                </span>
-                {report.conversation_id && (
-                  <span className="text-[10px] font-mono opacity-70">
-                    CONV: {report.conversation_id.slice(0, 8)}…
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* REPORTED POST REVIEW CARD (Displayed if post report) */}
-          {isPostReport && (
-            <div className="rounded-2xl border-2 border-purple-200 dark:border-purple-800/40 bg-purple-50/20 dark:bg-purple-950/10 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-700 dark:text-purple-300">
-                    <FileText size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-jakarta font-bold text-xs text-gray-900 dark:text-white">
-                      Reported Post Content
-                    </h4>
-                    <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      {post?.created_at ? new Date(post.created_at).toLocaleString() : 'Post details'} · Preserved permanently
-                    </p>
-                  </div>
-                </div>
-
-                {/* Post Status Badges */}
-                <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  {post?.is_deleted || post?.is_deleted_from_feed ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40">
-                      <AlertTriangle size={11} /> Deleted by Author
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
-                      Active on Feed
-                    </span>
-                  )}
-                  {post?.is_preserved && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
-                      <CheckCircle2 size={11} /> Snapshot Preserved
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Notice if post was deleted from feed */}
-              {(post?.is_deleted || post?.is_deleted_from_feed) && (
-                <div className="p-2.5 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
-                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                  <span>
-                    This post was deleted by the author from the feed. The full content and attached media captured at report time are preserved below for review.
-                  </span>
-                </div>
-              )}
-
-              {/* Author Info Snapshot */}
-              {post && (
-                <div className="flex items-center gap-2.5 pt-1">
-                  <AvatarDisplay
-                    src={post.author_avatar}
-                    name={post.author_name || post.author_username || 'Author'}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                      {post.author_name || post.author_username || 'Author'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 dark:text-white/40">
-                      @{post.author_username || report.reported_username}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Post Text Content */}
-              <div className="bg-white dark:bg-[#1A2234] rounded-xl p-3.5 border border-gray-100 dark:border-white/5 text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap font-jakarta">
-                {post?.content ? (
-                  post.content
-                ) : (
-                  <span className="italic text-gray-400 dark:text-white/40">[Post contains media only]</span>
-                )}
-              </div>
-
-              {/* Post Media Attachments */}
-              {post?.media && post.media.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-gray-500 dark:text-white/50">
-                    Attached Media ({post.media.length}):
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {post.media.map((m) => (
-                      <div
-                        key={m.id}
-                        onClick={() => setPreviewImage(m.url)}
-                        className="relative rounded-xl overflow-hidden aspect-video bg-black/5 cursor-pointer group border border-gray-200/60 dark:border-white/10"
-                      >
-                        <img src={m.url} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                          <Eye size={14} /> View Full
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Post Stats & ID */}
-              <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-white/40 pt-1 border-t border-purple-100 dark:border-white/5">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Heart size={12} /> {post?.likes_count ?? 0} likes
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageSquare size={12} /> {post?.comments_count ?? 0} comments
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono opacity-70">
-                  ID: {(report.post_id || post?.id || '').slice(0, 8)}…
-                </span>
-              </div>
-
-              {/* Post Action: DELETE POST BUTTON (Only if still on live feed) */}
-              {!post?.is_deleted && !post?.is_deleted_from_feed && (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={handleDeletePost}
-                    className="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-jakarta font-semibold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                {(studentDetail?.student_verification_status === 'approved' || studentDetail?.chmsu_auto_verified) && (
+                  <span
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0C1118] flex items-center justify-center text-[9px] text-white font-bold"
+                    title="Verified Student"
                   >
-                    <Trash2 size={14} />
-                    Delete Reported Post From Feed
-                  </button>
+                    ✓
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    Reported Student
+                  </span>
+                  {studentDetail?.is_banned ? (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30 uppercase">
+                      Banned
+                    </span>
+                  ) : studentDetail?.is_suspended ? (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                      Suspended
+                    </span>
+                  ) : null}
                 </div>
-              )}
+                <p className="font-bold text-sm text-white truncate flex items-center gap-1.5">
+                  {studentDetail?.full_name || getReportedDisplayName(report)}
+                  {report.reported_username && report.reported_username.toLowerCase() !== 'anonymous' && (
+                    <span className="text-xs text-white/50 font-normal">@{report.reported_username}</span>
+                  )}
+                </p>
+                <p className="text-[11px] text-white/60 truncate max-w-xs">
+                  {getStudentAcademicInfo(studentDetail, report)}
+                  {studentDetail?.email ? ` · ${studentDetail.email}` : report.reported_email ? ` · ${report.reported_email}` : ''}
+                </p>
+              </div>
             </div>
-          )}
 
-          {/* Internal Notes */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
-                Internal Admin Notes
-              </label>
+            {/* 2. Submitted By */}
+            <div className="flex items-center gap-2.5 pr-4 sm:pr-6 border-r border-white/10 min-w-0">
+              <AvatarDisplay
+                src={report.reporter_avatar}
+                name={getReporterDisplayName(report)}
+                className="w-8 h-8 rounded-full border border-white/15 shrink-0 text-xs"
+              />
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                  Submitted By
+                </span>
+                <p className="font-semibold text-xs text-white truncate">
+                  {getReporterDisplayName(report)}
+                </p>
+                <p className="text-[11px] text-white/50 truncate max-w-[180px]">
+                  {report.reporter_email || (report.reporter_username ? `@${report.reporter_username}` : 'Student Reporter')}
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Violations & Info */}
+            <div className="flex items-center gap-3 flex-wrap min-w-0">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/30">
+                    <AlertTriangle size={12} /> {report.violation_label}
+                  </span>
+                  <span className="text-xs text-white/60 font-medium">
+                    {report.category_label}
+                  </span>
+                  <span className="text-xs text-white/40">·</span>
+                  <span className="text-xs text-white/50">
+                    {new Date(report.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                {reporterDetails && (
+                  <p className="text-[11px] text-white/70 italic truncate max-w-md" title={reporterDetails}>
+                    "{reporterDetails}"
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Cluster: Status + ONE ONLY CTA Action Button + Close */}
+          <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+            {/* Status Badge */}
+            <Badge className={`border text-xs capitalize ${STATUS_COLORS[report.status]}`}>
+              {report.status}
+            </Badge>
+
+            {/* ONE ONLY CTA ACTION BUTTON */}
+            <button
+              type="button"
+              onClick={() => setActionModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer"
+            >
+              <ShieldAlert size={14} />
+              <span>Take Action</span>
+              <ChevronDown size={13} className="opacity-70" />
+            </button>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              title="Close Full Screen (Esc)"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── CENTER FULL-VIEW STAGE ── */}
+      <main className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden bg-gradient-to-b from-[#070A0F] to-[#0A0F17]">
+        {/* Stage Toolbar */}
+        <div className="w-full max-w-4xl flex items-center justify-between gap-3 mb-3 flex-wrap px-1">
+          {/* View Tab Switcher */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setActiveTab('id_card')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'id_card'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <CreditCard size={13} />
+              <span>Student ID Card</span>
+              {hasIdImages && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 font-mono">
+                  {backIdUrl ? 'Front & Back' : 'Front'}
+                </span>
+              )}
+            </button>
+
+            {hasEvidence && (
               <button
                 type="button"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    await apiClient.adminSetReportNotes(report.id, notes);
-                    notify.success('Notes saved');
-                    onChanged();
-                  } catch (err: any) {
-                    notify.error('Could not save notes', err.message);
-                  } finally {
-                    setBusy(false);
-                  }
+                onClick={() => setActiveTab('evidence')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'evidence'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                {isPostReport ? <FileText size={13} /> : <MessageSquare size={13} />}
+                <span>Flagged {isPostReport ? 'Post Evidence' : 'Chat Message'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Action Tools */}
+          <div className="flex items-center gap-2">
+            {/* Flip Card Action Button (ONLY in id_card tab!) */}
+            {activeTab === 'id_card' && (
+              <button
+                type="button"
+                onClick={toggleFlip}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/50 backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-emerald-400/30"
+                title="Click to flip (Space / F)"
+              >
+                <RotateCw size={13} className={isFlipping ? 'animate-spin' : ''} />
+                <span>Flip ({side === 'front' ? 'Front Side' : 'Back Side'})</span>
+              </button>
+            )}
+
+            {activeImageUrl && (
+              <a
+                href={activeImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 text-xs font-semibold backdrop-blur-md transition-colors"
+                title="Open high resolution original image in new tab"
+              >
+                <ExternalLink size={13} />
+                <span className="hidden sm:inline">Open Original</span>
+              </a>
+            )}
+
+            {activeTab === 'id_card' && (
+              <span className="text-[11px] text-white/40 hidden md:inline ml-1">
+                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 font-mono text-[10px]">Space</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 font-mono text-[10px]">F</kbd> to Flip
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ── CARD DISPLAY STAGE ── */}
+        {activeTab === 'id_card' ? (
+          /* 3D Flippable Student ID Card */
+          <div
+            className="w-full max-w-4xl h-[62vh] sm:h-[68vh] relative select-none"
+            style={{ perspective: '1400px' }}
+          >
+            <div
+              className="w-full h-full relative transition-transform duration-500 ease-out"
+              style={{
+                transformStyle: 'preserve-3d',
+                transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+              }}
+            >
+              {/* Front Face */}
+              <div
+                onClick={toggleFlip}
+                className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center cursor-pointer group backdrop-blur-xs"
+                style={{
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
                 }}
-                className="text-[11px] font-semibold text-[#1A6B3C] dark:text-emerald-400 hover:underline disabled:opacity-50"
               >
-                Save Notes
-              </button>
-            </div>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-colors"
-              placeholder="Private notes visible only to administrative team…"
-            />
-          </div>
-
-          {/* Investigation Status Actions */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
-              Update Report Status
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                disabled={busy}
-                onClick={() => setStatus('reviewing')}
-                className="px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-xs font-semibold disabled:opacity-50 hover:bg-blue-100 transition-colors"
-              >
-                In Review
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => setStatus('resolved')}
-                className="px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold disabled:opacity-50 hover:bg-emerald-100 transition-colors"
-              >
-                Resolve
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => setStatus('rejected')}
-                className="px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/70 text-xs font-semibold disabled:opacity-50 hover:bg-gray-200 transition-colors"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-
-          {/* Punitive & Account Moderation Actions */}
-          <div className="border-t border-gray-100 dark:border-white/5 pt-4 space-y-4">
-            <p className="text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wide">
-              Account Moderation Actions
-            </p>
-
-            {/* Action 1: Warn Account */}
-            <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-white">
-                <ShieldAlert size={14} className="text-amber-500" />
-                <span>Warn Account</span>
+                {frontIdUrl ? (
+                  <div className="relative w-full h-full flex items-center justify-center p-3">
+                    <img
+                      src={frontIdUrl}
+                      alt="Student ID Front"
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-lg group-hover:scale-[1.01] transition-transform duration-200"
+                    />
+                    <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5">
+                      <CreditCard size={12} className="text-emerald-400" />
+                      <span>STUDENT ID · FRONT</span>
+                    </div>
+                    <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-sm transition-colors">
+                      <RotateCw size={11} /> Flip to Back
+                    </div>
+                    <div className="absolute bottom-4 inset-x-0 mx-auto w-fit px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/70 text-[11px] pointer-events-none">
+                      Click image or Flip button to flip
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white/[0.02]">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 mb-4 shadow-inner">
+                      <CreditCard size={32} />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-1">
+                      {studentDetail?.full_name || getReportedDisplayName(report)}
+                    </h3>
+                    <p className="text-xs text-white/50 max-w-sm mb-4">
+                      {studentDetail?.email_type === 'chmsu'
+                        ? 'Institutional CHMSU student account verified automatically via university email. No physical ID card was required for onboarding.'
+                        : 'No front ID photo was submitted for this student account.'}
+                    </p>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-white/80 max-w-xs space-y-1 text-left">
+                      <p><span className="text-white/40">Department:</span> {studentDetail?.department || 'N/A'}</p>
+                      <p><span className="text-white/40">Course:</span> {studentDetail?.course || 'N/A'}</p>
+                      <p><span className="text-white/40">Email:</span> {studentDetail?.email || report.reported_email || 'N/A'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={toggleFlip}
+                      className="mt-4 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCw size={12} /> Flip to Back Side
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Presets */}
-              <div className="flex flex-wrap gap-1">
-                {WARNING_TEMPLATES.map((tmpl, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setWarnMessage(tmpl)}
-                    className="text-[10px] px-2 py-1 rounded-lg bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/70 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:text-amber-700 transition-colors truncate max-w-xs"
+              {/* Back Face */}
+              <div
+                onClick={toggleFlip}
+                className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center cursor-pointer group backdrop-blur-xs"
+                style={{
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                }}
+              >
+                {backIdUrl ? (
+                  <div className="relative w-full h-full flex items-center justify-center p-3">
+                    <img
+                      src={backIdUrl}
+                      alt="Student ID Back"
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-lg group-hover:scale-[1.01] transition-transform duration-200"
+                    />
+                    <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5">
+                      <CreditCard size={12} className="text-blue-400" />
+                      <span>STUDENT ID · BACK</span>
+                    </div>
+                    <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-sm transition-colors">
+                      <RotateCw size={11} /> Flip to Front
+                    </div>
+                    <div className="absolute bottom-4 inset-x-0 mx-auto w-fit px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/70 text-[11px] pointer-events-none">
+                      Click image or Flip button to flip
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white/[0.02]">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
+                      <CreditCard size={32} />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-1">No Back Side Uploaded</h3>
+                    <p className="text-xs text-white/50 max-w-sm mb-4">
+                      The student only submitted the front side of their ID or Certificate of Registration.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={toggleFlip}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCw size={12} /> Flip to Front Side
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── FLAGGED CONTENT EVIDENCE (NO FLIP, FULL BLEED / ENTIRE PICTURE & LABELED POSTCARD) ── */
+          <div className="w-full max-w-4xl h-[62vh] sm:h-[68vh] rounded-2xl overflow-hidden border border-white/10 bg-[#0C121B] shadow-2xl flex flex-col relative select-none">
+            {isPostReport && (
+              <>
+                {/* 1. Labeled Postcard Header */}
+                <div className="shrink-0 px-4 py-3 bg-[#111924] border-b border-white/10 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      <FileText size={12} /> Flagged Post Evidence
+                    </span>
+                    {post && (
+                      <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+                        <AvatarDisplay
+                          src={post.author_avatar || report.reported_avatar}
+                          name={post.author_name || getReportedDisplayName(report)}
+                          className="w-6 h-6 rounded-full"
+                        />
+                        <span className="text-xs font-bold text-white">
+                          {post.author_name || getReportedDisplayName(report)}
+                        </span>
+                        <span className="text-[11px] text-white/50">
+                          @{post.author_username || report.reported_username}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {post?.is_deleted || post?.is_deleted_from_feed ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-500/20 text-red-300 border border-red-500/30">
+                        <AlertTriangle size={11} /> Deleted from Feed by Author
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 size={11} /> Active on Live Feed
+                      </span>
+                    )}
+                    {post?.created_at && (
+                      <span className="text-[11px] text-white/40">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Photo Media Full Bleed / Entire Picture Display */}
+                <div className="flex-1 min-h-0 relative bg-black flex items-center justify-center overflow-hidden group">
+                  {post?.media && post.media.length > 0 ? (
+                    <div
+                      className="relative w-full h-full flex items-center justify-center cursor-pointer"
+                      onClick={() => setPreviewImage(post.media![currentPhotoIndex]?.url || post.media![0].url)}
+                      title="Click to view entire picture in fullscreen"
+                    >
+                      {(post.media[currentPhotoIndex]?.url || post.media[0].url) === '[removed]' ? (
+                        <div className="w-full max-w-md p-6 rounded-2xl bg-white/5 border border-dashed border-white/20 text-center space-y-2">
+                          <ImageOff size={28} className="mx-auto text-white/40 mb-1" />
+                          <p className="text-xs text-white/60 font-medium">This photo was removed for violating community standards.</p>
+                        </div>
+                      ) : (
+                        <img
+                          src={post.media[currentPhotoIndex]?.url || post.media[0].url}
+                          alt="Flagged Post Media"
+                          className="w-full h-full object-contain group-hover:scale-[1.01] transition-transform duration-200"
+                        />
+                      )}
+
+                      {/* Click Fullscreen Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(post.media![currentPhotoIndex]?.url || post.media![0].url);
+                        }}
+                        className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/75 hover:bg-black/90 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 border border-white/20 shadow-xl transition-all cursor-pointer"
+                      >
+                        <Maximize2 size={13} />
+                        <span>Click Fullscreen (Entire Picture)</span>
+                      </button>
+
+                      {/* Multi-photo Selector Pills */}
+                      {post.media.length > 1 && (
+                        <div
+                          className="absolute top-3 left-3 flex items-center gap-1.5 p-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/15"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {post.media.map((_, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setCurrentPhotoIndex(idx)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                currentPhotoIndex === idx
+                                  ? 'bg-purple-600 text-white'
+                                  : 'text-white/60 hover:text-white'
+                              }`}
+                            >
+                              Photo {idx + 1}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Bottom Floating Caption Banner on Photo */}
+                      {post.content && (
+                        <div
+                          className="absolute bottom-3 inset-x-3 p-3 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 max-h-24 overflow-y-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-purple-300 mb-0.5">
+                            Post Caption & Content
+                          </p>
+                          <p className="text-xs text-white leading-relaxed whitespace-pre-wrap font-jakarta">
+                            {post.content}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Text-Only Post */
+                    <div className="w-full h-full p-6 flex flex-col justify-center items-center text-center max-w-xl mx-auto overflow-y-auto">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-purple-400 mb-2">
+                        Post Content & Text
+                      </p>
+                      <blockquote className="text-base sm:text-lg text-white font-medium leading-relaxed italic bg-white/5 p-6 rounded-2xl border border-white/10 w-full text-left whitespace-pre-wrap">
+                        "{post?.content || '[No text content]'}"
+                      </blockquote>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Postcard Footer Strip */}
+                <div className="shrink-0 px-4 py-2.5 bg-[#111924] border-t border-white/10 flex items-center justify-between text-xs text-white/50 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-white/70">
+                      <Heart size={13} className="text-red-400" /> {post?.likes_count ?? 0} likes
+                    </span>
+                    <span className="flex items-center gap-1 text-white/70">
+                      <MessageSquare size={13} className="text-blue-400" /> {post?.comments_count ?? 0} comments
+                    </span>
+                    <span className="text-[11px] font-mono text-white/40">
+                      ID: {(report.post_id || post?.id || '').slice(0, 8)}…
+                    </span>
+                  </div>
+
+                  {!post?.is_deleted && !post?.is_deleted_from_feed && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        const targetPostId = report.post_id || post?.id;
+                        if (!targetPostId) return;
+                        if (!window.confirm('Delete this reported post from feed?')) return;
+                        setBusy(true);
+                        try {
+                          await apiClient.adminDeleteReportedPost(report.id, targetPostId);
+                          notify.success('Post deleted from feed');
+                          onChanged();
+                          onClose();
+                        } catch (err: any) {
+                          notify.error('Failed to delete post', err.message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete Post From Feed</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {isMessageReport && (
+              /* Chat Message Evidence View */
+              <div className="w-full h-full flex flex-col">
+                <div className="shrink-0 px-4 py-3 bg-[#111924] border-b border-white/10 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <MessageSquare size={12} /> Flagged Chat Message
+                    </span>
+                    <span className="text-xs text-white/70">
+                      From: {message?.sender_name || getReportedDisplayName(report)}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-white/40 font-mono">
+                    MSG: {(report.message_id || message?.id || '').slice(0, 8)}…
+                  </span>
+                </div>
+
+                <div className="flex-1 p-6 overflow-y-auto flex flex-col justify-center items-center">
+                  <div className="max-w-xl w-full p-4 rounded-2xl bg-[#1E293B] border border-amber-400/50 shadow-xl space-y-3">
+                    {message?.image_url && (
+                      message.image_url === '[removed]' ? (
+                        <div className="w-full p-4 rounded-xl bg-black/40 border border-dashed border-white/20 text-center space-y-1">
+                          <ImageOff size={24} className="mx-auto text-white/40 mb-1" />
+                          <p className="text-xs text-white/60 italic">This photo was removed for violating community standards.</p>
+                        </div>
+                      ) : (
+                        <div
+                          className="rounded-xl overflow-hidden aspect-video bg-black/40 border border-white/10 relative cursor-pointer group"
+                          onClick={() => setPreviewImage(message.image_url!)}
+                          title="Click to view entire picture in fullscreen"
+                        >
+                          <img src={message.image_url} alt="Attached" className="w-full h-full object-contain" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                            <Maximize2 size={14} /> View Entire Picture Fullscreen
+                          </div>
+                        </div>
+                      )
+                    )}
+                    <p className="text-sm text-white leading-relaxed">{message?.content || '[Image Only]'}</p>
+                    <p className="text-[10px] text-white/40 text-right">
+                      {message?.created_at ? new Date(message.created_at).toLocaleString() : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* ── SINGLE CTA ACTION MODAL (DIRECT FIXED OVERLAY AT Z-[10000]) ── */}
+      {actionModalOpen && (
+        <div
+          className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setActionModalOpen(false)}
+        >
+          <div
+            className="relative max-w-xl w-full max-h-[90vh] overflow-y-auto bg-[#141B24] border border-white/15 text-white p-6 rounded-2xl shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-fraunces text-lg font-bold text-white flex items-center gap-2">
+                  <ShieldAlert size={18} className="text-emerald-400" />
+                  Take Action on Report
+                </h3>
+                <p className="text-xs text-white/50 mt-0.5">
+                  Select a single moderation resolution for report #{report.id.slice(0, 8)}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActionModalOpen(false)}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Target Summary Strip */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <AvatarDisplay
+                  src={studentDetail?.avatar_url || report.reported_avatar}
+                  name={getReportedDisplayName(report)}
+                  className="w-8 h-8 rounded-full border border-white/15"
+                />
+                <div className="min-w-0">
+                  <p className="font-bold text-xs text-white truncate">
+                    {studentDetail?.full_name || getReportedDisplayName(report)}
+                  </p>
+                  <p className="text-[11px] text-white/50 truncate">
+                    {report.reported_email || (report.reported_username ? `@${report.reported_username}` : '')}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 uppercase shrink-0">
+                {report.violation_label}
+              </span>
+            </div>
+
+            {/* Action Radio Options */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                Select Moderation Resolution
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* 1. Resolve */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'resolve'
+                      ? 'border-emerald-500 bg-emerald-950/30 ring-1 ring-emerald-500'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'resolve'}
+                    onChange={() => setSelectedAction('resolve')}
+                    className="mt-0.5 accent-emerald-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <CheckCircle2 size={13} className="text-emerald-400" /> Resolve Report
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Mark resolved without account penalty</p>
+                  </div>
+                </label>
+
+                {/* 2. Reviewing */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'reviewing'
+                      ? 'border-blue-500 bg-blue-950/30 ring-1 ring-blue-500'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'reviewing'}
+                    onChange={() => setSelectedAction('reviewing')}
+                    className="mt-0.5 accent-blue-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock size={13} className="text-blue-400" /> Mark In Review
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Keep under ongoing investigation</p>
+                  </div>
+                </label>
+
+                {/* 3. Reject */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'reject'
+                      ? 'border-gray-400 bg-white/10 ring-1 ring-gray-400'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'reject'}
+                    onChange={() => setSelectedAction('reject')}
+                    className="mt-0.5 accent-gray-400"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <X size={13} className="text-gray-400" /> Dismiss / Reject
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Dismiss as unwarranted or false</p>
+                  </div>
+                </label>
+
+                {/* 4. Warn */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'warn'
+                      ? 'border-amber-500 bg-amber-950/30 ring-1 ring-amber-500'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'warn'}
+                    onChange={() => setSelectedAction('warn')}
+                    className="mt-0.5 accent-amber-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <ShieldAlert size={13} className="text-amber-400" /> Issue Warning
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Send official warning notification</p>
+                  </div>
+                </label>
+
+                {/* 5. Suspend */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'suspend'
+                      ? 'border-amber-500 bg-amber-950/30 ring-1 ring-amber-500'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'suspend'}
+                    onChange={() => setSelectedAction('suspend')}
+                    className="mt-0.5 accent-amber-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock size={13} className="text-amber-400" /> Suspend Student
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Restrict student account access</p>
+                  </div>
+                </label>
+
+                {/* 6. Ban */}
+                <label
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                    selectedAction === 'ban'
+                      ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
+                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="action"
+                    checked={selectedAction === 'ban'}
+                    onChange={() => setSelectedAction('ban')}
+                    className="mt-0.5 accent-red-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Ban size={13} className="text-red-400" /> Permanent Ban
+                    </p>
+                    <p className="text-[11px] text-white/50 mt-0.5">Permanently ban student account</p>
+                  </div>
+                </label>
+
+                {/* 7. Delete Post */}
+                {isPostReport && !post?.is_deleted && !post?.is_deleted_from_feed && (
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      selectedAction === 'delete_post'
+                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                    }`}
                   >
-                    Template {idx + 1}
-                  </button>
-                ))}
-              </div>
+                    <input
+                      type="radio"
+                      name="action"
+                      checked={selectedAction === 'delete_post'}
+                      onChange={() => setSelectedAction('delete_post')}
+                      className="mt-0.5 accent-red-500"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Trash2 size={13} className="text-red-400" /> Delete Reported Post
+                      </p>
+                      <p className="text-[11px] text-white/50 mt-0.5">Remove flagged post from student feed</p>
+                    </div>
+                  </label>
+                )}
 
-              <div className="flex gap-2">
+                {/* 8. Remove Message */}
+                {(Boolean(isMessageReport && message?.content) || Boolean(isPostReport && post?.content)) && (
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      selectedAction === 'remove_message'
+                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="action"
+                      checked={selectedAction === 'remove_message'}
+                      onChange={() => setSelectedAction('remove_message')}
+                      className="mt-0.5 accent-red-500"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <MessageSquareX size={13} className="text-red-400" /> Remove Message
+                      </p>
+                      <p className="text-[11px] text-white/50 mt-0.5">Replace with "This message was removed"</p>
+                    </div>
+                  </label>
+                )}
+
+                {/* 9. Remove Media */}
+                {(Boolean(isMessageReport && message?.image_url) || Boolean(isPostReport && post?.media && post.media.length > 0)) && (
+                  <label
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                      selectedAction === 'remove_media'
+                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="action"
+                      checked={selectedAction === 'remove_media'}
+                      onChange={() => setSelectedAction('remove_media')}
+                      className="mt-0.5 accent-red-500"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <ImageOff size={13} className="text-red-400" /> Remove Media
+                      </p>
+                      <p className="text-[11px] text-white/50 mt-0.5">Replace photo with guidelines notice</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Warning Message Inputs */}
+            {selectedAction === 'warn' && (
+              <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2">
+                <p className="text-xs font-bold text-amber-300">Warning Message to Student:</p>
+                <div className="flex flex-wrap gap-1">
+                  {WARNING_TEMPLATES.map((tmpl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setWarnMessage(tmpl)}
+                      className="text-[10px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white/80 transition-colors cursor-pointer"
+                    >
+                      Template {idx + 1}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={warnMessage}
                   onChange={(e) => setWarnMessage(e.target.value)}
-                  placeholder="Type official warning message to user…"
+                  placeholder="Type official warning message..."
                   rows={2}
-                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-xs outline-none focus:border-[#1A6B3C]"
+                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-xs outline-none focus:border-amber-400"
                 />
-                <button
-                  disabled={busy || !warnMessage.trim()}
-                  onClick={handleWarn}
-                  className="px-3 rounded-xl bg-amber-500 text-white text-xs font-semibold disabled:opacity-50 shrink-0 hover:bg-amber-600 transition-colors flex items-center justify-center gap-1"
-                >
-                  <ShieldAlert size={14} /> Send Warn
-                </button>
               </div>
-            </div>
+            )}
 
-            {/* Action 2: Suspend Account */}
-            <div className="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-white">
-                  <Clock size={14} className="text-amber-500" />
-                  <span>Suspend Account</span>
-                </div>
+            {/* Suspend Duration Inputs */}
+            {selectedAction === 'suspend' && (
+              <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-300">Suspension Duration:</span>
                 <select
                   value={suspendDays}
                   onChange={(e) => setSuspendDays(e.target.value)}
-                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/10 text-gray-800 dark:text-white outline-none"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-white outline-none cursor-pointer"
                 >
                   <option value="3">3 Days</option>
                   <option value="7">7 Days</option>
@@ -1044,55 +1502,69 @@ function ReportDetailModal({
                   <option value="permanent">Indefinite</option>
                 </select>
               </div>
+            )}
 
-              <button
-                type="button"
-                disabled={busy}
-                onClick={handleSuspend}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
-              >
-                <Clock size={14} /> Suspend User Account ({suspendDays === 'permanent' ? 'Indefinite' : `${suspendDays}d`})
-              </button>
+            {/* Internal Notes */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                Internal Admin Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Private notes visible only to the moderation team..."
+                rows={2}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs outline-none focus:border-emerald-500"
+              />
             </div>
 
-            {/* Action 3: Ban Account */}
-            <div className="pt-1">
+            {/* Actions Submit */}
+            <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2">
               <button
+                type="button"
+                onClick={() => setActionModalOpen(false)}
                 disabled={busy}
-                onClick={() => doAction('User banned', () => apiClient.adminBanReportedUser(report.id))}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-600 text-white text-xs font-semibold disabled:opacity-50 hover:bg-red-700 transition-colors shadow-sm"
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
               >
-                <Ban size={14} /> Permanent Ban Account
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyAction}
+                disabled={busy}
+                className="px-5 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white text-xs font-bold shadow-lg shadow-emerald-950/50 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {busy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                <span>Apply Moderation Action</span>
               </button>
             </div>
           </div>
         </div>
-      </DialogContent>
+      )}
 
-      {/* Image Preview Lightbox rendered via Portal */}
-      {previewImage &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
-            onClick={() => setPreviewImage(null)}
-          >
-            <div className="relative max-w-3xl max-h-[90vh]">
-              <button
-                onClick={() => setPreviewImage(null)}
-                className="absolute -top-10 right-0 text-white hover:text-gray-300 p-1"
-              >
-                <X size={24} />
-              </button>
-              <img
-                src={previewImage}
-                alt="Reported media preview"
-                className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
-    </Dialog>
+      {/* ── ENTIRE PICTURE FULLSCREEN LIGHTBOX (Z-[10001]) ── */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[10001] bg-black/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-full max-h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-10 sm:top-3 right-0 sm:right-3 p-2 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 transition-colors cursor-pointer z-10"
+              title="Close Fullscreen View (Esc)"
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={previewImage}
+              alt="Entire picture"
+              className="max-w-[96vw] max-h-[92vh] object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
+    </div>,
+    document.body
   );
 }

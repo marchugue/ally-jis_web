@@ -37,6 +37,8 @@ export interface FeedPost {
   author: FeedAuthor | null;
   liked_by_me: boolean;
   media: PostMedia[];
+  is_flagged?: boolean;
+  is_restricted?: boolean;
 }
 
 export interface FeedComment {

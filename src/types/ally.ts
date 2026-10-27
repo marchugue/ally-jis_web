@@ -64,6 +64,7 @@ export interface Message {
   reactions?: MessageReaction[];
   isDeleted?: boolean;
   deletedForMe?: boolean;
+  is_flagged?: boolean;
   game_invite?: GameInvitePayload | null;
 }
 
