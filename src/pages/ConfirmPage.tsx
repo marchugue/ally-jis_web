@@ -123,6 +123,22 @@ export default function ConfirmPage() {
           });
         }
 
+        // Check if user is banned
+        const isBanned = Boolean(
+          session.user?.user_metadata?.is_banned === true ||
+          session.user?.user_metadata?.status === 'banned' ||
+          session.user?.user_metadata?.is_suspended === true ||
+          session.user?.user_metadata?.status === 'suspended' ||
+          (session.user as any)?.is_banned === true ||
+          (session.user as any)?.status === 'banned' ||
+          (session.user as any)?.is_suspended === true ||
+          (session.user as any)?.status === 'suspended'
+        );
+        if (isBanned) {
+          navigate('/banned', { replace: true });
+          return;
+        }
+
         // Next Step determination:
         // - CHMSU institutional accounts auto-pass student ID requirement.
         // - External accounts: if they have a student ID (server or cache), proceed straight to Step 2 if incomplete.

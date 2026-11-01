@@ -1,9 +1,18 @@
+import { cn } from '@/lib/utils';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { useAdminMe } from '@/hooks/useAdminMe';
+import { useAuth } from '@/context/AuthContext';
+import { getSocket } from '@/lib/socket';
 // src/pages/admin/AdminReportsPage.tsx
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Loader2,
+  Search,
+  UserCheck,
+  UserX,
   Ban,
   Clock,
   ShieldAlert,
@@ -21,6 +30,7 @@ import {
   Copy,
   AlertTriangle,
   RotateCw,
+  RefreshCw,
   CreditCard,
   ChevronDown,
   Check,
@@ -28,6 +38,19 @@ import {
   MessageSquareX,
   Maximize2,
   Layers,
+  GraduationCap,
+  Building,
+  Mail,
+  Calendar,
+  Shield,
+  ArrowRight,
+  ChevronRight,
+  Globe2,
+  Users,
+  MessageCircle,
+  Upload,
+  Paperclip,
+  FileUp
 } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import type { AdminReportListItem, ReportStatus, ReportStatusCounts, AdminUserDetail } from '@/api/client';
@@ -116,45 +139,161 @@ function getStudentAcademicInfo(detail: AdminUserDetail | null, r: AdminReportLi
 }
 
 export default function AdminReportsPage() {
-  const [status, setStatus] = useState<ReportStatus | 'all'>('pending');
-  const [targetType, setTargetType] = useState<TargetFilter>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = (searchParams.get('status') as ReportStatus | 'all') || 'all';
+  const initialTarget = (searchParams.get('target') as TargetFilter) || 'all';
+
+  const [status, setStatus] = useState<ReportStatus | 'all'>(initialStatus);
+  const [targetType, setTargetType] = useState<TargetFilter>(initialTarget);
   const [reports, setReports] = useState<AdminReportListItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [counts, setCounts] = useState<ReportStatusCounts | null>(null);
   const [selected, setSelected] = useState<AdminReportListItem | null>(null);
+  const [assignTargetReport, setAssignTargetReport] = useState<AdminReportListItem | null>(null);
+  const { role } = useAdminMe();
+  const { user } = useAuth();
+  const isModerator = role === 'moderator';
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isSuperAdmin = role === 'super_admin';
+  const canAssign = isAdmin;
 
-  const load = () => {
-    setReports(null);
+  const load = useCallback((statusToUse = status, targetToUse = targetType) => {
+    setLoading(true);
+    setLoadError(null);
+    const assignedParam = isModerator && user?.id ? user.id : undefined;
     apiClient
-      .adminListReports({ status, targetType, cursor: null })
+      .adminListReports({ status: statusToUse, targetType: targetToUse, cursor: null, assignedTo: assignedParam })
       .then((res) => {
-        setReports(res.items);
-        // If an item is currently selected, update its reference in selected
-        if (selected) {
-          const updated = res.items.find((i) => i.id === selected.id);
-          if (updated) setSelected(updated);
-        }
+        // Double-check client-side filter if moderator
+        const items = isModerator && user?.id
+          ? res.items.filter((r) => r.reviewed_by === user.id)
+          : res.items;
+        setReports(items);
+        setSelected((curr) => {
+          if (curr) {
+            const updated = res.items.find((i) => i.id === curr.id);
+            return updated || curr;
+          }
+          const targetId = searchParams.get('id') || searchParams.get('reportId');
+          if (targetId) {
+            return res.items.find((i) => i.id === targetId) || null;
+          }
+          return null;
+        });
       })
-      .catch((err: any) => notify.error('Failed to load reports', err.message));
+      .catch((err: any) => {
+        console.error('Failed to load reports:', err);
+        setLoadError(err.message || 'Failed to load reports');
+        setReports((prev) => prev ?? []);
+        notify.error('Failed to load reports', err.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [status, targetType, searchParams, isModerator, user?.id]);
+
+  useEffect(() => {
+    load(status, targetType);
+  }, [load, status, targetType]);
+
+  const loadCounts = useCallback(() => {
+    const assignedParam = isModerator && user?.id ? user.id : undefined;
+    apiClient.adminGetReportStatusCounts(assignedParam).then(setCounts).catch(() => setCounts(null));
+  }, [isModerator, user?.id]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  // Realtime updates via socket
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.emit('reports:subscribe');
+
+    const handleUpdate = () => {
+      load(status, targetType);
+      loadCounts();
+    };
+
+    socket.on('connect', handleUpdate);
+    socket.on('reconnect', handleUpdate);
+    socket.on('report:created', handleUpdate);
+    socket.on('report:assigned', handleUpdate);
+    socket.on('report:verified', handleUpdate);
+    socket.on('report:action_taken', handleUpdate);
+    socket.on('report:updated', handleUpdate);
+    socket.on('report:appeal_submitted', handleUpdate);
+
+    return () => {
+      socket.off('connect', handleUpdate);
+      socket.off('reconnect', handleUpdate);
+      socket.off('report:created', handleUpdate);
+      socket.off('report:assigned', handleUpdate);
+      socket.off('report:verified', handleUpdate);
+      socket.off('report:action_taken', handleUpdate);
+      socket.off('report:updated', handleUpdate);
+      socket.off('report:appeal_submitted', handleUpdate);
+    };
+  }, [load, loadCounts, status, targetType]);
+
+  // Window focus & soft interval fallback (guarantees real-time admin sync without manual refresh)
+  useEffect(() => {
+    const onFocus = () => {
+      load(status, targetType);
+      loadCounts();
+    };
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => {
+      load(status, targetType);
+      loadCounts();
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
+  }, [load, loadCounts, status, targetType]);
+
+  const handleTargetChange = (newTarget: TargetFilter) => {
+    setTargetType(newTarget);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newTarget === 'all') next.delete('target');
+      else next.set('target', newTarget);
+      return next;
+    });
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, targetType]);
-
-  useEffect(() => {
-    apiClient.adminGetReportStatusCounts().then(setCounts).catch(() => setCounts(null));
-  }, []);
+  const handleStatusChange = (newStatus: ReportStatus | 'all') => {
+    setStatus(newStatus);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newStatus === 'all') next.delete('status');
+      else next.set('status', newStatus);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6 w-full pb-8">
-      <div>
-        <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          Moderation & Flagged Content
-        </h1>
-        <p className="text-xs text-gray-400 dark:text-white/40 mt-1">
-          {counts ? `${counts.pending} pending moderation · ${counts.reviewing} currently under review` : 'Loading moderation status…'}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            Moderation & Flagged Content
+          </h1>
+          <p className="text-xs text-gray-400 dark:text-white/40 mt-1">
+            {counts ? `${counts.pending} pending moderation · ${counts.reviewing} currently under review` : 'Loading moderation status…'}
+          </p>
+        </div>
+        {isModerator && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 text-xs font-semibold self-start sm:self-auto">
+            <UserCheck size={13} />
+            <span>Moderator View: Showing tickets assigned to you</span>
+          </div>
+        )}
       </div>
 
       {/* Filter Controls Bar */}
@@ -167,12 +306,11 @@ export default function AdminReportsPage() {
             return (
               <button
                 key={f.value}
-                onClick={() => setTargetType(f.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  active
+                onClick={() => handleTargetChange(f.value)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${active
                     ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white shadow-xs'
                     : 'text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <Icon size={13} className={active ? 'text-[#1A6B3C] dark:text-emerald-400' : ''} />
                 {f.label}
@@ -186,12 +324,11 @@ export default function AdminReportsPage() {
           {STATUS_TABS.map((t) => (
             <button
               key={t.value}
-              onClick={() => setStatus(t.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                status === t.value
+              onClick={() => handleStatusChange(t.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${status === t.value
                   ? 'bg-[#1A6B3C] dark:bg-emerald-600 text-white shadow-sm'
                   : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/10'
-              }`}
+                }`}
             >
               {t.label} {t.value !== 'all' && counts ? `(${counts[t.value as ReportStatus]})` : ''}
             </button>
@@ -200,15 +337,33 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="bg-white dark:bg-[#161D19] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-        {!reports ? (
+        {loading && !reports ? (
           <div className="flex justify-center py-16">
             <Loader2 className="animate-spin text-[#1A6B3C] dark:text-emerald-400" size={24} />
           </div>
-        ) : reports.length === 0 ? (
+        ) : loadError && (!reports || reports.length === 0) ? (
+          <div className="text-center py-16 px-4">
+            <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-2 opacity-80" />
+            <p className="text-sm font-bold text-gray-800 dark:text-white">Could not load reports</p>
+            <p className="text-xs text-gray-400 dark:text-white/40 mt-1 mb-4">{loadError}</p>
+            <button
+              onClick={() => load(status, targetType)}
+              className="px-4 py-2 rounded-xl bg-[#1A6B3C] dark:bg-emerald-600 text-white text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        ) : !reports || reports.length === 0 ? (
           <div className="text-center py-16 px-4">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2 opacity-80" />
-            <p className="text-sm font-bold text-gray-800 dark:text-white">All Flagged Content Handled</p>
-            <p className="text-xs text-gray-400 dark:text-white/40 mt-1">There are no reported items matching this filter.</p>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">
+              {isModerator ? 'No Reports Assigned to You' : 'All Flagged Content Handled'}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-white/40 mt-1">
+              {isModerator
+                ? 'You currently have no tickets assigned to your queue.'
+                : 'There are no reported items matching this filter.'}
+            </p>
           </div>
         ) : (
           <>
@@ -223,6 +378,7 @@ export default function AdminReportsPage() {
                     <th className="px-5 py-3 font-semibold">Violation Reason</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
                     <th className="px-5 py-3 font-semibold">Submitted</th>
+                    {canAssign && <th className="px-5 py-3 font-semibold text-right">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -339,6 +495,26 @@ export default function AdminReportsPage() {
                         <td className="px-5 py-3.5 text-xs text-gray-400 dark:text-white/40">
                           {new Date(r.created_at).toLocaleDateString()}
                         </td>
+
+                        {/* Action Column: Assign (Admin Side) */}
+                        {canAssign && (
+                          <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setAssignTargetReport(r)}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs',
+                                r.reviewed_by
+                                  ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800/40'
+                                  : 'bg-[#1A6B3C] hover:bg-[#14532D] text-white shadow-xs'
+                              )}
+                              title={r.reviewed_by ? `Assigned to ${r.reviewed_by_name || 'Staff'}. Click to reassign.` : 'Assign moderator'}
+                            >
+                              <UserCheck size={12} />
+                              <span>{r.reviewed_by ? (r.reviewed_by_name ? `Assigned: ${r.reviewed_by_name.split(' ')[0]}` : 'Assigned') : 'Assign'}</span>
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -403,6 +579,27 @@ export default function AdminReportsPage() {
                       <span>Reason: {r.violation_label}</span>
                       <span>{new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
+
+                    {canAssign && (
+                      <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[11px] text-gray-500 dark:text-white/50">
+                          {r.reviewed_by ? `Assigned: ${r.reviewed_by_name || 'Staff'}` : 'Not assigned'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAssignTargetReport(r)}
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer',
+                            r.reviewed_by
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300'
+                              : 'bg-[#1A6B3C] text-white hover:bg-[#14532D]'
+                          )}
+                        >
+                          <UserCheck size={12} />
+                          <span>{r.reviewed_by ? 'Reassign' : 'Assign'}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -412,7 +609,296 @@ export default function AdminReportsPage() {
       </div>
 
       <ReportDetailModal report={selected} onClose={() => setSelected(null)} onChanged={load} />
+      <AssignModeratorModal
+        report={assignTargetReport}
+        isOpen={Boolean(assignTargetReport)}
+        onClose={() => setAssignTargetReport(null)}
+        onAssigned={() => {
+          load();
+          loadCounts();
+        }}
+      />
     </div>
+  );
+}
+
+
+function MediaGrid({
+  media,
+  onMediaClick,
+}: {
+  media?: { id: string; url: string; position: number }[];
+  onMediaClick?: (url: string) => void;
+}) {
+  if (!media || media.length === 0) return null;
+
+  const sorted = [...media].sort((a, b) => a.position - b.position);
+
+  if (sorted.some((m) => m.url === '[removed]')) {
+    return (
+      <div className="mt-3 p-4 rounded-xl bg-gray-100 dark:bg-[#1E293B] border border-gray-200 dark:border-white/10 text-center">
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-jakarta italic">
+          This photo was removed for violating community standards.
+        </p>
+      </div>
+    );
+  }
+
+  if (sorted.length === 1) {
+    return (
+      <div
+        onClick={() => onMediaClick?.(sorted[0].url)}
+        className="mt-3 rounded-xl overflow-hidden border border-gray-100/80 dark:border-white/10 w-full bg-black/5 flex items-center justify-center cursor-pointer hover:opacity-95 transition-opacity"
+      >
+        <img src={sorted[0].url} alt="" className="w-full h-auto max-h-[550px] object-cover" />
+      </div>
+    );
+  }
+
+  if (sorted.length === 2) {
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10">
+        {sorted.map((m) => (
+          <img
+            key={m.id}
+            src={m.url}
+            alt=""
+            onClick={() => onMediaClick?.(m.url)}
+            className="w-full object-cover aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (sorted.length === 3) {
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10">
+        <img
+          src={sorted[0].url}
+          alt=""
+          onClick={() => onMediaClick?.(sorted[0].url)}
+          className="w-full object-cover row-span-2 h-full aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+        />
+        <img
+          src={sorted[1].url}
+          alt=""
+          onClick={() => onMediaClick?.(sorted[1].url)}
+          className="w-full object-cover aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+        />
+        <img
+          src={sorted[2].url}
+          alt=""
+          onClick={() => onMediaClick?.(sorted[2].url)}
+          className="w-full object-cover aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10">
+      {sorted.slice(0, 4).map((m) => (
+        <img
+          key={m.id}
+          src={m.url}
+          alt=""
+          onClick={() => onMediaClick?.(m.url)}
+          className="w-full object-cover aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+        />
+      ))}
+    </div>
+  );
+}
+
+
+function AssignModeratorModal({
+  report,
+  isOpen,
+  onClose,
+  onAssigned,
+}: {
+  report: AdminReportListItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const [moderators, setModerators] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || !report) return;
+    setLoading(true);
+    setSearch('');
+    apiClient
+      .adminListModerators()
+      .then((mods: any) => setModerators(mods || []))
+      .catch((err: any) => {
+        console.error('Failed to load moderators:', err);
+        notify.error('Could not load moderators', err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [isOpen, report]);
+
+  if (!isOpen || !report) return null;
+
+  const filtered = moderators.filter((m) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (m.full_name && m.full_name.toLowerCase().includes(q)) ||
+      (m.username && m.username.toLowerCase().includes(q)) ||
+      (m.email && m.email.toLowerCase().includes(q))
+    );
+  });
+
+  const handleAssign = async (moderatorId: string | null) => {
+    setAssigningId(moderatorId || 'unassign');
+    try {
+      await apiClient.adminAssignReportModerator(report.id, moderatorId || 'unassign');
+      if (moderatorId) {
+        const mod = moderators.find((m) => m.id === moderatorId);
+        notify.success('Moderator Assigned', `Case assigned to ${mod?.full_name || 'moderator'}. Status moved to Under Review.`);
+      } else {
+        notify.success('Assignment Removed', 'Report returned to unassigned pending queue.');
+      }
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      notify.error('Failed to update assignment', err?.message);
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10005] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-md bg-white dark:bg-[#111827] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-gray-900 dark:text-white font-jakarta"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-white/10 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-fraunces text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <UserCheck size={18} className="text-[#1A6B3C] dark:text-emerald-400" />
+              Assign Moderator
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-white/50 mt-0.5">
+              Docket #{report.id.slice(0, 8).toUpperCase()} • {report.violation_label}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Search Input */}
+        <div className="p-3.5 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]">
+          <div className="relative">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/40" />
+            <input
+              type="text"
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search moderator by name or email..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Moderator List */}
+        <div className="flex-1 overflow-y-auto p-3.5 space-y-2">
+          {loading ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <Loader2 size={22} className="animate-spin text-[#1A6B3C] dark:text-emerald-400 mb-2" />
+              <p className="text-xs text-gray-400 dark:text-white/40">Loading staff moderators…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-10 text-center text-xs text-gray-400 dark:text-white/40">
+              {search.trim() ? `No moderators found matching "${search}"` : 'No moderators registered in system.'}
+            </div>
+          ) : (
+            filtered.map((m) => {
+              const isCurrent = report.reviewed_by === m.id;
+              const isBusy = assigningId === m.id;
+              return (
+                <div
+                  key={m.id}
+                  className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                    isCurrent
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/50'
+                      : 'bg-white dark:bg-white/5 border-gray-200/80 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <AvatarDisplay
+                      src={m.avatar_url}
+                      name={m.full_name || m.username}
+                      className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/15 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-xs text-gray-900 dark:text-white truncate">
+                        {m.full_name}
+                      </p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/50 truncate">
+                        {m.username ? `@${m.username} · ` : ''}{m.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {isCurrent ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-2xs">
+                        <Check size={12} /> Assigned
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(assigningId)}
+                        onClick={() => handleAssign(m.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#1A6B3C] hover:bg-[#15592F] text-white transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs"
+                      >
+                        {isBusy ? <Loader2 size={12} className="animate-spin" /> : null}
+                        <span>Assign</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer: Unassign Option */}
+        {report.reviewed_by && (
+          <div className="p-3 bg-gray-50 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+            <span className="text-[11px] text-gray-500 dark:text-white/50">
+              Current: {report.reviewed_by_name || 'Assigned Moderator'}
+            </span>
+            <button
+              type="button"
+              disabled={Boolean(assigningId)}
+              onClick={() => handleAssign(null)}
+              className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline cursor-pointer disabled:opacity-50"
+            >
+              {assigningId === 'unassign' ? 'Unassigning…' : 'Unassign Moderator'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -426,13 +912,80 @@ function ReportDetailModal({
   onChanged: () => void;
 }) {
   const [studentDetail, setStudentDetail] = useState<AdminUserDetail | null>(null);
+  const { role } = useAdminMe();
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isModerator = role === 'moderator';
+  const canReveal = Boolean(role && (isAdmin || isModerator));
+  const [deletingPost, setDeletingPost] = useState(false);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
+
+  const handleDeleteReportedPost = async () => {
+    if (!isAdmin) {
+      notify.error('Access Denied', 'Only administrators have permission to delete posts.');
+      return;
+    }
+    const targetPostId = report?.post_id || report?.post?.id;
+    if (!targetPostId || !report) return;
+    if (!window.confirm('Delete this reported post from feed? This action permanently removes it from the live student feed.')) return;
+    setDeletingPost(true);
+    try {
+      await apiClient.adminDeleteReportedPost(report.id, targetPostId);
+      notify.success('Post Deleted', 'The reported post has been removed from the feed.');
+      onChanged();
+      onClose();
+    } catch (err: any) {
+      notify.error('Failed to delete post', err.message);
+    } finally {
+      setDeletingPost(false);
+    }
+  };
+
+  const handleFileSelected = (file: File) => {
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isImage && !isPdf) {
+      notify.error('Invalid file type', 'Please upload an image (PNG, JPG, WEBP) or PDF file.');
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      notify.error('File too large', 'Attachment size must be under 25 MB.');
+      return;
+    }
+    setFindingFile(file);
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = () => setFindingPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setFindingPreview(null);
+    }
+  };
+
   const [loadingStudent, setLoadingStudent] = useState(false);
   const [side, setSide] = useState<'front' | 'back'>('front');
   const [isFlipping, setIsFlipping] = useState(false);
-  const [activeTab, setActiveTab] = useState<'id_card' | 'evidence'>('id_card');
+  const [activeTab, setActiveTab] = useState<'id_card' | 'evidence'>('evidence');
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [moderators, setModerators] = useState<any[]>([]);
+  const [selectedModeratorId, setSelectedModeratorId] = useState<string>('');
+  const [assigningModerator, setAssigningModerator] = useState(false);
+  const [findingsInput, setFindingsInput] = useState('');
+  const [recommendedActionInput, setRecommendedActionInput] = useState('warn');
+  const [verifyingModerator, setVerifyingModerator] = useState(false);
+
+  // Moderator Findings Modal state
+  const [findingsModalOpen, setFindingsModalOpen] = useState(false);
+  const [findingText, setFindingText] = useState('');
+  const [findingRecAction, setFindingRecAction] = useState('warn');
+  const [findingFile, setFindingFile] = useState<File | null>(null);
+  const [findingPreview, setFindingPreview] = useState<string | null>(null);
+  const [findingExistingUrl, setFindingExistingUrl] = useState<string | null>(null);
+  const [submittingFindings, setSubmittingFindings] = useState(false);
+
+  // Admin View Details Modal state
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   // Action form state inside the single CTA action modal
   const [selectedAction, setSelectedAction] = useState<
@@ -453,11 +1006,27 @@ function ReportDetailModal({
     setSide('front');
     setCurrentPhotoIndex(0);
     setActionModalOpen(false);
+    setFindingsModalOpen(false);
+    setDetailsModalOpen(false);
     setPreviewImage(null);
     setSelectedAction('resolve');
+    setSelectedModeratorId(report.reviewed_by || '');
+    setFindingsInput(report.moderator_findings || '');
+    setRecommendedActionInput(report.moderator_recommended_action || 'warn');
+    setFindingText(report.moderator_findings || '');
+    setFindingRecAction(report.moderator_recommended_action || 'warn');
+    setFindingExistingUrl(report.moderator_attachment_url || null);
+    setFindingFile(null);
+    setFindingPreview(null);
+
+    apiClient.adminListModerators?.()
+      .then((mods: any) => setModerators(mods || []))
+      .catch(() => { });
 
     const kind = getReportKind(report);
     const hasFlaggedContent = kind === 'post' || kind === 'message';
+    // Default to evidence tab if the report has flagged content so it displays immediately on the first try!
+    setActiveTab(hasFlaggedContent ? 'evidence' : 'id_card');
 
     if (report.reported_user_id) {
       setLoadingStudent(true);
@@ -465,22 +1034,14 @@ function ReportDetailModal({
         .adminGetUserDetail(report.reported_user_id)
         .then((detail) => {
           setStudentDetail(detail);
-          // If student has no ID photo uploaded but report has flagged post/message evidence, default to evidence tab
-          if (!detail.student_id_url && !detail.student_id_back_url && hasFlaggedContent) {
-            setActiveTab('evidence');
-          } else {
-            setActiveTab('id_card');
-          }
         })
         .catch((err) => {
           console.warn('Failed to load student detail', err);
           setStudentDetail(null);
-          if (hasFlaggedContent) setActiveTab('evidence');
         })
         .finally(() => setLoadingStudent(false));
     } else {
       setStudentDetail(null);
-      if (hasFlaggedContent) setActiveTab('evidence');
     }
   }, [report]);
 
@@ -640,124 +1201,52 @@ function ReportDetailModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-[#070A0F] text-white flex flex-col select-none overflow-hidden font-jakarta animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] bg-gray-50 dark:bg-[#070A0F] text-gray-900 dark:text-white flex flex-col select-none overflow-hidden font-jakarta animate-in fade-in duration-200">
       {/* ── TOP HEADER BAR ── */}
-      <header className="shrink-0 border-b border-white/10 bg-[#0C1118]/95 backdrop-blur-xl px-4 sm:px-6 py-3 z-30 shadow-md">
+      <header className="shrink-0 border-b border-gray-200 dark:border-white/10 bg-white/95 dark:bg-[#0C1118]/95 backdrop-blur-xl px-4 sm:px-6 py-3 z-30 shadow-xs dark:shadow-md">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Left Cluster: Reported Student + Reporter + Violations */}
-          <div className="flex items-center gap-4 sm:gap-6 flex-wrap min-w-0 flex-1">
-            {/* 1. Who is that Student */}
-            <div className="flex items-center gap-3 pr-4 sm:pr-6 border-r border-white/10 min-w-0">
-              <div className="relative shrink-0">
-                <AvatarDisplay
-                  src={studentDetail?.avatar_url || report.reported_avatar}
-                  name={getReportedDisplayName(report)}
-                  className="w-10 h-10 rounded-full border-2 border-white/20 shadow-sm"
-                />
-                {(studentDetail?.student_verification_status === 'approved' || studentDetail?.chmsu_auto_verified) && (
-                  <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0C1118] flex items-center justify-center text-[9px] text-white font-bold"
-                    title="Verified Student"
-                  >
-                    ✓
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    Reported Student
-                  </span>
-                  {studentDetail?.is_banned ? (
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30 uppercase">
-                      Banned
-                    </span>
-                  ) : studentDetail?.is_suspended ? (
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-                      Suspended
-                    </span>
-                  ) : null}
-                </div>
-                <p className="font-bold text-sm text-white truncate flex items-center gap-1.5">
-                  {studentDetail?.full_name || getReportedDisplayName(report)}
-                  {report.reported_username && report.reported_username.toLowerCase() !== 'anonymous' && (
-                    <span className="text-xs text-white/50 font-normal">@{report.reported_username}</span>
-                  )}
-                </p>
-                <p className="text-[11px] text-white/60 truncate max-w-xs">
-                  {getStudentAcademicInfo(studentDetail, report)}
-                  {studentDetail?.email ? ` · ${studentDetail.email}` : report.reported_email ? ` · ${report.reported_email}` : ''}
-                </p>
-              </div>
-            </div>
-
-            {/* 2. Submitted By */}
-            <div className="flex items-center gap-2.5 pr-4 sm:pr-6 border-r border-white/10 min-w-0">
-              <AvatarDisplay
-                src={report.reporter_avatar}
-                name={getReporterDisplayName(report)}
-                className="w-8 h-8 rounded-full border border-white/15 shrink-0 text-xs"
-              />
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">
-                  Submitted By
-                </span>
-                <p className="font-semibold text-xs text-white truncate">
-                  {getReporterDisplayName(report)}
-                </p>
-                <p className="text-[11px] text-white/50 truncate max-w-[180px]">
-                  {report.reporter_email || (report.reporter_username ? `@${report.reporter_username}` : 'Student Reporter')}
-                </p>
-              </div>
-            </div>
-
-            {/* 3. Violations & Info */}
-            <div className="flex items-center gap-3 flex-wrap min-w-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/30">
-                    <AlertTriangle size={12} /> {report.violation_label}
-                  </span>
-                  <span className="text-xs text-white/60 font-medium">
-                    {report.category_label}
-                  </span>
-                  <span className="text-xs text-white/40">·</span>
-                  <span className="text-xs text-white/50">
-                    {new Date(report.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                {reporterDetails && (
-                  <p className="text-[11px] text-white/70 italic truncate max-w-md" title={reporterDetails}>
-                    "{reporterDetails}"
-                  </p>
-                )}
-              </div>
-            </div>
+          {/* Left Cluster: Report ID + Target Pill + Violation Badge + Category */}
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/15 text-gray-800 dark:text-white font-bold tracking-wider">
+              #{report.id.slice(0, 8).toUpperCase()}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30">
+              <AlertTriangle size={12} /> {report.violation_label}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-white/60 font-medium hidden sm:inline">
+              {report.category_label}
+            </span>
+            <span className="text-xs text-gray-300 dark:text-white/40 hidden sm:inline">·</span>
+            <span className="text-xs text-gray-400 dark:text-white/50 hidden sm:inline">
+              Reported on {new Date(report.created_at).toLocaleDateString()} {new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
 
-          {/* Right Cluster: Status + ONE ONLY CTA Action Button + Close */}
+          {/* Right Cluster: Stage / Status Badge + ONE ONLY CTA Action Button + Close */}
           <div className="flex items-center gap-2.5 shrink-0 ml-auto">
             {/* Status Badge */}
             <Badge className={`border text-xs capitalize ${STATUS_COLORS[report.status]}`}>
               {report.status}
             </Badge>
 
-            {/* ONE ONLY CTA ACTION BUTTON */}
-            <button
-              type="button"
-              onClick={() => setActionModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer"
-            >
-              <ShieldAlert size={14} />
-              <span>Take Action</span>
-              <ChevronDown size={13} className="opacity-70" />
-            </button>
+            {/* ONE ONLY CTA ACTION BUTTON (ADMIN ONLY) */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActionModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer"
+              >
+                <ShieldAlert size={14} />
+                <span>Take Action</span>
+                <ChevronDown size={13} className="opacity-70" />
+              </button>
+            )}
 
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors cursor-pointer"
               title="Close Full Screen (Esc)"
             >
               <X size={18} />
@@ -766,396 +1255,350 @@ function ReportDetailModal({
         </div>
       </header>
 
-      {/* ── CENTER FULL-VIEW STAGE ── */}
-      <main className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden bg-gradient-to-b from-[#070A0F] to-[#0A0F17]">
-        {/* Stage Toolbar */}
-        <div className="w-full max-w-4xl flex items-center justify-between gap-3 mb-3 flex-wrap px-1">
-          {/* View Tab Switcher */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => setActiveTab('id_card')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'id_card'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-white/60 hover:text-white'
-              }`}
-            >
-              <CreditCard size={13} />
-              <span>Student ID Card</span>
-              {hasIdImages && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 font-mono">
-                  {backIdUrl ? 'Front & Back' : 'Front'}
-                </span>
-              )}
-            </button>
+      {/* ── 2-COLUMN MAIN BODY: LEFT CONTENT | RIGHT INFORMATION ── */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden bg-gray-50 dark:bg-[#070A0F]">
 
-            {hasEvidence && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('evidence')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'evidence'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {isPostReport ? <FileText size={13} /> : <MessageSquare size={13} />}
-                <span>Flagged {isPostReport ? 'Post Evidence' : 'Chat Message'}</span>
-              </button>
-            )}
-          </div>
+        {/* ── LEFT COLUMN: THE CONTENT (~60%) ── */}
+        <section className="flex-1 lg:w-7/12 xl:w-3/5 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/10 min-h-0 bg-gray-100/60 dark:bg-[#080C14] overflow-hidden">
+          {/* Content Viewport Stage */}
+          <div className="flex-1 min-h-0 p-4 sm:p-6 flex flex-col items-center justify-center overflow-y-auto relative bg-gradient-to-b from-gray-100/60 to-gray-200/60 dark:from-[#080C14] dark:to-[#0A101C]">
 
-          {/* Action Tools */}
-          <div className="flex items-center gap-2">
-            {/* Flip Card Action Button (ONLY in id_card tab!) */}
-            {activeTab === 'id_card' && (
-              <button
-                type="button"
-                onClick={toggleFlip}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/50 backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-emerald-400/30"
-                title="Click to flip (Space / F)"
-              >
-                <RotateCw size={13} className={isFlipping ? 'animate-spin' : ''} />
-                <span>Flip ({side === 'front' ? 'Front Side' : 'Back Side'})</span>
-              </button>
-            )}
+            {/* ── THE TWO OPTIONS ONLY (Centered directly above post card / ID card) ── */}
+            <div className="shrink-0 flex items-center justify-center w-full max-w-xl mb-4">
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-2xs backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('id_card')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'id_card'
+                      ? 'bg-[#1A6B3C] text-white shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-white/60 dark:hover:text-white'
+                    }`}
+                >
+                  <CreditCard size={13} />
+                  <span>Student ID Card</span>
+                  {hasIdImages && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 font-mono">
+                      {backIdUrl ? 'Front & Back' : 'Front'}
+                    </span>
+                  )}
+                </button>
 
-            {activeImageUrl && (
-              <a
-                href={activeImageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 text-xs font-semibold backdrop-blur-md transition-colors"
-                title="Open high resolution original image in new tab"
-              >
-                <ExternalLink size={13} />
-                <span className="hidden sm:inline">Open Original</span>
-              </a>
-            )}
-
-            {activeTab === 'id_card' && (
-              <span className="text-[11px] text-white/40 hidden md:inline ml-1">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 font-mono text-[10px]">Space</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 font-mono text-[10px]">F</kbd> to Flip
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* ── CARD DISPLAY STAGE ── */}
-        {activeTab === 'id_card' ? (
-          /* 3D Flippable Student ID Card */
-          <div
-            className="w-full max-w-4xl h-[62vh] sm:h-[68vh] relative select-none"
-            style={{ perspective: '1400px' }}
-          >
-            <div
-              className="w-full h-full relative transition-transform duration-500 ease-out"
-              style={{
-                transformStyle: 'preserve-3d',
-                transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
-              }}
-            >
-              {/* Front Face */}
-              <div
-                onClick={toggleFlip}
-                className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center cursor-pointer group backdrop-blur-xs"
-                style={{
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                }}
-              >
-                {frontIdUrl ? (
-                  <div className="relative w-full h-full flex items-center justify-center p-3">
-                    <img
-                      src={frontIdUrl}
-                      alt="Student ID Front"
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-lg group-hover:scale-[1.01] transition-transform duration-200"
-                    />
-                    <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5">
-                      <CreditCard size={12} className="text-emerald-400" />
-                      <span>STUDENT ID · FRONT</span>
-                    </div>
-                    <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-sm transition-colors">
-                      <RotateCw size={11} /> Flip to Back
-                    </div>
-                    <div className="absolute bottom-4 inset-x-0 mx-auto w-fit px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/70 text-[11px] pointer-events-none">
-                      Click image or Flip button to flip
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white/[0.02]">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 mb-4 shadow-inner">
-                      <CreditCard size={32} />
-                    </div>
-                    <h3 className="text-base font-bold text-white mb-1">
-                      {studentDetail?.full_name || getReportedDisplayName(report)}
-                    </h3>
-                    <p className="text-xs text-white/50 max-w-sm mb-4">
-                      {studentDetail?.email_type === 'chmsu'
-                        ? 'Institutional CHMSU student account verified automatically via university email. No physical ID card was required for onboarding.'
-                        : 'No front ID photo was submitted for this student account.'}
-                    </p>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-white/80 max-w-xs space-y-1 text-left">
-                      <p><span className="text-white/40">Department:</span> {studentDetail?.department || 'N/A'}</p>
-                      <p><span className="text-white/40">Course:</span> {studentDetail?.course || 'N/A'}</p>
-                      <p><span className="text-white/40">Email:</span> {studentDetail?.email || report.reported_email || 'N/A'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={toggleFlip}
-                      className="mt-4 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <RotateCw size={12} /> Flip to Back Side
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Back Face */}
-              <div
-                onClick={toggleFlip}
-                className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center cursor-pointer group backdrop-blur-xs"
-                style={{
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                }}
-              >
-                {backIdUrl ? (
-                  <div className="relative w-full h-full flex items-center justify-center p-3">
-                    <img
-                      src={backIdUrl}
-                      alt="Student ID Back"
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-lg group-hover:scale-[1.01] transition-transform duration-200"
-                    />
-                    <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5">
-                      <CreditCard size={12} className="text-blue-400" />
-                      <span>STUDENT ID · BACK</span>
-                    </div>
-                    <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-sm transition-colors">
-                      <RotateCw size={11} /> Flip to Front
-                    </div>
-                    <div className="absolute bottom-4 inset-x-0 mx-auto w-fit px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/70 text-[11px] pointer-events-none">
-                      Click image or Flip button to flip
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white/[0.02]">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
-                      <CreditCard size={32} />
-                    </div>
-                    <h3 className="text-base font-bold text-white mb-1">No Back Side Uploaded</h3>
-                    <p className="text-xs text-white/50 max-w-sm mb-4">
-                      The student only submitted the front side of their ID or Certificate of Registration.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={toggleFlip}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <RotateCw size={12} /> Flip to Front Side
-                    </button>
-                  </div>
+                {hasEvidence && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('evidence')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'evidence'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-white/60 dark:hover:text-white'
+                      }`}
+                  >
+                    {isPostReport ? <FileText size={13} /> : <MessageSquare size={13} />}
+                    <span>Flagged {isPostReport ? 'Post Evidence' : 'Chat Message'}</span>
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-        ) : (
-          /* ── FLAGGED CONTENT EVIDENCE (NO FLIP, FULL BLEED / ENTIRE PICTURE & LABELED POSTCARD) ── */
-          <div className="w-full max-w-4xl h-[62vh] sm:h-[68vh] rounded-2xl overflow-hidden border border-white/10 bg-[#0C121B] shadow-2xl flex flex-col relative select-none">
-            {isPostReport && (
-              <>
-                {/* 1. Labeled Postcard Header */}
-                <div className="shrink-0 px-4 py-3 bg-[#111924] border-b border-white/10 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2.5">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      <FileText size={12} /> Flagged Post Evidence
-                    </span>
-                    {post && (
-                      <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-                        <AvatarDisplay
-                          src={post.author_avatar || report.reported_avatar}
-                          name={post.author_name || getReportedDisplayName(report)}
-                          className="w-6 h-6 rounded-full"
+
+            {/* Content View: Either Student ID Card, or authentic FeedPostCard, or Message */}
+            {activeTab === 'id_card' ? (
+              /* 3D Flippable Student ID Card */
+              <div
+                className="w-full max-w-3xl h-[64vh] sm:h-[72vh] relative select-none flex items-center justify-center"
+                style={{ perspective: '1400px' }}
+              >
+                <div
+                  className="w-full h-full relative transition-transform duration-500 ease-out"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transform: side === 'back' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  }}
+                >
+                  {/* Front Face */}
+                  <div
+                    onClick={toggleFlip}
+                    className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer group"
+                    style={{
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                    }}
+                  >
+                    {frontIdUrl ? (
+                      <div className="relative max-h-full max-w-full rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center bg-black/5 dark:bg-black/30 border border-gray-200/80 dark:border-white/10">
+                        <img
+                          src={frontIdUrl}
+                          alt="Student ID Front"
+                          className="max-h-[60vh] sm:max-h-[68vh] max-w-full w-auto h-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.01]"
                         />
-                        <span className="text-xs font-bold text-white">
-                          {post.author_name || getReportedDisplayName(report)}
-                        </span>
-                        <span className="text-[11px] text-white/50">
-                          @{post.author_username || report.reported_username}
-                        </span>
+                        {/* Student ID badge inside the image (top-left) */}
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[10px] sm:text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5 shadow-lg select-none">
+                          <CreditCard size={12} className="text-emerald-400" />
+                          <span>STUDENT ID · FRONT</span>
+                        </div>
+                        {/* Flip to back button inside the image (top-right) */}
+                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[10px] sm:text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-lg transition-colors select-none">
+                          <RotateCw size={11} /> Flip to Back
+                        </div>
+                        {/* Click to flip hint inside the image (bottom) */}
+                        <div className="absolute bottom-3 inset-x-0 mx-auto w-fit px-3 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-white/80 text-[10px] pointer-events-none shadow-lg select-none">
+                          Click image to flip
+                        </div>
+                        {/* Fullscreen preview button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage(frontIdUrl);
+                          }}
+                          className="absolute bottom-3 right-3 p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs backdrop-blur-md border border-white/15 shadow-lg transition-colors cursor-pointer"
+                          title="View Full Resolution"
+                        >
+                          <Maximize2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full rounded-2xl border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center p-8 text-center backdrop-blur-xs">
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 mb-4 shadow-inner">
+                          <CreditCard size={32} />
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-1">
+                          {studentDetail?.full_name || getReportedDisplayName(report)}
+                        </h3>
+                        <p className="text-xs text-white/50 max-w-sm mb-4">
+                          {studentDetail?.email_type === 'chmsu'
+                            ? 'Institutional CHMSU student account verified automatically via university email. No physical ID card was required for onboarding.'
+                            : 'No front ID photo was submitted for this student account.'}
+                        </p>
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-white/80 max-w-xs space-y-1 text-left">
+                          <p><span className="text-white/40">Department:</span> {studentDetail?.department || 'N/A'}</p>
+                          <p><span className="text-white/40">Course:</span> {studentDetail?.course || 'N/A'}</p>
+                          <p><span className="text-white/40">Email:</span> {studentDetail?.email || report.reported_email || 'N/A'}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleFlip}
+                          className="mt-4 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <RotateCw size={12} /> Flip to Back Side
+                        </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {post?.is_deleted || post?.is_deleted_from_feed ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-500/20 text-red-300 border border-red-500/30">
-                        <AlertTriangle size={11} /> Deleted from Feed by Author
-                      </span>
+                  {/* Back Face */}
+                  <div
+                    onClick={toggleFlip}
+                    className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer group"
+                    style={{
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                      transform: 'rotateY(180deg)',
+                    }}
+                  >
+                    {backIdUrl ? (
+                      <div className="relative max-h-full max-w-full rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center bg-black/5 dark:bg-black/30 border border-gray-200/80 dark:border-white/10">
+                        <img
+                          src={backIdUrl}
+                          alt="Student ID Back"
+                          className="max-h-[60vh] sm:max-h-[68vh] max-w-full w-auto h-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.01]"
+                        />
+                        {/* Student ID badge inside the image (top-left) */}
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[10px] sm:text-[11px] font-bold tracking-wider border border-white/15 flex items-center gap-1.5 shadow-lg select-none">
+                          <CreditCard size={12} className="text-blue-400" />
+                          <span>STUDENT ID · BACK</span>
+                        </div>
+                        {/* Flip to front button inside the image (top-right) */}
+                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[10px] sm:text-[11px] font-semibold flex items-center gap-1.5 border border-white/20 shadow-lg transition-colors select-none">
+                          <RotateCw size={11} /> Flip to Front
+                        </div>
+                        {/* Click to flip hint inside the image (bottom) */}
+                        <div className="absolute bottom-3 inset-x-0 mx-auto w-fit px-3 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-white/80 text-[10px] pointer-events-none shadow-lg select-none">
+                          Click image to flip
+                        </div>
+                        {/* Fullscreen preview button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage(backIdUrl);
+                          }}
+                          className="absolute bottom-3 right-3 p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs backdrop-blur-md border border-white/15 shadow-lg transition-colors cursor-pointer"
+                          title="View Full Resolution"
+                        >
+                          <Maximize2 size={13} />
+                        </button>
+                      </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        <CheckCircle2 size={11} /> Active on Live Feed
-                      </span>
-                    )}
-                    {post?.created_at && (
-                      <span className="text-[11px] text-white/40">
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </span>
+                      <div className="w-full h-full rounded-2xl border border-white/10 bg-[#101722]/90 shadow-2xl flex flex-col items-center justify-center p-8 text-center backdrop-blur-xs">
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
+                          <CreditCard size={32} />
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-1">No Back Side Uploaded</h3>
+                        <p className="text-xs text-white/50 max-w-sm mb-4">
+                          The student only submitted the front side of their ID or Certificate of Registration.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={toggleFlip}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <RotateCw size={12} /> Flip to Front Side
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
+              </div>
+            ) : isPostReport && post ? (
+              /* ── AUTHENTIC FeedPostCard UI & DATA (Staff Moderation Preview) ── */
+              <article className="w-full max-w-xl bg-white dark:bg-[#181818] p-4 sm:p-6 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm text-left transition-colors">
+                {/* Flagged / Restricted Visibility Banner */}
+                {(post.is_deleted || post.is_deleted_from_feed) && (
+                  <div className="mb-3.5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5">
+                    <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-red-600 dark:text-red-400">Post Deleted from Live Feed</p>
+                      <p className="text-[11px] text-red-700/80 dark:text-red-300/80 mt-0.5">This post was removed from the live student feed and is preserved here for moderation review.</p>
+                    </div>
+                  </div>
+                )}
 
-                {/* 2. Photo Media Full Bleed / Entire Picture Display */}
-                <div className="flex-1 min-h-0 relative bg-black flex items-center justify-center overflow-hidden group">
-                  {post?.media && post.media.length > 0 ? (
-                    <div
-                      className="relative w-full h-full flex items-center justify-center cursor-pointer"
-                      onClick={() => setPreviewImage(post.media![currentPhotoIndex]?.url || post.media![0].url)}
-                      title="Click to view entire picture in fullscreen"
-                    >
-                      {(post.media[currentPhotoIndex]?.url || post.media[0].url) === '[removed]' ? (
-                        <div className="w-full max-w-md p-6 rounded-2xl bg-white/5 border border-dashed border-white/20 text-center space-y-2">
-                          <ImageOff size={28} className="mx-auto text-white/40 mb-1" />
-                          <p className="text-xs text-white/60 font-medium">This photo was removed for violating community standards.</p>
-                        </div>
-                      ) : (
-                        <img
-                          src={post.media[currentPhotoIndex]?.url || post.media[0].url}
-                          alt="Flagged Post Media"
-                          className="w-full h-full object-contain group-hover:scale-[1.01] transition-transform duration-200"
-                        />
-                      )}
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AvatarDisplay
+                      src={studentDetail?.avatar_url || report.reported_avatar || post.author_avatar}
+                      name={studentDetail?.full_name || report.reported_name || post.author_name || 'Student'}
+                      className="w-10 h-10 rounded-full border border-gray-200 dark:border-white/10 shrink-0 shadow-xs"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">
+                        {studentDetail?.full_name || report.reported_name || post.author_name || 'Student'}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {(studentDetail?.username || report.reported_username || post.author_username) && (
+                          <span className="font-jakarta text-[11px] text-gray-500 dark:text-gray-400">
+                            @{studentDetail?.username || report.reported_username || post.author_username}
+                          </span>
+                        )}
+                        {(studentDetail?.username || report.reported_username || post.author_username) && (
+                          <span className="text-gray-300 dark:text-gray-600">·</span>
+                        )}
+                        <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">
+                          {post.created_at ? formatDistanceToNowStrict(new Date(post.created_at), { addSuffix: true }) : ''}
+                        </span>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
+                        {post.audience === 'public' ? (
+                          <Globe2 size={11} className="text-gray-400 dark:text-gray-500" />
+                        ) : (
+                          <Users size={11} className="text-gray-400 dark:text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Click Fullscreen Button */}
+                  {/* Header Right: Follow & 3-dots removed! Admin only delete button */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {post.is_deleted || post.is_deleted_from_feed ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 border border-red-500/30">
+                        <AlertTriangle size={11} /> Deleted
+                      </span>
+                    ) : isAdmin ? (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewImage(post.media![currentPhotoIndex]?.url || post.media![0].url);
-                        }}
-                        className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/75 hover:bg-black/90 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 border border-white/20 shadow-xl transition-all cursor-pointer"
+                        disabled={busy || deletingPost}
+                        onClick={handleDeleteReportedPost}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-jakarta text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                        title="Permanently remove this post from the student feed"
                       >
-                        <Maximize2 size={13} />
-                        <span>Click Fullscreen (Entire Picture)</span>
+                        {deletingPost ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                        <span>Delete Post</span>
                       </button>
-
-                      {/* Multi-photo Selector Pills */}
-                      {post.media.length > 1 && (
-                        <div
-                          className="absolute top-3 left-3 flex items-center gap-1.5 p-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/15"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {post.media.map((_, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setCurrentPhotoIndex(idx)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                currentPhotoIndex === idx
-                                  ? 'bg-purple-600 text-white'
-                                  : 'text-white/60 hover:text-white'
-                              }`}
-                            >
-                              Photo {idx + 1}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Bottom Floating Caption Banner on Photo */}
-                      {post.content && (
-                        <div
-                          className="absolute bottom-3 inset-x-3 p-3 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 max-h-24 overflow-y-auto"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-purple-300 mb-0.5">
-                            Post Caption & Content
-                          </p>
-                          <p className="text-xs text-white leading-relaxed whitespace-pre-wrap font-jakarta">
-                            {post.content}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Text-Only Post */
-                    <div className="w-full h-full p-6 flex flex-col justify-center items-center text-center max-w-xl mx-auto overflow-y-auto">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-purple-400 mb-2">
-                        Post Content & Text
-                      </p>
-                      <blockquote className="text-base sm:text-lg text-white font-medium leading-relaxed italic bg-white/5 p-6 rounded-2xl border border-white/10 w-full text-left whitespace-pre-wrap">
-                        "{post?.content || '[No text content]'}"
-                      </blockquote>
-                    </div>
-                  )}
+                    ) : null}
+                  </div>
                 </div>
 
-                {/* 3. Postcard Footer Strip */}
-                <div className="shrink-0 px-4 py-2.5 bg-[#111924] border-t border-white/10 flex items-center justify-between text-xs text-white/50 flex-wrap gap-2">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 text-white/70">
-                      <Heart size={13} className="text-red-400" /> {post?.likes_count ?? 0} likes
-                    </span>
-                    <span className="flex items-center gap-1 text-white/70">
-                      <MessageSquare size={13} className="text-blue-400" /> {post?.comments_count ?? 0} comments
-                    </span>
-                    <span className="text-[11px] font-mono text-white/40">
-                      ID: {(report.post_id || post?.id || '').slice(0, 8)}…
-                    </span>
+                {/* Content */}
+                {post.content && (
+                  <div className="mt-3">
+                    {post.content === 'This message was removed' ? (
+                      <p className="font-jakarta text-[14px] italic text-gray-400 dark:text-gray-500 py-1">
+                        This message was removed
+                      </p>
+                    ) : (
+                      <>
+                        <p
+                          className={cn(
+                            "font-jakarta text-[14.5px] sm:text-[15px] text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap break-words",
+                            post.content.length > 120 && !isContentExpanded && "line-clamp-3"
+                          )}
+                        >
+                          {post.content}
+                        </p>
+                        {post.content.length > 120 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsContentExpanded(!isContentExpanded)}
+                            className="font-jakarta text-xs font-bold text-[#1A6B3C] dark:text-emerald-400 mt-1 hover:underline cursor-pointer focus:outline-none"
+                          >
+                            {isContentExpanded ? 'Show less' : '...more'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Media Grid */}
+                <MediaGrid
+                  media={post.media}
+                  onMediaClick={(url) => setPreviewImage(url)}
+                />
+
+                {/* Actions (Left-aligned, icon-only with count matching mobile/feed) */}
+                <div className="mt-3.5 pt-2.5 border-t border-gray-100/80 dark:border-white/10 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-5 sm:gap-6">
+                    {/* Like */}
+                    <div className="flex items-center gap-1.5 py-1 text-gray-400 dark:text-gray-500 font-jakarta font-medium select-none">
+                      <Heart size={18} className="text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-[13px] font-medium">
+                        {post.likes_count ?? 0}
+                      </span>
+                    </div>
+
+                    {/* Comment (count only) */}
+                    <div className="flex items-center gap-1.5 py-1 text-gray-400 dark:text-gray-500 font-jakarta font-medium select-none">
+                      <MessageCircle size={18} className="text-gray-400 dark:text-gray-500" strokeWidth={2} />
+                      <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-[13px] font-medium">
+                        {post.comments_count ?? 0}
+                      </span>
+                    </div>
                   </div>
 
-                  {!post?.is_deleted && !post?.is_deleted_from_feed && (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={async () => {
-                        const targetPostId = report.post_id || post?.id;
-                        if (!targetPostId) return;
-                        if (!window.confirm('Delete this reported post from feed?')) return;
-                        setBusy(true);
-                        try {
-                          await apiClient.adminDeleteReportedPost(report.id, targetPostId);
-                          notify.success('Post deleted from feed');
-                          onChanged();
-                          onClose();
-                        } catch (err: any) {
-                          notify.error('Failed to delete post', err.message);
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Trash2 size={12} />
-                      <span>Delete Post From Feed</span>
-                    </button>
-                  )}
+                  <span className="font-mono text-[11px] text-gray-400 dark:text-white/40">
+                    POST ID: {(report.post_id || post.id || '').slice(0, 8)}…
+                  </span>
                 </div>
-              </>
-            )}
-
-            {isMessageReport && (
-              /* Chat Message Evidence View */
-              <div className="w-full h-full flex flex-col">
+              </article>
+            ) : isMessageReport && message ? (
+              /* Flagged Chat Message Evidence */
+              <div className="w-full max-w-xl rounded-2xl overflow-hidden border border-white/10 bg-[#0C121B] shadow-2xl flex flex-col relative select-none">
                 <div className="shrink-0 px-4 py-3 bg-[#111924] border-b border-white/10 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       <MessageSquare size={12} /> Flagged Chat Message
                     </span>
                     <span className="text-xs text-white/70">
-                      From: {message?.sender_name || getReportedDisplayName(report)}
+                      From: {studentDetail?.full_name || message.sender_name || getReportedDisplayName(report)}
                     </span>
                   </div>
                   <span className="text-[10px] text-white/40 font-mono">
-                    MSG: {(report.message_id || message?.id || '').slice(0, 8)}…
+                    MSG: {(report.message_id || message.id || '').slice(0, 8)}…
                   </span>
                 </div>
 
-                <div className="flex-1 p-6 overflow-y-auto flex flex-col justify-center items-center">
+                <div className="p-6 flex flex-col justify-center items-center">
                   <div className="max-w-xl w-full p-4 rounded-2xl bg-[#1E293B] border border-amber-400/50 shadow-xl space-y-3">
-                    {message?.image_url && (
+                    {message.image_url && (
                       message.image_url === '[removed]' ? (
                         <div className="w-full p-4 rounded-xl bg-black/40 border border-dashed border-white/20 text-center space-y-1">
                           <ImageOff size={24} className="mx-auto text-white/40 mb-1" />
@@ -1165,7 +1608,7 @@ function ReportDetailModal({
                         <div
                           className="rounded-xl overflow-hidden aspect-video bg-black/40 border border-white/10 relative cursor-pointer group"
                           onClick={() => setPreviewImage(message.image_url!)}
-                          title="Click to view entire picture in fullscreen"
+                          title="Click to view full picture"
                         >
                           <img src={message.image_url} alt="Attached" className="w-full h-full object-contain" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
@@ -1174,50 +1617,639 @@ function ReportDetailModal({
                         </div>
                       )
                     )}
-                    <p className="text-sm text-white leading-relaxed">{message?.content || '[Image Only]'}</p>
+                    <p className="text-sm text-white leading-relaxed">{message.content || '[Image Only]'}</p>
                     <p className="text-[10px] text-white/40 text-right">
-                      {message?.created_at ? new Date(message.created_at).toLocaleString() : ''}
+                      {message.created_at ? new Date(message.created_at).toLocaleString() : ''}
                     </p>
                   </div>
                 </div>
               </div>
+            ) : (
+              <div className="p-12 text-center text-white/40 text-xs">
+                No content evidence available for this report.
+              </div>
             )}
           </div>
-        )}
-      </main>
 
-      {/* ── SINGLE CTA ACTION MODAL (DIRECT FIXED OVERLAY AT Z-[10000]) ── */}
+          {/* ── UNDER THE CONTENT: ONE FULLY ROUNDED CTA (FOR MODERATOR) ── */}
+          {isModerator && (
+            <div className="shrink-0 p-3 sm:px-6 bg-white dark:bg-[#0B1019] border-t border-gray-200 dark:border-white/10 flex items-center justify-center shadow-md">
+              <button
+                type="button"
+                onClick={() => {
+                  setFindingText(report.moderator_findings || '');
+                  setFindingRecAction(report.moderator_recommended_action || 'warn');
+                  setFindingExistingUrl(report.moderator_attachment_url || null);
+                  setFindingFile(null);
+                  setFindingPreview(null);
+                  setFindingsModalOpen(true);
+                }}
+                className="w-full bg-[#1A6B3C] dark:bg-emerald-600 hover:bg-[#14532D] dark:hover:bg-emerald-500 text-white font-mono text-xs uppercase tracking-wider font-bold py-3.5 rounded-full transition-all shadow-md flex items-center justify-center cursor-pointer active:scale-95"
+              >
+                <span>submit review</span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ── RIGHT COLUMN: THE INFORMATION (~40%) ── */}
+        <aside className="w-full lg:w-5/12 xl:w-2/5 flex flex-col bg-white dark:bg-[#0B1019] overflow-y-auto divide-y divide-gray-100 dark:divide-white/10 text-gray-900 dark:text-white">
+
+          {/* Section 1: Reported Student Profile & Academic Dossier */}
+          <div className="p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <User size={13} /> Reported Student Dossier
+              </span>
+              {studentDetail?.is_banned ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 uppercase">
+                  Banned Account
+                </span>
+              ) : studentDetail?.is_suspended ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                  Suspended
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                  Active
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-start gap-3.5 bg-gray-50 dark:bg-white/5 p-3.5 rounded-xl border border-gray-200/80 dark:border-white/10">
+              <div className="relative shrink-0">
+                <AvatarDisplay
+                  src={studentDetail?.avatar_url || report.reported_avatar}
+                  name={getReportedDisplayName(report)}
+                  className="w-12 h-12 rounded-full border-2 border-white/20 shadow-sm"
+                />
+                {(studentDetail?.student_verification_status === 'approved' || studentDetail?.chmsu_auto_verified) && (
+                  <span
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0B1019] flex items-center justify-center text-[9px] text-white font-bold"
+                    title="Verified Student"
+                  >
+                    ✓
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                  {studentDetail?.full_name || getReportedDisplayName(report)}
+                  {report.reported_username && report.reported_username.toLowerCase() !== 'anonymous' && (
+                    <span className="text-xs text-gray-500 dark:text-white/50 font-normal">@{report.reported_username}</span>
+                  )}
+                </h4>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium truncate mt-0.5">
+                  {getStudentAcademicInfo(studentDetail, report)}
+                </p>
+                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-white/60">
+                  <Mail size={12} className="text-gray-400 dark:text-white/40 shrink-0" />
+                  <span className="truncate">{studentDetail?.email || report.reported_email || 'Institutional email verified'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Submitted By (Reporter) */}
+          <div className="p-4 sm:p-5 space-y-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-white/50 flex items-center gap-1.5">
+              <Shield size={13} /> Submitted By (Reporter)
+            </span>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <AvatarDisplay
+                  src={report.reporter_avatar}
+                  name={getReporterDisplayName(report)}
+                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/15 shrink-0 text-xs"
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold text-xs text-gray-900 dark:text-white truncate">
+                    {getReporterDisplayName(report)}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/50 truncate">
+                    {report.reporter_email || (report.reporter_username ? `@${report.reporter_username}` : 'CHMSU Student Reporter')}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] text-gray-400 dark:text-white/40 shrink-0">
+                {new Date(report.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+
+
+
+          {/* Section 4: Moderation Workflow Lifecycle (4-Tier Stepper) */}
+          <div className="p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                <Layers size={13} /> Moderation Lifecycle Workflow
+              </span>
+              <span className="text-[10px] font-mono text-gray-400 dark:text-white/40">4-Stage Pipeline</span>
+            </div>
+
+            <div className="space-y-3 bg-gray-50 dark:bg-white/5 p-3.5 rounded-xl border border-gray-200/80 dark:border-white/10">
+              {/* Step 1: Report Submitted */}
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                  ✓
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between">
+                    <span>1. Report Submitted</span>
+                    <span className="text-[10px] font-normal text-white/40">{new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/60 mt-0.5">Report registered in moderation desk.</p>
+                </div>
+              </div>
+
+              {/* Step 2: Under Review */}
+              <div className="flex items-start gap-3 pt-2 border-t border-white/5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${report.status === 'reviewing' || report.status === 'resolved'
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                    : 'bg-gray-200 text-gray-500 border border-gray-300 dark:bg-white/10 dark:text-white/40 dark:border-white/15'
+                  }`}>
+                  {report.status === 'reviewing' || report.status === 'resolved' ? '✓' : '2'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between">
+                    <span>2. Under Review</span>
+                    {report.reviewed_at && (
+                      <span className="text-[10px] font-normal text-gray-400 dark:text-white/40">{new Date(report.reviewed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/60 mt-1 flex items-center gap-1.5">
+                    <span className="text-gray-400 dark:text-white/40">assign to:</span>
+                    {report.reviewed_by_name ? (
+                      <span className="font-semibold text-blue-600 dark:text-blue-400 inline-flex items-center gap-1">
+                        moderator : {report.reviewed_by_name}
+                      </span>
+                    ) : (
+                      <span className="italic text-gray-400 dark:text-white/40">
+                        moderator : not yet assigned
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3: Pending Action */}
+              <div className="flex items-start gap-3 pt-2 border-t border-white/5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${report.status === 'resolved' || (report.internal_notes && report.internal_notes.includes('[STAGE:pending_action]'))
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    : 'bg-white/10 text-white/40 border border-white/15'
+                  }`}>
+                  {report.status === 'resolved' ? '✓' : '3'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">3. Pending Action</p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/60 mt-0.5">
+                    {report.status === 'resolved'
+                      ? 'Moderation verified and recommendations evaluated'
+                      : 'Assigned staff reviews evidence and submits recommendation'}
+                  </p>
+
+                  {/* View Details link placed right where the green card used to be */}
+                  {(report.moderator_findings || report.status === 'resolved') && (
+                    <div className="mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsModalOpen(true)}
+                        className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline inline-flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <span>View Details</span>
+                        <ExternalLink size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 4: Action Taken */}
+              <div className="flex items-start gap-3 pt-2 border-t border-white/5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${report.status === 'resolved'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : report.status === 'rejected'
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                      : 'bg-white/10 text-white/40 border border-white/15'
+                  }`}>
+                  {report.status === 'resolved' ? '✓' : report.status === 'rejected' ? '✕' : '4'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">4. Action Taken</p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/60 mt-0.5">
+                    {report.status === 'resolved'
+                      ? 'Admin executed sanctions and case is concluded.'
+                      : report.status === 'rejected'
+                        ? 'Report dismissed as unwarranted.'
+                        : 'Admin confirms decision and enforces disciplinary sanctions.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+        </aside>
+      </div>
+
+      {/* ── FINDINGS MODAL (MODERATOR INVESTIGATION REVIEW) ── */}
+      {findingsModalOpen && (
+        <div
+          className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setFindingsModalOpen(false)}
+        >
+          <div
+            className="relative max-w-xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-[#141B24] border border-gray-200 dark:border-white/15 text-gray-900 dark:text-white p-6 rounded-2xl shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">
+                    Complete Review & Findings
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFindingsModalOpen(false)}
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Target Strip */}
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="text-gray-500 dark:text-white/50">Reported Student: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {report.reported_name || report.reported_username || 'Student'}
+                </span>
+              </div>
+              <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">
+                {report.violation_label}
+              </Badge>
+            </div>
+
+            {/* Findings Text Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <span>Investigation Findings & Evaluation</span>
+                <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={findingText}
+                onChange={(e) => setFindingText(e.target.value)}
+                placeholder="Detail your investigation findings, evidence evaluation, student history, and applicable university handbook clauses..."
+                rows={4}
+                className="w-full text-xs bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-white/15 rounded-xl p-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/30 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 resize-none"
+              />
+            </div>
+
+            {/* Recommended Action Selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <span>Recommended Action for Administration</span>
+                <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={findingRecAction}
+                onChange={(e) => setFindingRecAction(e.target.value)}
+                className="w-full text-xs bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-white/15 rounded-xl p-2.5 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="warn">Recommend: Issue Official Warning</option>
+                <option value="delete_post">Recommend: Remove Flagged Content / Post</option>
+                <option value="suspend">Recommend: Temporary Account Suspension</option>
+                <option value="ban">Recommend: Permanent Disciplinary Ban</option>
+                <option value="resolve">Recommend: Dismiss / Resolve (No Violation)</option>
+              </select>
+            </div>
+
+            {/* Supporting Attachment Upload */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <Paperclip size={13} className="text-emerald-500" />
+                <span>Attach Evidence</span>
+              </label>
+
+              {findingFile || findingExistingUrl ? (
+                <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {findingPreview ? (
+                      <img src={findingPreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-white/20 shrink-0" />
+                    ) : (findingFile?.type === 'application/pdf' || findingExistingUrl?.toLowerCase().includes('.pdf')) ? (
+                      <div className="w-12 h-12 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30">
+                        <FileText size={22} />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                        <Paperclip size={20} />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                        {findingFile?.name || (findingExistingUrl ? 'Attached Evidence Document' : 'Evidence File')}
+                      </p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/50">
+                        {findingFile ? `${(findingFile.size / 1024 / 1024).toFixed(2)} MB • Ready to upload` : 'Evidence file attached'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFindingFile(null);
+                      setFindingPreview(null);
+                      setFindingExistingUrl(null);
+                    }}
+                    className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+                    title="Remove attachment"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                  className="border-2 border-dashed border-gray-300 dark:border-white/15 hover:border-emerald-500 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-white/[0.02] transition-colors group"
+                >
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelected(file);
+                    }}
+                  />
+                  <Upload size={22} className="text-gray-400 dark:text-white/40 group-hover:text-emerald-500 transition-colors" />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-white/80 group-hover:text-emerald-500">
+                    Click to browse or drag & drop evidence file
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-white/40">
+                    Supports PNG, JPG, WEBP, GIF, or PDF documents (up to 25MB)
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => setFindingsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!findingText.trim() || submittingFindings}
+                onClick={async () => {
+                  if (!findingText.trim()) return;
+                  setSubmittingFindings(true);
+                  try {
+                    let attachmentUrl = findingExistingUrl;
+                    if (findingFile) {
+                      const uploadRes = await apiClient.adminUploadFindingAttachment(findingFile, report.id);
+                      attachmentUrl = uploadRes.url;
+                    }
+                    await apiClient.adminVerifyReport(report.id, {
+                      findings: findingText.trim(),
+                      recommendedAction: findingRecAction,
+                      attachmentUrl,
+                    });
+                    notify.success('Review Completed', 'Investigation findings and evidence uploaded successfully.');
+                    setFindingsModalOpen(false);
+                    onChanged();
+                  } catch (err: any) {
+                    notify.error('Failed to submit review', err.message);
+                  } finally {
+                    setSubmittingFindings(false);
+                  }
+                }}
+                className="px-5 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center cursor-pointer disabled:opacity-40"
+              >
+                {submittingFindings ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin mr-1.5" />
+                    <span>Uploading & Submitting...</span>
+                  </>
+                ) : (
+                  <span>Submit Findings</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DETAILS MODAL (VIEW FINDINGS & ATTACHMENTS) ── */}
+      {detailsModalOpen && (
+        <div
+          className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setDetailsModalOpen(false)}
+        >
+          <div
+            className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-[#141B24] border border-gray-200 dark:border-white/15 text-gray-900 dark:text-white p-6 rounded-2xl shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">
+                    Investigation Findings & Evidence Details
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-white/50">
+                    Report #{report.id.slice(0, 8)} • Stage: Pending Action
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailsModalOpen(false)}
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Moderator Info Header */}
+            <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  {report.reviewed_by_name?.charAt(0) || 'M'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                    Reviewed by: {report.reviewed_by_name || 'Assigned Moderator'}
+                  </p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/50">
+                    {report.reviewed_at ? new Date(report.reviewed_at).toLocaleString() : 'Recently reviewed'}
+                  </p>
+                </div>
+              </div>
+              {report.moderator_recommended_action && (
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-gray-500 dark:text-white/50 block">Recommendation</span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase">
+                    {report.moderator_recommended_action}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Findings Text */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-white/60">
+                Moderator Investigation Findings
+              </h4>
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 text-xs text-gray-800 dark:text-white/90 leading-relaxed whitespace-pre-wrap">
+                {report.moderator_findings || 'No written findings submitted yet.'}
+              </div>
+            </div>
+
+            {/* Attachment Section */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-white/60">
+                <span>Attached Evidence File</span>
+              </h4>
+
+              {report.moderator_attachment_url ? (
+                report.moderator_attachment_url.toLowerCase().match(/\.(png|jpe?g|webp|gif)($|\?)/) ||
+                report.moderator_attachment_url.startsWith('data:image/') ? (
+                  <div className="space-y-2">
+                    <div
+                      className="rounded-xl overflow-hidden max-h-[300px] bg-black/40 border border-gray-200 dark:border-white/10 relative group cursor-pointer"
+                      onClick={() => setPreviewImage(report.moderator_attachment_url!)}
+                    >
+                      <img
+                        src={report.moderator_attachment_url}
+                        alt="Moderator Finding Evidence"
+                        className="w-full max-h-[300px] object-contain mx-auto"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                        <Maximize2 size={16} /> Click to View Full Size
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <a
+                        href={report.moderator_attachment_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Open original image</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
+                        <FileText size={22} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                          Supporting PDF / Document Evidence
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-white/50 truncate">
+                          Supporting document evidence
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={report.moderator_attachment_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+                    >
+                      <span>Open Document</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )
+              ) : (
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-white/10 text-center text-xs text-gray-400 dark:text-white/40 italic">
+                  No document or media file attached with this review.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/10">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailsModalOpen(false);
+                    setActionModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#1A6B3C] hover:bg-[#14532D] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldAlert size={14} />
+                  <span>Proceed to Take Action</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDetailsModalOpen(false)}
+                className="ml-auto px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {actionModalOpen && (
         <div
           className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
           onClick={() => setActionModalOpen(false)}
         >
           <div
-            className="relative max-w-xl w-full max-h-[90vh] overflow-y-auto bg-[#141B24] border border-white/15 text-white p-6 rounded-2xl shadow-2xl space-y-4"
+            className="relative max-w-xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-[#141B24] border border-gray-200 dark:border-white/15 text-gray-900 dark:text-white p-6 rounded-2xl shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/10">
               <div>
-                <h3 className="font-fraunces text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <ShieldAlert size={18} className="text-emerald-400" />
                   Take Action on Report
                 </h3>
-                <p className="text-xs text-white/50 mt-0.5">
+                <p className="text-xs text-gray-500 dark:text-white/50 mt-0.5">
                   Select a single moderation resolution for report #{report.id.slice(0, 8)}.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setActionModalOpen(false)}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Target Summary Strip */}
-            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <AvatarDisplay
                   src={studentDetail?.avatar_url || report.reported_avatar}
@@ -1225,33 +2257,32 @@ function ReportDetailModal({
                   className="w-8 h-8 rounded-full border border-white/15"
                 />
                 <div className="min-w-0">
-                  <p className="font-bold text-xs text-white truncate">
+                  <p className="font-bold text-xs text-gray-900 dark:text-white truncate">
                     {studentDetail?.full_name || getReportedDisplayName(report)}
                   </p>
-                  <p className="text-[11px] text-white/50 truncate">
+                  <p className="text-[11px] text-gray-500 dark:text-white/50 truncate">
                     {report.reported_email || (report.reported_username ? `@${report.reported_username}` : '')}
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 uppercase shrink-0">
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 uppercase shrink-0">
                 {report.violation_label}
               </span>
             </div>
 
             {/* Action Radio Options */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wider">
                 Select Moderation Resolution
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* 1. Resolve */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'resolve'
-                      ? 'border-emerald-500 bg-emerald-950/30 ring-1 ring-emerald-500'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'resolve'
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 ring-1 ring-emerald-500'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1261,20 +2292,19 @@ function ReportDetailModal({
                     className="mt-0.5 accent-emerald-500"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-emerald-400" /> Resolve Report
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Mark resolved without account penalty</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Mark resolved without account penalty</p>
                   </div>
                 </label>
 
                 {/* 2. Reviewing */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'reviewing'
-                      ? 'border-blue-500 bg-blue-950/30 ring-1 ring-blue-500'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'reviewing'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-500'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1284,20 +2314,19 @@ function ReportDetailModal({
                     className="mt-0.5 accent-blue-500"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <Clock size={13} className="text-blue-400" /> Mark In Review
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Keep under ongoing investigation</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Keep under ongoing investigation</p>
                   </div>
                 </label>
 
                 {/* 3. Reject */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'reject'
-                      ? 'border-gray-400 bg-white/10 ring-1 ring-gray-400'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'reject'
+                      ? 'border-gray-400 bg-gray-100 dark:bg-white/10 ring-1 ring-gray-400'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1307,20 +2336,19 @@ function ReportDetailModal({
                     className="mt-0.5 accent-gray-400"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <X size={13} className="text-gray-400" /> Dismiss / Reject
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Dismiss as unwarranted or false</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Dismiss as unwarranted or false</p>
                   </div>
                 </label>
 
                 {/* 4. Warn */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'warn'
-                      ? 'border-amber-500 bg-amber-950/30 ring-1 ring-amber-500'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'warn'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-500'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1330,20 +2358,19 @@ function ReportDetailModal({
                     className="mt-0.5 accent-amber-500"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <ShieldAlert size={13} className="text-amber-400" /> Issue Warning
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Send official warning notification</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Send official warning notification</p>
                   </div>
                 </label>
 
                 {/* 5. Suspend */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'suspend'
-                      ? 'border-amber-500 bg-amber-950/30 ring-1 ring-amber-500'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'suspend'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-500'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1353,20 +2380,19 @@ function ReportDetailModal({
                     className="mt-0.5 accent-amber-500"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <Clock size={13} className="text-amber-400" /> Suspend Student
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Restrict student account access</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Restrict student account access</p>
                   </div>
                 </label>
 
                 {/* 6. Ban */}
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedAction === 'ban'
-                      ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
-                      : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                  }`}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'ban'
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-500'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1376,21 +2402,20 @@ function ReportDetailModal({
                     className="mt-0.5 accent-red-500"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                       <Ban size={13} className="text-red-400" /> Permanent Ban
                     </p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Permanently ban student account</p>
+                    <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Permanently ban student account</p>
                   </div>
                 </label>
 
-                {/* 7. Delete Post */}
-                {isPostReport && !post?.is_deleted && !post?.is_deleted_from_feed && (
+                {/* 7. Delete Post - Admin Only */}
+                {isPostReport && !post?.is_deleted && !post?.is_deleted_from_feed && isAdmin && (
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      selectedAction === 'delete_post'
-                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
-                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                    }`}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'delete_post'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1400,10 +2425,10 @@ function ReportDetailModal({
                       className="mt-0.5 accent-red-500"
                     />
                     <div>
-                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                         <Trash2 size={13} className="text-red-400" /> Delete Reported Post
                       </p>
-                      <p className="text-[11px] text-white/50 mt-0.5">Remove flagged post from student feed</p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Remove flagged post from student feed</p>
                     </div>
                   </label>
                 )}
@@ -1411,11 +2436,10 @@ function ReportDetailModal({
                 {/* 8. Remove Message */}
                 {(Boolean(isMessageReport && message?.content) || Boolean(isPostReport && post?.content)) && (
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      selectedAction === 'remove_message'
-                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
-                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                    }`}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'remove_message'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1425,10 +2449,10 @@ function ReportDetailModal({
                       className="mt-0.5 accent-red-500"
                     />
                     <div>
-                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                         <MessageSquareX size={13} className="text-red-400" /> Remove Message
                       </p>
-                      <p className="text-[11px] text-white/50 mt-0.5">Replace with "This message was removed"</p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Replace with "This message was removed"</p>
                     </div>
                   </label>
                 )}
@@ -1436,11 +2460,10 @@ function ReportDetailModal({
                 {/* 9. Remove Media */}
                 {(Boolean(isMessageReport && message?.image_url) || Boolean(isPostReport && post?.media && post.media.length > 0)) && (
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      selectedAction === 'remove_media'
-                        ? 'border-red-500 bg-red-950/30 ring-1 ring-red-500'
-                        : 'border-white/10 bg-white/5 hover:bg-white/[0.08]'
-                    }`}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${selectedAction === 'remove_media'
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-500'
+                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100/80 dark:hover:bg-white/[0.08]'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1450,10 +2473,10 @@ function ReportDetailModal({
                       className="mt-0.5 accent-red-500"
                     />
                     <div>
-                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                         <ImageOff size={13} className="text-red-400" /> Remove Media
                       </p>
-                      <p className="text-[11px] text-white/50 mt-0.5">Replace photo with guidelines notice</p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/50 mt-0.5">Replace photo with guidelines notice</p>
                     </div>
                   </label>
                 )}
@@ -1470,7 +2493,7 @@ function ReportDetailModal({
                       key={idx}
                       type="button"
                       onClick={() => setWarnMessage(tmpl)}
-                      className="text-[10px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white/80 transition-colors cursor-pointer"
+                      className="text-[10px] px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white/80 transition-colors cursor-pointer"
                     >
                       Template {idx + 1}
                     </button>
@@ -1481,7 +2504,7 @@ function ReportDetailModal({
                   onChange={(e) => setWarnMessage(e.target.value)}
                   placeholder="Type official warning message..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-xs outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 text-xs outline-none focus:border-amber-400"
                 />
               </div>
             )}
@@ -1493,7 +2516,7 @@ function ReportDetailModal({
                 <select
                   value={suspendDays}
                   onChange={(e) => setSuspendDays(e.target.value)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-white outline-none cursor-pointer"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white outline-none cursor-pointer"
                 >
                   <option value="3">3 Days</option>
                   <option value="7">7 Days</option>
@@ -1506,7 +2529,7 @@ function ReportDetailModal({
 
             {/* Internal Notes */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+              <label className="text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wider">
                 Internal Admin Notes
               </label>
               <textarea
@@ -1514,7 +2537,7 @@ function ReportDetailModal({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Private notes visible only to the moderation team..."
                 rows={2}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 text-xs outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -1524,7 +2547,7 @@ function ReportDetailModal({
                 type="button"
                 onClick={() => setActionModalOpen(false)}
                 disabled={busy}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>

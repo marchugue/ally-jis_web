@@ -1,16 +1,15 @@
 import React from 'react';
 import { ArrowLeft, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  stageName,
-  TOTAL_POINTS_FOR_PROFILE_UNLOCK,
-} from '@/constants/roadmap';
 
 export interface RoadmapCanvasProps {
   stage?: number;
+  stageName?: string;
   dayStreak?: number;
   matchPoints?: number;
   goalPoints?: number;
+  progressPercent?: number;
+  isProfileUnlocked?: boolean;
   effectiveMultiplier?: number;
   partnerAlias?: string;
   extraRightPadding?: boolean;
@@ -20,17 +19,24 @@ export interface RoadmapCanvasProps {
 
 export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   stage = 1,
-  dayStreak = 0,
+  stageName,
   matchPoints = 0,
-  goalPoints = TOTAL_POINTS_FOR_PROFILE_UNLOCK,
+  goalPoints,
+  progressPercent: serverProgressPercent,
+  isProfileUnlocked: serverIsProfileUnlocked,
   effectiveMultiplier = 1,
-  extraRightPadding = false,
   onBackToChat,
   className,
 }) => {
   const currentStage = Math.max(1, Math.min(4, stage));
-  const progressPercent = Math.min(100, Math.max(0, (matchPoints / goalPoints) * 100));
-  const isProfileUnlocked = matchPoints >= goalPoints;
+  const resolvedStageName = stageName || 'Anonymous Chat';
+  const progressPercent =
+    serverProgressPercent ??
+    (goalPoints && goalPoints > 0
+      ? Math.min(100, Math.max(0, Math.round((matchPoints / goalPoints) * 100)))
+      : 0);
+  const isProfileUnlocked =
+    serverIsProfileUnlocked ?? Boolean(goalPoints && goalPoints > 0 && matchPoints >= goalPoints);
 
   return (
     <div
@@ -64,7 +70,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
         <div className="pointer-events-auto inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md shadow-md border border-black/10 dark:border-white/10 select-none">
           <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
           <span className="font-jakarta font-black text-xs text-[#1A6B3C] dark:text-emerald-400 uppercase tracking-wide">
-            Stage {currentStage} · {stageName(currentStage)}
+            Stage {currentStage} · {resolvedStageName}
           </span>
         </div>
 
@@ -88,7 +94,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
             style={{ width: `${Math.max(progressPercent > 0 ? 5 : 0, progressPercent)}%` }}
           />
           <span className="relative z-10 text-xs font-black text-white font-mono tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-            {matchPoints}/{goalPoints}
+            {goalPoints ? `${matchPoints}/${goalPoints}` : `${matchPoints} pts`}
           </span>
         </div>
       </div>

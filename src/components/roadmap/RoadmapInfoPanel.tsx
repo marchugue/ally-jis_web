@@ -8,21 +8,16 @@ import {
   Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  STAGES,
-  STAGE_STREAK_REQS,
-  MASTER_DAILY_TASKS,
-  stageName,
-} from '@/constants/roadmap';
-import type { AvatarRevealView, DailyTaskStatus } from '@/api/types';
-import { AvatarRevealCard } from '@/components/match/AvatarRevealCard';
+import type { AvatarRevealView, DailyTaskStatus, StreakMilestoneInfo } from '@/api/types';
 
 export interface RoadmapInfoPanelProps {
   stage?: number;
+  stageName?: string;
   dayStreak?: number;
   matchPoints?: number;
   effectiveMultiplier?: number;
   dailyTasks?: DailyTaskStatus[];
+  streakMilestones?: StreakMilestoneInfo[];
   partnerAlias?: string;
   /** Progressive real-avatar reveal state from the reveal endpoint. */
   avatarReveal?: AvatarRevealView | null;
@@ -34,34 +29,18 @@ export interface RoadmapInfoPanelProps {
 
 export const RoadmapInfoPanel: React.FC<RoadmapInfoPanelProps> = ({
   stage = 1,
-  dayStreak = 0,
-  effectiveMultiplier = 1,
+  stageName,
   dailyTasks = [],
+  streakMilestones = [],
   partnerAlias,
-  avatarReveal,
-  partnerAvatarKey,
-  partnerName,
   onClose,
   className,
 }) => {
   const currentStage = Math.max(1, Math.min(4, stage));
-
-  // Compute daily tasks display matching mobile app logic
-  const tasksToDisplay = MASTER_DAILY_TASKS.map((def) => {
-    const serverTask = dailyTasks.find((t) => t.taskId === def.taskId);
-    const isAvailable = currentStage >= def.unlockedAtStage;
-    const isDone =
-      isAvailable &&
-      (serverTask ? serverTask.myCompleted && serverTask.partnerCompleted : false);
-    const basePoints = serverTask?.basePoints ?? def.basePoints;
-
-    return {
-      ...def,
-      basePoints,
-      isAvailable,
-      isDone,
-    };
-  });
+  const resolvedStageName =
+    stageName ||
+    streakMilestones.find((m) => m.stage === currentStage)?.stageName ||
+    'Anonymous Chat';
 
   return (
     <div
@@ -81,7 +60,7 @@ export const RoadmapInfoPanel: React.FC<RoadmapInfoPanelProps> = ({
               Roadmap Progression
             </h3>
             <p className="text-[11px] font-mono text-gray-500 dark:text-gray-400 truncate mt-0.5">
-              Stage {currentStage} · {stageName(currentStage)}
+              Stage {currentStage} · {resolvedStageName}
             </p>
           </div>
         </div>
@@ -97,162 +76,137 @@ export const RoadmapInfoPanel: React.FC<RoadmapInfoPanelProps> = ({
         </button>
       </div>
 
-      {/* ── CARD CONTENT (Strict 1:1 mobile mirror: ONLY Daily Tasks & Streak Milestones) ── */}
+      {/* ── CARD CONTENT (Backend-driven Daily Tasks & Streak Milestones) ── */}
       <div className="flex-1 overflow-y-auto px-5 py-6 space-y-7 custom-scrollbar">
-        {/* ── Daily Tasks (Vertically aligned list, horizontal rows) ── */}
+        {/* ── Daily Tasks ── */}
         <div>
           <h3 className="text-[11px] font-extrabold uppercase tracking-[0.8px] text-[#475569] dark:text-[#94A3B8] mb-3">
             Daily Tasks
           </h3>
 
           <div>
-            {tasksToDisplay.map((task, idx) => (
-              <React.Fragment key={task.taskId}>
-                <div
-                  className={cn(
-                    'flex items-center py-3.5 gap-3 transition-opacity',
-                    !task.isAvailable && 'opacity-55'
-                  )}
-                >
-                  {/* Icon on left */}
-                  <div className="w-7 flex items-center justify-center shrink-0">
-                    {!task.isAvailable ? (
-                      <Lock size={18} color="#94A3B8" strokeWidth={2} />
-                    ) : task.isDone ? (
-                      <CheckCircle2 size={22} color="#16A34A" strokeWidth={2.2} />
-                    ) : (
-                      <Circle size={22} color="#CBD5E1" strokeWidth={2} />
-                    )}
-                  </div>
-
-                  {/* Info in middle */}
-                  <div className="flex-1 min-w-0">
-                    <h4
-                      className={cn(
-                        'text-sm font-bold font-jakarta leading-tight truncate',
-                        task.isDone
-                          ? 'text-[#16A34A]'
-                          : !task.isAvailable
-                          ? 'text-[#94A3B8]'
-                          : 'text-[#0F172A] dark:text-white'
-                      )}
-                    >
-                      {task.label}
-                    </h4>
-                    <p
-                      className={cn(
-                        'text-xs leading-[17px] mt-0.5',
-                        !task.isAvailable
-                          ? 'text-[#CBD5E1] dark:text-gray-600'
-                          : 'text-[#64748B] dark:text-gray-400'
-                      )}
-                    >
-                      {!task.isAvailable
-                        ? `Unlocks at Stage ${task.unlockedAtStage} · ${stageName(task.unlockedAtStage)}`
-                        : task.description}
-                    </p>
-                  </div>
-
-                  {/* Points on right */}
-                  <div className="text-right shrink-0">
-                    <span
-                      className={cn(
-                        'text-sm font-extrabold font-mono',
-                        task.isDone
-                          ? 'text-[#16A34A]'
-                          : !task.isAvailable
-                          ? 'text-[#CBD5E1]'
-                          : 'text-[#1A6B3C] dark:text-emerald-400'
-                      )}
-                    >
-                      +{Math.round(task.basePoints * effectiveMultiplier)}
-                    </span>
-                    <p
-                      className={cn(
-                        'text-[10px] font-mono',
-                        !task.isAvailable ? 'text-[#CBD5E1]' : 'text-[#94A3B8]'
-                      )}
-                    >
-                      pts
-                    </p>
-                  </div>
-                </div>
-                {idx < tasksToDisplay.length - 1 && (
-                  <div className="h-px bg-[#F1F5F9] dark:bg-white/5 ml-10" />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Streak Milestones (Horizontally aligned with gaps) ── */}
-        <div>
-          <h3 className="text-[11px] font-extrabold uppercase tracking-[0.8px] text-[#475569] dark:text-[#94A3B8] mb-3">
-            Streak Milestones
-          </h3>
-
-          <div className="flex items-center justify-between py-3.5 px-1">
-            {STAGES.map((s, idx) => {
-              const reqDays = STAGE_STREAK_REQS[s];
-              const unlocked = dayStreak >= reqDays;
-              const nextReqDays = STAGE_STREAK_REQS[s + 1] ?? 999;
-              const isConnectorActive =
-                idx < STAGES.length - 1 && dayStreak >= nextReqDays;
-
+            {dailyTasks.map((task, idx) => {
+              const isDone = Boolean(task.isCompleted ?? (task.myCompleted && task.partnerCompleted));
               return (
-                <React.Fragment key={s}>
-                  {/* Milestone Node: top streak icon, bottom days */}
-                  <div className="flex flex-col items-center w-14 shrink-0">
-                    {/* Top: Streak icon wrap */}
-                    <div
-                      className={cn(
-                        'w-11 h-11 rounded-full flex items-center justify-center mb-1.5 transition-all',
-                        unlocked
-                          ? 'bg-[#FEF3C7] border-[1.5px] border-[#F59E0B] shadow-[0_2px_4px_rgba(245,158,11,0.18)]'
-                          : 'bg-[#F1F5F9] dark:bg-neutral-800 border-[1.5px] border-[#E2E8F0] dark:border-neutral-700'
-                      )}
-                    >
-                      {unlocked ? (
-                        <span className="text-[21px]">🔥</span>
+                <React.Fragment key={task.taskId}>
+                  <div className="flex items-center py-3.5 gap-3">
+                    <div className="w-7 flex items-center justify-center shrink-0">
+                      {isDone ? (
+                        <CheckCircle2 size={22} color="#16A34A" strokeWidth={2.2} />
                       ) : (
-                        <div className="relative flex items-center justify-center">
-                          <span className="text-[19px] opacity-25">🔥</span>
-                          <div className="absolute -bottom-1 -right-1.5 bg-[#E2E8F0] dark:bg-neutral-700 rounded-md p-[2px]">
-                            <Lock size={9} color="#64748B" strokeWidth={2.5} />
-                          </div>
-                        </div>
+                        <Circle size={22} color="#CBD5E1" strokeWidth={2} />
                       )}
                     </div>
 
-                    {/* Bottom: Days e.g. 0d, 3d, 7d, 10d */}
-                    <span
-                      className={cn(
-                        'text-xs font-extrabold font-mono',
-                        unlocked
-                          ? 'text-[#0F172A] dark:text-white'
-                          : 'text-[#94A3B8]'
-                      )}
-                    >
-                      {reqDays}d
-                    </span>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <h4
+                        className={cn(
+                          'text-sm font-bold font-jakarta leading-tight truncate',
+                          isDone
+                            ? 'text-[#16A34A]'
+                            : 'text-[#0F172A] dark:text-white'
+                        )}
+                      >
+                        {task.label}
+                      </h4>
+                      <p className="text-xs leading-[17px] mt-0.5 text-[#64748B] dark:text-gray-400">
+                        {task.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-mono text-gray-400">
+                          You: {task.myCompleted ? '✓' : '○'} · {partnerAlias || 'Partner'}: {task.partnerCompleted ? '✓' : '○'}
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Horizontal connector line with gaps */}
-                  {idx < STAGES.length - 1 && (
-                    <div
-                      className={cn(
-                        'flex-1 h-[2px] mx-1.5 self-start mt-5 transition-colors',
-                        isConnectorActive
-                          ? 'bg-[#16A34A]'
-                          : 'bg-[#E2E8F0] dark:bg-neutral-700'
-                      )}
-                    />
+                    <div className="text-right shrink-0">
+                      <span
+                        className={cn(
+                          'text-sm font-extrabold font-mono',
+                          isDone
+                            ? 'text-[#16A34A]'
+                            : 'text-[#1A6B3C] dark:text-emerald-400'
+                        )}
+                      >
+                        +{task.points}
+                      </span>
+                      <p className="text-[10px] font-mono text-[#94A3B8]">
+                        pts
+                      </p>
+                    </div>
+                  </div>
+                  {idx < dailyTasks.length - 1 && (
+                    <div className="h-px bg-[#F1F5F9] dark:bg-white/5 ml-10" />
                   )}
                 </React.Fragment>
               );
             })}
           </div>
         </div>
+
+        {/* ── Streak Milestones ── */}
+        {streakMilestones.length > 0 && (
+          <div>
+            <h3 className="text-[11px] font-extrabold uppercase tracking-[0.8px] text-[#475569] dark:text-[#94A3B8] mb-3">
+              Streak Milestones
+            </h3>
+
+            <div className="flex items-center justify-between py-3.5 px-1">
+              {streakMilestones.map((milestone, idx) => {
+                const nextMilestone = streakMilestones[idx + 1];
+                const isConnectorActive = Boolean(nextMilestone?.unlocked);
+
+                return (
+                  <React.Fragment key={milestone.stage}>
+                    <div className="flex flex-col items-center w-14 shrink-0">
+                      <div
+                        className={cn(
+                          'w-11 h-11 rounded-full flex items-center justify-center mb-1.5 transition-all',
+                          milestone.unlocked
+                            ? 'bg-[#FEF3C7] border-[1.5px] border-[#F59E0B] shadow-[0_2px_4px_rgba(245,158,11,0.18)]'
+                            : 'bg-[#F1F5F9] dark:bg-neutral-800 border-[1.5px] border-[#E2E8F0] dark:border-neutral-700'
+                        )}
+                      >
+                        {milestone.unlocked ? (
+                          <span className="text-[21px]">🔥</span>
+                        ) : (
+                          <div className="relative flex items-center justify-center">
+                            <span className="text-[19px] opacity-25">🔥</span>
+                            <div className="absolute -bottom-1 -right-1.5 bg-[#E2E8F0] dark:bg-neutral-700 rounded-md p-[2px]">
+                              <Lock size={9} color="#64748B" strokeWidth={2.5} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <span
+                        className={cn(
+                          'text-xs font-extrabold font-mono',
+                          milestone.unlocked
+                            ? 'text-[#0F172A] dark:text-white'
+                            : 'text-[#94A3B8]'
+                        )}
+                      >
+                        {milestone.thresholdDays}d
+                      </span>
+                    </div>
+
+                    {idx < streakMilestones.length - 1 && (
+                      <div
+                        className={cn(
+                          'flex-1 h-[2px] mx-1.5 self-start mt-5 transition-colors',
+                          isConnectorActive
+                            ? 'bg-[#16A34A]'
+                            : 'bg-[#E2E8F0] dark:bg-neutral-700'
+                        )}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

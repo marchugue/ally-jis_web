@@ -10,7 +10,6 @@ import { MobileReactionPopup, DesktopHoverActions } from '@/components/chat/Mess
 import { ReplyQuote } from '@/components/chat/ReplyQuote';
 import { ChatImageThumbnail } from '@/components/chat/ChatImageThumbnail';
 import { MessageImageViewer } from '@/components/chat/MessageImageViewer';
-import { LockedMediaThumbnail } from '@/components/chat/LockedMediaThumbnail';
 import { MessageReactions } from '@/components/chat/MessageReactions';
 import { DeleteMessageModal, MessageDeleteMode } from '@/components/chat/DeleteMessageModal';
 import { ReportModal } from '@/components/chat/ReportModal';
@@ -267,7 +266,6 @@ const MessageBubble = memo(function MessageBubble({
   const primaryMedia = images[0] || '';
   const isVideoUrl = Boolean(primaryMedia && /\.(mp4|webm|mov|quicktime)([?#]|$)/i.test(primaryMedia));
   const isImageOnly = Boolean(hasMedia && !isMediaRemoved && !msg.content?.trim());
-  const isMediaLocked = Boolean(imagesLocked && hasMedia);
   const isEmojiOnly = Boolean(!hasMedia && msg.content && isOnlyEmoji(msg.content));
   const isGameInvite = Boolean(msg.game_invite || (msg.content && msg.content.includes('Game invite:')));
   const effectiveGameInvite = msg.game_invite || (msg.content && msg.content.includes('Game invite:') ? {
@@ -304,10 +302,6 @@ const MessageBubble = memo(function MessageBubble({
   }, [msg.content]);
 
   const handleForward = useCallback(async () => {
-    if (isMediaLocked) {
-      toast.error('This photo is locked until you reach Lv.3 again');
-      return;
-    }
     const shareText = msg.content || primaryMedia;
     if (typeof navigator !== 'undefined' && navigator.share && shareText) {
       try {
@@ -318,7 +312,7 @@ const MessageBubble = memo(function MessageBubble({
       }
     }
     onForward?.(msg);
-  }, [msg, primaryMedia, onForward, isMediaLocked]);
+  }, [msg, primaryMedia, onForward]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -472,18 +466,8 @@ const MessageBubble = memo(function MessageBubble({
             imageUrl={msg.replyTo.imageUrl}
           />
         )}
-        {/* Locked media (streak ended → level dropped below Lv.3) */}
-        {isMediaLocked && (
-          <LockedMediaThumbnail
-            src={primaryMedia}
-            count={images.length}
-            isVideo={isVideoUrl}
-            className={cn(!isImageOnly && 'mb-2')}
-          />
-        )}
-
         {/* Removed Media State */}
-        {!isMediaLocked && hasMedia && isMediaRemoved && (
+        {hasMedia && isMediaRemoved && (
           <div className="w-[240px] max-w-full p-3.5 rounded-xl bg-gray-200 dark:bg-[#1E293B] border border-gray-300 dark:border-white/10 my-1 text-center select-none">
             <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
               This photo was removed for violating community standards.
@@ -492,7 +476,7 @@ const MessageBubble = memo(function MessageBubble({
         )}
 
         {/* Single Media or Stacked Cards UI */}
-        {!isMediaLocked && hasMedia && !isMediaRemoved && images.length === 1 && (
+        {hasMedia && !isMediaRemoved && images.length === 1 && (
           isVideoUrl ? (
             <div className={cn('rounded-xl overflow-hidden', !isImageOnly && 'mb-2')}>
               <video
@@ -515,7 +499,7 @@ const MessageBubble = memo(function MessageBubble({
           )
         )}
 
-        {!isMediaLocked && hasMedia && !isMediaRemoved && images.length > 1 && (
+        {hasMedia && !isMediaRemoved && images.length > 1 && (
           <div
             onClick={() => {
               if (longPress.didLongPress()) return;
@@ -783,7 +767,7 @@ const MessageBubble = memo(function MessageBubble({
             }}
           />
         )}
-        {viewingImage && hasMedia && !isMediaLocked && (
+        {viewingImage && hasMedia && (
           <MessageImageViewer
             message={msg}
             initialIndex={viewingImageIndex}

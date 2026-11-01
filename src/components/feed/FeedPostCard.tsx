@@ -1,7 +1,8 @@
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 // src/components/feed/FeedPostCard.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2, ShieldAlert } from 'lucide-react';
+import { MessageCircle, Globe2, Users, MoreHorizontal, Trash2, Flag, Link2, ShieldAlert, Pencil } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
@@ -10,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/api/client';
 import { notify } from '@/components/ui/sonner';
 import ReportPostModal from './ReportPostModal';
+import EditPostModal from './EditPostModal';
 import type { FeedPost } from '@/types/feed';
 import type { Student } from '@/types/ally';
 
@@ -19,6 +21,7 @@ interface FeedPostCardProps {
   onToggleLike: (post: FeedPost) => void;
   onCommentClick: (post: FeedPost) => void;
   onDelete?: (postId: string) => void;
+  onUpdate?: (updatedPost: FeedPost) => void;
   /** Optional — when provided, the author name/avatar becomes clickable
    * and navigates to their profile. Omitted (e.g. on ProfilePage, which
    * only ever shows one author's posts) it's just not clickable. */
@@ -112,21 +115,28 @@ export default function FeedPostCard({
   onToggleLike,
   onCommentClick,
   onDelete,
+  onUpdate,
   onAuthorClick,
   onToggleFollow,
   showBorder = true,
   className,
 }: FeedPostCardProps) {
   const navigate = useNavigate();
+  const [currentPost, setCurrentPost] = useState(post);
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentPost(post);
+  }, [post]);
   const menuRef = useRef<HTMLDivElement>(null);
   const author = post.author;
   const isOwn = post.author_id === currentUser.id;
-  const isAlly = Boolean(post.author?.is_ally || isOwn);
+  const isAlly = Boolean((post.author?.is_ally && !post.author?.is_unrevealed_match && post.author?.username !== 'anonymous') || isOwn);
   const displayName = isAlly
     ? (author?.full_name || author?.username || 'Ally member')
-    : 'Anonymous Peer';
+    : getAnonymousDisplayName(author);
 
   const [isFollowing, setIsFollowing] = useState(Boolean(author?.is_following));
   const [followBusy, setFollowBusy] = useState(false);
@@ -186,8 +196,14 @@ export default function FeedPostCard({
     }
   })();
 
+  const isEdited = Boolean(
+    currentPost.updated_at &&
+    currentPost.created_at &&
+    new Date(currentPost.updated_at).getTime() - new Date(currentPost.created_at).getTime() > 1000
+  );
+
   const [isContentExpanded, setIsContentExpanded] = useState(false);
-  const isLongContent = Boolean(post.content && post.content.length > 120);
+  const isLongContent = Boolean(currentPost.content && currentPost.content.length > 120);
 
   return (
     <article
@@ -201,7 +217,7 @@ export default function FeedPostCard({
       )}
     >
       {/* Flagged / Restricted Visibility Banner */}
-      {(post.is_flagged || post.is_restricted) && (
+      {(currentPost.is_flagged || currentPost.is_restricted) && (
         <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
           <ShieldAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
           <div className="min-w-0">
@@ -256,9 +272,10 @@ export default function FeedPostCard({
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="font-jakarta text-[11px] text-gray-400 dark:text-gray-500">
                 {isAlly && author?.username && author?.avatar_url ? `@${author.username} · ` : ''}{timeAgo}
+                {isEdited && ' · (edited)'}
               </span>
               <span className="text-gray-200 dark:text-gray-700">·</span>
-              {post.audience === 'public' ? (
+              {currentPost.audience === 'public' ? (
                 <Globe2 size={11} className="text-gray-400 dark:text-gray-500" />
               ) : (
                 <Users size={11} className="text-gray-400 dark:text-gray-500" />
@@ -312,10 +329,24 @@ export default function FeedPostCard({
                       setShowMenu(false);
                       setShowReportModal(true);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold cursor-pointer"
                   >
                     <Flag size={14} className="text-red-500" />
                     Report post
+                  </button>
+                )}
+
+                {isOwn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 font-jakarta text-xs transition-colors text-left font-medium cursor-pointer"
+                  >
+                    <Pencil size={14} className="text-gray-400" />
+                    Edit post
                   </button>
                 )}
 
@@ -326,7 +357,7 @@ export default function FeedPostCard({
                       setShowMenu(false);
                       onDelete(post.id);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-jakarta text-xs transition-colors text-left font-semibold cursor-pointer"
                   >
                     <Trash2 size={14} className="text-red-500" />
                     Delete post
@@ -339,9 +370,9 @@ export default function FeedPostCard({
       </div>
 
       {/* Content */}
-      {post.content && (
+      {currentPost.content && (
         <div className="mt-2.5">
-          {post.content === 'This message was removed' ? (
+          {currentPost.content === 'This message was removed' ? (
             <p className="font-jakarta text-[14px] italic text-gray-400 dark:text-gray-500 py-1">
               This message was removed
             </p>
@@ -353,7 +384,7 @@ export default function FeedPostCard({
                   isLongContent && !isContentExpanded && "line-clamp-3"
                 )}
               >
-                {post.content}
+                {currentPost.content}
               </p>
               {isLongContent && (
                 <button
@@ -370,7 +401,7 @@ export default function FeedPostCard({
       )}
 
       {/* Media */}
-      <MediaGrid media={post.media} onMediaClick={() => onCommentClick(post)} />
+      <MediaGrid media={currentPost.media} onMediaClick={() => onCommentClick(currentPost)} />
 
       {/* Actions (Left-aligned, icon-only with count matching mobile) */}
       <div className="mt-3 pt-2.5 border-t border-gray-100/80 dark:border-white/10 flex items-center gap-5 sm:gap-6">
@@ -428,6 +459,19 @@ export default function FeedPostCard({
         <ReportPostModal
           post={post}
           onClose={() => setShowReportModal(false)}
+        />
+      )}
+
+      {isEditModalOpen && (
+        <EditPostModal
+          open={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          post={currentPost}
+          currentUser={currentUser}
+          onSave={(updated) => {
+            setCurrentPost(updated);
+            onUpdate?.(updated);
+          }}
         />
       )}
     </article>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getDeterministicAnonymousAvatar } from '@/lib/matchOptions';
 import {
@@ -183,6 +184,7 @@ export default function ProfilePage() {
 
   // ── profile ──────────────────────────────────────────────────────────────
   const [profile, setProfile] = useState<Student | null>(null);
+  const [viewerProfile, setViewerProfile] = useState<Student | null>(null);
 
   // ── own posts ─────────────────────────────────────────────────────────────
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -215,8 +217,15 @@ export default function ProfilePage() {
     }
 
     if (!isOwnProfile && viewedUserId) {
-      profileService.getProfile(viewedUserId)
-        .then((other) => { if (isMounted) setProfile(other); })
+      Promise.all([
+        profileService.getProfile(viewedUserId),
+        profileService.getMyProfile().catch(() => null),
+      ])
+        .then(([other, me]) => {
+          if (!isMounted) return;
+          setProfile(other);
+          if (me) setViewerProfile(me);
+        })
         .catch((err: any) => { if (isMounted) notify.error('Failed to load profile', err.message); });
       return () => { isMounted = false; };
     }
@@ -373,6 +382,10 @@ export default function ProfilePage() {
     }
   }, [useBackend]);
 
+  const handleUpdatePost = useCallback((updatedPost: FeedPost) => {
+    setPosts((prev) => prev.map((p) => p.id === updatedPost.id ? updatedPost : p));
+  }, []);
+
   const loadComments = useCallback(async (postId: string): Promise<FeedCommentWithReplies[]> => {
     if (!useBackend) return [];
     return (await apiClient.listComments(postId)) as FeedCommentWithReplies[];
@@ -423,7 +436,17 @@ export default function ProfilePage() {
   // private accounts only show posts to allies.
   const isPrivateAccount = Boolean(relationship?.isPrivate);
   const canViewPosts = isConfirmedAlly || !isPrivateAccount;
-  const currentUser = profile ?? CURRENT_USER;
+  const currentUser: Student = isOwnProfile
+    ? (profile ?? CURRENT_USER)
+    : (viewerProfile ?? {
+        ...CURRENT_USER,
+        id: user?.id || '',
+        name: (user as any)?.full_name || user?.email?.split('@')[0] || 'You',
+        username: (user as any)?.username || null,
+        email: user?.email || '',
+        avatar: (user as any)?.avatar_url || '',
+      });
+  const maskedDisplayName = getAnonymousDisplayName(profile, routeState?.name || undefined, viewedUserId);
 
   // ── Right Side Blended Information Panel Content ─────────────────────────
   const rightSideInfoContent = (
@@ -541,30 +564,54 @@ export default function ProfilePage() {
           </h3>
           <div className="space-y-3.5">
             {suggested.map((person) => {
-              const status = connections[person.id] || 'none';
+              const isPersonAlly = Boolean(person.isAlly && person.username !== 'anonymous');
+              const personDisplayName = isPersonAlly
+                ? (person.username ? `@${person.username}` : person.name)
+                : getAnonymousDisplayName(person);
+              const personAvatarKey = person.avatarKey || person.avatarPresetId || getDeterministicAnonymousAvatar(person.id);
               return (
                 <div key={person.id} className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/40 dark:bg-white/5">
                   <button
                     type="button"
-                    onClick={() => navigate(`/profile/${person.id}`)}
-                    className="hover:opacity-80 transition-opacity flex-shrink-0"
-                    aria-label={`View ${person.name || person.username}'s profile`}
+                    onClick={() => navigate(`/profile/${person.id}`, {
+                      state: {
+                        avatarUrl: isPersonAlly ? person.avatar : null,
+                        avatarKey: personAvatarKey,
+                        name: personDisplayName,
+                      },
+                    })}
+                    className="hover:opacity-80 transition-opacity flex-shrink-0 cursor-pointer"
+                    aria-label={`View ${personDisplayName}'s profile`}
                   >
-                    <AvatarDisplay
-                      src={person.avatar}
-                      name={person.name || person.username}
-                      className="w-10 h-10 rounded-full object-cover border border-gray-200/60 dark:border-white/10"
-                      textClassName="text-lg"
-                    />
+                    {isPersonAlly && person.avatar ? (
+                      <AvatarDisplay
+                        src={person.avatar}
+                        name={personDisplayName}
+                        className="w-10 h-10 rounded-full object-cover border border-gray-200/60 dark:border-white/10"
+                        textClassName="text-lg"
+                      />
+                    ) : (
+                      <AnonymousAvatar
+                        avatarKey={personAvatarKey}
+                        size={40}
+                        className="w-10 h-10 rounded-full border border-gray-200/60 dark:border-white/10"
+                      />
+                    )}
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => navigate(`/profile/${person.id}`)}
-                        className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 text-left"
+                        onClick={() => navigate(`/profile/${person.id}`, {
+                          state: {
+                            avatarUrl: isPersonAlly ? person.avatar : null,
+                            avatarKey: personAvatarKey,
+                            name: personDisplayName,
+                          },
+                        })}
+                        className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline hover:text-[#1A6B3C] dark:hover:text-emerald-400 text-left cursor-pointer"
                       >
-                        {person.username ? `@${person.username}` : person.name}
+                        {personDisplayName}
                       </button>
                       {person.isVerified && <Shield size={10} className="text-[#1A6B3C] dark:text-emerald-400 flex-shrink-0" />}
                     </div>
@@ -617,9 +664,7 @@ export default function ProfilePage() {
                 <span className="font-jakarta text-base font-bold text-gray-900 dark:text-white truncate max-w-[200px]">
                   {isIdentityRevealed
                     ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
-                    : isUnrevealedMatch
-                    ? (profile.name || routeState.name || 'Anonymous Ally')
-                    : 'Anonymous Peer'}
+                    : maskedDisplayName}
                 </span>
                 {viewedUserId ? (
                   <button
@@ -707,9 +752,7 @@ export default function ProfilePage() {
                 <span className="font-fraunces font-bold text-lg text-gray-900 dark:text-white leading-tight">
                   {isIdentityRevealed
                     ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
-                    : isUnrevealedMatch
-                    ? (profile.name || routeState.name || 'Anonymous Ally')
-                    : 'Anonymous Peer'}
+                    : maskedDisplayName}
                 </span>
                 {isIdentityRevealed && profile.isVerified && (
                   <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight">
@@ -720,13 +763,17 @@ export default function ProfilePage() {
               </div>
 
               <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {profile.username ? `@${profile.username}` : ''}
+                {isIdentityRevealed
+                  ? (profile.username ? `@${profile.username}` : '')
+                  : isUnrevealedMatch
+                  ? '@campus-ally'
+                  : '@anonymous'}
                 {profile.course ? ` · ${profile.course}` : ''}
                 {profile.yearLevel ? ` · ${profile.yearLevel}` : ''}
               </p>
 
               {/* Bio */}
-              {profile.bio ? (
+              {isIdentityRevealed && profile.bio ? (
                 <p className="font-jakarta text-xs text-gray-700 dark:text-gray-300 mt-2 leading-relaxed whitespace-pre-line">
                   {profile.bio}
                 </p>
@@ -759,9 +806,7 @@ export default function ProfilePage() {
                         targetName={
                           isIdentityRevealed
                             ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student')
-                            : isUnrevealedMatch
-                            ? (profile.name || 'Anonymous Ally')
-                            : 'Anonymous Peer'
+                            : maskedDisplayName
                         }
                         allyStatus={relationship.allyStatus}
                         isFollowing={relationship.isFollowing}
@@ -872,9 +917,7 @@ export default function ProfilePage() {
                 <h1 className="font-fraunces text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
                   {isIdentityRevealed
                     ? (profile.name || (profile.username ? `@${profile.username}` : 'Student'))
-                    : isUnrevealedMatch
-                    ? (profile.name || routeState.name || 'Anonymous Ally')
-                    : 'Anonymous Peer'}
+                    : maskedDisplayName}
                 </h1>
                 {isIdentityRevealed && profile.isVerified && (
                   <span className="inline-flex items-center gap-1 bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 border border-[#1A6B3C]/20 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-md">
@@ -903,9 +946,7 @@ export default function ProfilePage() {
                     targetName={
                       isIdentityRevealed
                         ? (profile.username ? `@${profile.username}` : profile.name ?? 'this student')
-                        : isUnrevealedMatch
-                        ? (profile.name || 'Anonymous Ally')
-                        : 'Anonymous Peer'
+                        : maskedDisplayName
                     }
                     allyStatus={relationship.allyStatus}
                     isFollowing={relationship.isFollowing}
@@ -1109,6 +1150,7 @@ export default function ProfilePage() {
                         onToggleLike={toggleLike}
                         onCommentClick={setActivePost}
                         onDelete={handleDelete}
+                        onUpdate={handleUpdatePost}
                         showBorder={false}
                         className="rounded-none sm:rounded-2xl border-0 border-b sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 transition-colors shadow-none sm:shadow-2xs"
                       />
@@ -1236,6 +1278,7 @@ export default function ProfilePage() {
         onToggleCommentLike={toggleCommentLike}
         onTogglePostLike={toggleLike}
         onDeletePost={handleDelete}
+        onUpdatePost={handleUpdatePost}
       />
 
       {viewedUserId && listModal && (
@@ -1263,9 +1306,7 @@ export default function ProfilePage() {
           participantName={
             isIdentityRevealed
               ? (profile?.name || (profile?.username ? `@${profile.username}` : 'this user'))
-              : isUnrevealedMatch
-              ? (profile?.name || routeState.name || 'Anonymous Ally')
-              : 'Anonymous Peer'
+              : maskedDisplayName
           }
           participantId={viewedUserId}
           targetType="user"

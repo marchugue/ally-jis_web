@@ -6,7 +6,7 @@
 
 import type { FeedPost } from '@/types/feed';
 
-const CACHE_PREFIX = 'ally_newsfeed_cache_v2';
+const CACHE_PREFIX = 'ally_newsfeed_cache_v6';
 const MAX_CACHED_POSTS = 20;
 
 export interface NewsfeedCacheEntry {

@@ -4,10 +4,18 @@
 // wrapper, the error type, token storage, and automatic fallback from
 // local backend to production backend when local is unreachable.
 
+const isBrowserLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0' ||
+    window.location.hostname.endsWith('.local'));
+
 export const DEFAULT_PROD_API_URL = 'https://api.ally-jis.com/api';
 
 const CONFIGURED_API_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || DEFAULT_PROD_API_URL;
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
+  (isBrowserLocalhost ? 'http://localhost:5174/api' : DEFAULT_PROD_API_URL);
 
 export const PRODUCTION_API_URL =
   ((import.meta.env.VITE_PROD_API_BASE_URL as string | undefined) || DEFAULT_PROD_API_URL).replace(/\/$/, '');
@@ -19,22 +27,47 @@ export function isLocalUrl(url: string): boolean {
 
 const AUTH_STORAGE_KEY = 'allyjis-auth-token';
 const FALLBACK_STORAGE_KEY = 'ally_backend_fallback_active';
+const DISCOVERED_LOCAL_URL_KEY = 'ally_local_backend_url';
+
+const LOCAL_CANDIDATE_URLS: string[] = (() => {
+  const candidates: string[] = [];
+  // Prefer port 5174 first (default PORT in backend/.env), even if an older dev script passed 3001
+  if (isLocalUrl(CONFIGURED_API_URL) && CONFIGURED_API_URL !== 'http://localhost:3001/api') {
+    candidates.push(CONFIGURED_API_URL);
+  }
+  for (const url of ['http://localhost:5174/api', 'http://localhost:3001/api']) {
+    if (!candidates.includes(url)) {
+      candidates.push(url);
+    }
+  }
+  return candidates;
+})();
 
 let activeApiBaseUrl: string = (() => {
+  if (isBrowserLocalhost) {
+    try {
+      const discoveredLocal = sessionStorage.getItem(DISCOVERED_LOCAL_URL_KEY);
+      if (discoveredLocal && isLocalUrl(discoveredLocal)) {
+        return discoveredLocal;
+      }
+    } catch {}
+    return LOCAL_CANDIDATE_URLS[0] || 'http://localhost:5174/api';
+  }
   if (!isLocalUrl(CONFIGURED_API_URL)) {
     return CONFIGURED_API_URL;
   }
   try {
-    if (sessionStorage.getItem(FALLBACK_STORAGE_KEY) === 'true') {
-      return PRODUCTION_API_URL;
+    const discoveredLocal = sessionStorage.getItem(DISCOVERED_LOCAL_URL_KEY);
+    if (discoveredLocal && isLocalUrl(discoveredLocal)) {
+      return discoveredLocal;
     }
   } catch {
     // Ignore storage errors
   }
-  return CONFIGURED_API_URL;
+  return LOCAL_CANDIDATE_URLS[0] || CONFIGURED_API_URL;
 })();
 
-let isFallingBack = activeApiBaseUrl === PRODUCTION_API_URL && isLocalUrl(CONFIGURED_API_URL);
+let isFallingBack = activeApiBaseUrl === PRODUCTION_API_URL && (isLocalUrl(CONFIGURED_API_URL) || isBrowserLocalhost);
 
 export const isApiConfigured = Boolean(activeApiBaseUrl || PRODUCTION_API_URL);
 
@@ -48,12 +81,33 @@ export function isUsingFallback(): boolean {
 
 export const BACKEND_SWITCHED_EVENT = 'api:backend-switched';
 
+function setLocalBackendUrl(url: string): void {
+  const changed = activeApiBaseUrl !== url || isFallingBack;
+  activeApiBaseUrl = url;
+  isFallingBack = false;
+  try {
+    sessionStorage.removeItem(FALLBACK_STORAGE_KEY);
+    sessionStorage.setItem(DISCOVERED_LOCAL_URL_KEY, url);
+  } catch {}
+  if (changed) {
+    console.info(`[API] Connected to local backend: ${url}`);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent(BACKEND_SWITCHED_EVENT, {
+          detail: { url, isFallback: false },
+        })
+      );
+    }
+  }
+}
+
 export function switchToProductionFallback(reason?: string): void {
   if (activeApiBaseUrl === PRODUCTION_API_URL) return;
   activeApiBaseUrl = PRODUCTION_API_URL;
   isFallingBack = true;
   try {
     sessionStorage.setItem(FALLBACK_STORAGE_KEY, 'true');
+    sessionStorage.removeItem(DISCOVERED_LOCAL_URL_KEY);
   } catch {}
   console.warn(
     `[API Fallback] Local backend is not reachable. Automatically switched to Production backend: ${PRODUCTION_API_URL}${
@@ -70,25 +124,13 @@ export function switchToProductionFallback(reason?: string): void {
 }
 
 export function resetToConfiguredBackend(): void {
-  activeApiBaseUrl = CONFIGURED_API_URL;
-  isFallingBack = false;
-  try {
-    sessionStorage.removeItem(FALLBACK_STORAGE_KEY);
-  } catch {}
-  console.info(`[API] Restored backend to configured URL: ${CONFIGURED_API_URL}`);
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent(BACKEND_SWITCHED_EVENT, {
-        detail: { url: CONFIGURED_API_URL, isFallback: false },
-      })
-    );
-  }
+  setLocalBackendUrl(CONFIGURED_API_URL);
 }
 
 let probePromise: Promise<boolean> | null = null;
 
 export function probeLocalBackend(): Promise<boolean> {
-  if (!isLocalUrl(CONFIGURED_API_URL)) {
+  if (!isLocalUrl(CONFIGURED_API_URL) && !isBrowserLocalhost) {
     return Promise.resolve(true);
   }
   if (probePromise) {
@@ -96,25 +138,24 @@ export function probeLocalBackend(): Promise<boolean> {
   }
 
   probePromise = (async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
-
     try {
-      const res = await fetch(`${CONFIGURED_API_URL}/health`, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        if (isFallingBack) {
-          resetToConfiguredBackend();
+      for (const candidateUrl of LOCAL_CANDIDATE_URLS) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        try {
+          const res = await fetch(`${candidateUrl}/health`, {
+            method: 'GET',
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            setLocalBackendUrl(candidateUrl);
+            return true;
+          }
+        } catch {
+          clearTimeout(timeoutId);
         }
-        return true;
       }
-      switchToProductionFallback('Health check responded with non-200');
-      return false;
-    } catch {
-      clearTimeout(timeoutId);
       switchToProductionFallback('Local backend is not running or unreachable');
       return false;
     } finally {
@@ -125,8 +166,8 @@ export function probeLocalBackend(): Promise<boolean> {
   return probePromise;
 }
 
-// Automatically trigger probe on client startup if configured URL is local
-if (typeof window !== 'undefined' && isLocalUrl(CONFIGURED_API_URL)) {
+// Automatically trigger probe on client startup if configured URL is local or browser is on localhost
+if (typeof window !== 'undefined' && (isLocalUrl(CONFIGURED_API_URL) || isBrowserLocalhost)) {
   probeLocalBackend().catch(() => {});
 }
 
@@ -174,6 +215,12 @@ export type RequestOptions = Omit<RequestInit, 'body'> & {
 export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized';
 
 /**
+ * Dispatched on any request that indicates the user account has been banned.
+ * AuthContext listens for this event to set isBanned=true and lock navigation to /banned.
+ */
+export const AUTH_BANNED_EVENT = 'auth:banned';
+
+/**
  * Dispatched on any request that returns 503 with maintenance active.
  * MaintenanceContext listens for this event to display the maintenance UI.
  */
@@ -198,7 +245,7 @@ export async function doSilentRefresh(): Promise<string | null> {
         });
       } catch {
         if (isLocalUrl(currentUrl) && currentUrl !== PRODUCTION_API_URL) {
-          switchToProductionFallback('Local backend unreachable during silent refresh');
+          await probeLocalBackend();
           currentUrl = getApiBaseUrl();
           response = await fetch(`${currentUrl}/auth/refresh`, {
             method: 'POST',
@@ -269,10 +316,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       body: fetchBody,
     });
   } catch (err: unknown) {
-    // If request to local backend failed (connection refused, network error, timeout),
-    // immediately fall back to production backend and retry the request!
+    // If request to local backend failed (e.g. wrong local port before probe finished,
+    // or local backend stopped), probe local candidate ports first and fall back to production only if none respond.
     if (isLocalUrl(currentBaseUrl) && currentBaseUrl !== PRODUCTION_API_URL) {
-      switchToProductionFallback('Network connection to local backend failed');
+      await probeLocalBackend();
       currentBaseUrl = getApiBaseUrl();
       try {
         response = await fetch(`${currentBaseUrl}${path}`, {
@@ -336,17 +383,50 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message =
+    let message =
       typeof payload === 'object' && payload && 'message' in payload
         ? String((payload as { message: string }).message)
         : typeof payload === 'string' && payload
           ? payload
           : `Request failed (${response.status})`;
 
+    // If message is an HTML document or snippet (e.g. Express 404 Cannot GET /...), sanitize it
+    if (typeof message === 'string' && (message.includes('<html') || message.includes('<!DOCTYPE') || message.includes('<pre>'))) {
+      const preMatch = message.match(/<pre>([\s\S]*?)<\/pre>/i);
+      if (preMatch?.[1]) {
+        message = preMatch[1].trim();
+      } else {
+        const titleMatch = message.match(/<title>([\s\S]*?)<\/title>/i);
+        message = titleMatch?.[1]?.trim() || `Request failed (${response.status})`;
+      }
+    }
+
+    // If we received 404 from the production fallback and client is local,
+    // check if local backend is running (or has newly registered routes) and re-try locally!
+    if (response.status === 404 && (isFallingBack || isBrowserLocalhost || isLocalUrl(CONFIGURED_API_URL))) {
+      if (currentBaseUrl === PRODUCTION_API_URL) {
+        const recovered = await probeLocalBackend();
+        if (recovered) {
+          return request<T>(path, options);
+        }
+      }
+    }
+
     // If 401 occurred on an unauthenticated call or refresh already failed above
     if (response.status === 401 && auth) {
       setStoredToken(null);
       window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+    }
+
+    // If 403 occurred and indicates account is banned or suspended, notify listeners
+    if (response.status === 403 && typeof payload === 'object' && payload !== null && ((payload as any).is_banned || (payload as any).status === 'banned' || (payload as any).is_suspended || (payload as any).status === 'suspended')) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(AUTH_BANNED_EVENT, {
+            detail: payload,
+          })
+        );
+      }
     }
 
     // If 503 occurred and indicates maintenance mode, notify listeners

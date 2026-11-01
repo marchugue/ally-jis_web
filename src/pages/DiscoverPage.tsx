@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -40,13 +41,8 @@ import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
 import { getDeterministicAnonymousAvatar } from '@/lib/matchOptions';
 import { apiClient } from '@/api/client';
 
-function getAnonymousName(student: Student, avatarKey: string): string {
-  if (student.name && student.name.toLowerCase().startsWith('anonymous')) {
-    return student.name;
-  }
-  const key = avatarKey || 'peer';
-  const capitalized = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
-  return `Anonymous ${capitalized}`;
+function getAnonymousName(student: Student, _avatarKey?: string): string {
+  return getAnonymousDisplayName(student);
 }
 
 export default function DiscoverPage() {
@@ -216,10 +212,11 @@ export default function DiscoverPage() {
         const q = search.toLowerCase().trim();
         if (q) {
           const nameMatch = (m.student.name || '').toLowerCase().includes(q);
+          const handleMatch = (m.student.anonymous_handle || '').toLowerCase().includes(q);
           const courseMatch = (m.student.course || '').toLowerCase().includes(q);
           const deptMatch = (m.student.department || '').toLowerCase().includes(q);
           const interestMatch = (m.student.interests || []).some((i) => i.toLowerCase().includes(q));
-          if (!nameMatch && !courseMatch && !deptMatch && !interestMatch) return false;
+          if (!nameMatch && !handleMatch && !courseMatch && !deptMatch && !interestMatch) return false;
         }
 
         if (filters.department && m.student.department !== filters.department) {

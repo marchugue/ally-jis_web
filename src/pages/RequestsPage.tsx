@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getAnonymousDisplayName, getAnonymousAvatarKey, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -133,11 +134,20 @@ export default function RequestsPage() {
           const requesterId = row.from_user_id as string;
           const profile = profileMap.get(requesterId);
           // Derive an anonymous avatar key — never expose real identity on this page
-          const anonAvatarKey = getAnonAvatarKey(requesterId, profile?.avatarKey);
+          const anonAvatarKey = getAnonymousAvatarKey(row, profile?.avatarKey, requesterId);
           return {
             id: row.id,
             fromUserId: requesterId,
-            fromName: `Anonymous ${anonAvatarKey.charAt(0).toUpperCase() + anonAvatarKey.slice(1)}`,
+            fromName: getAnonymousDisplayName(
+              {
+                ...(row as any),
+                id: requesterId,
+                anonymous_handle: (row as any).anonymous_handle || (row as any).from_user?.anonymous_handle,
+                name: (row as any).from_user_name || profile?.name,
+              },
+              undefined,
+              requesterId
+            ),
             avatarKey: anonAvatarKey,
             course: 'CHMSU Student',
             title: row.title || 'New Match Request',
@@ -504,7 +514,7 @@ export default function RequestsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h3 className="font-jakarta font-bold text-base text-gray-900 dark:text-white truncate">
-                            Anonymous Peer
+                            {request.fromName}
                           </h3>
                           <span className="inline-flex items-center gap-1 text-[10px] font-jakarta font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 uppercase tracking-tight">
                             <Sparkles size={10} />

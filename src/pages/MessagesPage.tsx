@@ -34,7 +34,6 @@ import { FloatingStatusBadge } from '@/components/match/FloatingStatusBadge';
 import { RoadmapCanvas } from '@/components/roadmap/RoadmapCanvas';
 import { RoadmapInfoPanel } from '@/components/roadmap/RoadmapInfoPanel';
 import { MobileRoadmapView } from '@/components/roadmap/MobileRoadmapView';
-import { TOTAL_POINTS_FOR_PROFILE_UNLOCK } from '@/constants/roadmap';
 import { getSocket } from '@/lib/socket';
 import { useMatchReveal } from '@/hooks/useMatchReveal';
 import {
@@ -189,7 +188,15 @@ export default function MessagesPage() {
               streakActiveToday: true,
               streakRestoreDeadline: null, // window consumed
               matchInfo: prev.matchInfo
-                ? { ...prev.matchInfo, dayStreak: result.newStreak, streakActiveToday: true, streakRestoreDeadline: null }
+                ? {
+                    ...prev.matchInfo,
+                    dayStreak: result.newStreak,
+                    stage: result.stage ?? prev.matchInfo.stage,
+                    stageName: result.stageName ?? prev.matchInfo.stageName,
+                    effectiveMultiplier: result.effectiveMultiplier ?? prev.matchInfo.effectiveMultiplier,
+                    streakActiveToday: true,
+                    streakRestoreDeadline: null,
+                  }
                 : prev.matchInfo,
             }
           : prev
@@ -199,6 +206,9 @@ export default function MessagesPage() {
           ? {
               ...prev,
               dayStreak: result.newStreak,
+              stage: result.stage ?? prev.stage,
+              stageName: result.stageName ?? prev.stageName,
+              effectiveMultiplier: result.effectiveMultiplier ?? prev.effectiveMultiplier,
               streakActiveToday: true,
               streakStatus: 'active',
               streakRestoreDeadline: null,
@@ -207,11 +217,12 @@ export default function MessagesPage() {
             }
           : null
       );
+      void reveal.refetch();
       notify.success(`✅ Streak Restored! ${result.restoresRemaining} restore${result.restoresRemaining !== 1 ? 's' : ''} left this month.`);
     } catch (err: any) {
       notify.error("Couldn't restore streak", err?.message ?? 'You may be out of restore tokens.');
     }
-  }, [activeConversation?.id]);
+  }, [activeConversation?.id, reveal.refetch]);
 
   // ── Restore window ────────────────────────────────────────────────────────────────────────
   // The deadline is an ISO UTC string computed server-side from streak_last_active_pht + 42h.
@@ -394,6 +405,9 @@ export default function MessagesPage() {
       matchId?: string;
       currentStreak?: number;
       dayStreak?: number;
+      stage?: number;
+      stageName?: string;
+      effectiveMultiplier?: number;
       streakActiveToday?: boolean;
       streakStatus?: string;
       status?: string;
@@ -403,6 +417,9 @@ export default function MessagesPage() {
       lapsedStreak?: number;
     }) => {
       void refreshConvs(true);
+      if (payload.conversationId === activeConversation?.id) {
+        void reveal.refetch();
+      }
       setActiveConversation((prev) => {
         if (!prev) return prev;
         const isMatch =
@@ -424,6 +441,9 @@ export default function MessagesPage() {
           setStreakState((prev) => prev ? {
             ...prev,
             dayStreak: streak,
+            stage: payload.stage ?? prev.stage,
+            stageName: payload.stageName ?? prev.stageName,
+            effectiveMultiplier: payload.effectiveMultiplier ?? prev.effectiveMultiplier,
             streakActiveToday: activeToday,
             streakStatus: (payload.streakStatus as any) ?? (isInactive ? 'lapsed' : 'active'),
             streakRestoreDeadline: deadline,
@@ -439,6 +459,9 @@ export default function MessagesPage() {
             ? {
                 ...prev.matchInfo,
                 dayStreak: streak,
+                stage: payload.stage ?? prev.matchInfo.stage,
+                stageName: payload.stageName ?? prev.matchInfo.stageName,
+                effectiveMultiplier: payload.effectiveMultiplier ?? prev.matchInfo.effectiveMultiplier,
                 streakActiveToday: activeToday,
                 streakRestoreDeadline: deadline,
               }
@@ -476,7 +499,11 @@ export default function MessagesPage() {
       matchId?: string;
       stagePoints?: number;
       matchPoints?: number;
+      profileUnlockTarget?: number;
+      isProfileUnlocked?: boolean;
       stage?: number;
+      stageName?: string;
+      effectiveMultiplier?: number;
       revealTier?: number;
       previousRevealTier?: number;
     }) => {
@@ -504,7 +531,11 @@ export default function MessagesPage() {
                 ...prev.matchInfo,
                 stagePoints: payload.stagePoints ?? prev.matchInfo.stagePoints,
                 matchPoints: payload.matchPoints ?? prev.matchInfo.matchPoints,
+                profileUnlockTarget: payload.profileUnlockTarget ?? prev.matchInfo.profileUnlockTarget,
+                isProfileUnlocked: payload.isProfileUnlocked ?? prev.matchInfo.isProfileUnlocked,
                 stage: payload.stage ?? prev.matchInfo.stage,
+                stageName: payload.stageName ?? prev.matchInfo.stageName,
+                effectiveMultiplier: payload.effectiveMultiplier ?? prev.matchInfo.effectiveMultiplier,
               }
             : prev.matchInfo,
         };
@@ -529,6 +560,7 @@ export default function MessagesPage() {
       conversationId?: string;
       stage?: number;
       stageName?: string;
+      effectiveMultiplier?: number;
       dayStreak?: number;
       downgraded?: boolean;
     }) => {
@@ -545,6 +577,8 @@ export default function MessagesPage() {
             ? {
                 ...prev.matchInfo,
                 stage: payload.stage ?? prev.matchInfo.stage,
+                stageName: payload.stageName ?? prev.matchInfo.stageName,
+                effectiveMultiplier: payload.effectiveMultiplier ?? prev.matchInfo.effectiveMultiplier,
                 dayStreak: payload.dayStreak ?? prev.matchInfo.dayStreak,
                 // Level dropped because the streak ended — keep earned points.
                 stagePoints: payload.downgraded ? prev.matchInfo.stagePoints : 0,
@@ -1046,11 +1080,14 @@ export default function MessagesPage() {
           {activeConversation ? (
             isRoadmapActive && !isMobileView ? (
               <RoadmapCanvas
-                stage={activeConversation.matchInfo?.stage ?? 1}
-                dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
-                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
-                goalPoints={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
-                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+                stage={reveal.reveal?.stage ?? activeConversation.matchInfo?.stage ?? 1}
+                stageName={reveal.reveal?.stageName ?? activeConversation.matchInfo?.stageName}
+                dayStreak={activeConversation.dayStreak ?? reveal.reveal?.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                goalPoints={reveal.reveal?.profileUnlockTarget ?? activeConversation.matchInfo?.profileUnlockTarget}
+                progressPercent={reveal.reveal?.progressPercent ?? activeConversation.matchInfo?.progressPercent}
+                isProfileUnlocked={reveal.reveal?.isProfileUnlocked ?? activeConversation.matchInfo?.isProfileUnlocked}
+                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.effectiveMultiplier ?? 1}
                 partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
                 extraRightPadding={showInfoPanel && !isMobileView}
                 onBackToChat={() => setIsRoadmapActive(false)}
@@ -1178,13 +1215,15 @@ export default function MessagesPage() {
               <div className="flex-1 min-h-0 relative flex flex-col">
                 {isAnonymousConversation && (
                   <FloatingStatusBadge
-                    stage={activeConversation.matchInfo?.stage ?? 1}
-                    dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
-                    matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                    stage={reveal.reveal?.stage ?? activeConversation.matchInfo?.stage ?? 1}
+                    dayStreak={activeConversation.dayStreak ?? reveal.reveal?.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                    matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
                     stagePoints={reveal.reveal?.stagePoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
-                    pointsPerStage={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
-                    profileUnlockTarget={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
-                    effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+                    profileUnlockTarget={reveal.reveal?.profileUnlockTarget ?? activeConversation.matchInfo?.profileUnlockTarget}
+                    progressPercent={reveal.reveal?.progressPercent ?? activeConversation.matchInfo?.progressPercent}
+                    isProfileUnlocked={reveal.reveal?.isProfileUnlocked ?? activeConversation.matchInfo?.isProfileUnlocked}
+                    isMaxStage={reveal.reveal?.isMaxStage}
+                    effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.effectiveMultiplier ?? 1}
                     avatarKey={activeConversation.matchInfo?.partnerAvatar || activeConversation.participantAvatar}
                     avatarReveal={reveal.reveal?.avatarReveal ?? null}
                     onClick={() => {
@@ -1344,11 +1383,13 @@ export default function MessagesPage() {
               )}
             >
               <RoadmapInfoPanel
-                stage={activeConversation.matchInfo?.stage ?? 1}
-                dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
-                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
-                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+                stage={reveal.reveal?.stage ?? activeConversation.matchInfo?.stage ?? 1}
+                stageName={reveal.reveal?.stageName ?? activeConversation.matchInfo?.stageName}
+                dayStreak={activeConversation.dayStreak ?? reveal.reveal?.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+                matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+                effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.effectiveMultiplier ?? 1}
                 dailyTasks={reveal.reveal?.dailyTasks ?? []}
+                streakMilestones={reveal.reveal?.streakMilestones ?? []}
                 partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
                 avatarReveal={reveal.reveal?.avatarReveal ?? null}
                 partnerAvatarKey={activeConversation.matchInfo?.partnerAvatar ?? null}
@@ -1411,12 +1452,16 @@ export default function MessagesPage() {
       {/* ── Mobile Roadmap View (anonymous conversations) ── */}
       {isMobileView && isRoadmapActive && activeConversation && isAnonymousConversation && (
         <MobileRoadmapView
-          stage={activeConversation.matchInfo?.stage ?? 1}
-          dayStreak={activeConversation.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
-          matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
-          goalPoints={TOTAL_POINTS_FOR_PROFILE_UNLOCK}
-          effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.stage ?? 1}
+          stage={reveal.reveal?.stage ?? activeConversation.matchInfo?.stage ?? 1}
+          stageName={reveal.reveal?.stageName ?? activeConversation.matchInfo?.stageName}
+          dayStreak={activeConversation.dayStreak ?? reveal.reveal?.dayStreak ?? activeConversation.matchInfo?.dayStreak ?? 0}
+          matchPoints={reveal.reveal?.matchPoints ?? activeConversation.matchInfo?.matchPoints ?? activeConversation.matchInfo?.stagePoints ?? 0}
+          goalPoints={reveal.reveal?.profileUnlockTarget ?? activeConversation.matchInfo?.profileUnlockTarget}
+          progressPercent={reveal.reveal?.progressPercent ?? activeConversation.matchInfo?.progressPercent}
+          isProfileUnlocked={reveal.reveal?.isProfileUnlocked ?? activeConversation.matchInfo?.isProfileUnlocked}
+          effectiveMultiplier={reveal.reveal?.effectiveMultiplier ?? activeConversation.matchInfo?.effectiveMultiplier ?? 1}
           dailyTasks={reveal.reveal?.dailyTasks ?? []}
+          streakMilestones={reveal.reveal?.streakMilestones ?? []}
           partnerAlias={activeConversation.matchInfo?.partnerAlias ?? activeConversation.participantName}
           avatarReveal={reveal.reveal?.avatarReveal ?? null}
           partnerAvatarKey={activeConversation.matchInfo?.partnerAvatar ?? null}

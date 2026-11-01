@@ -32,6 +32,7 @@ export default function NewsfeedPage() {
     loadMore,
     refreshFeed,
     createPost,
+    updateFeedPost,
     toggleLike,
     toggleFollow,
     bumpCommentCount,
@@ -382,6 +383,7 @@ export default function NewsfeedPage() {
                   onToggleLike={handleToggleLike}
                   onCommentClick={setActivePost}
                   onDelete={handleDelete}
+                  onUpdate={updateFeedPost}
                   onToggleFollow={toggleFollow}
                   className="rounded-none sm:rounded-2xl border-0 border-b border-[#E2DED7] dark:border-white/10 sm:border sm:border-gray-200/80 dark:sm:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 shadow-none sm:shadow-2xs transition-colors"
                 />
@@ -437,6 +439,7 @@ export default function NewsfeedPage() {
         onToggleCommentLike={toggleCommentLike}
         onTogglePostLike={handleToggleLike}
         onDeletePost={handleDelete}
+        onUpdatePost={updateFeedPost}
         initialReplyCommentId={pendingReplyCommentId}
         onAuthorClick={(authorId) => {
           setActivePost(null);

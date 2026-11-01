@@ -60,12 +60,13 @@ export interface ListUsersQuery {
   sortBy?: 'created_at' | 'full_name' | 'username' | 'last_seen_at';
   sortDir?: 'asc' | 'desc';
   cursor?: string | null;
+  limit?: number;
 }
 
-function buildQuery(params: Record<string, string | null | undefined>): string {
+function buildQuery(params: Record<string, string | number | null | undefined>): string {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join('&');
   return qs ? `?${qs}` : '';
 }
@@ -142,14 +143,15 @@ export interface ListReportsQuery {
   categoryId?: string;
   cursor?: string | null;
   targetType?: 'all' | 'post' | 'user' | 'message';
+  assignedTo?: string;
 }
 
 export function listReports(params: ListReportsQuery) {
   return request<PaginatedReportList>(`/admin/reports${buildQuery({ ...params })}`);
 }
 
-export function getReportStatusCounts() {
-  return request<ReportStatusCounts>('/admin/reports/status-counts');
+export function getReportStatusCounts(assignedTo?: string) {
+  return request<ReportStatusCounts>(`/admin/reports/status-counts${assignedTo ? `?assignedTo=${encodeURIComponent(assignedTo)}` : ''}`);
 }
 
 export function getReport(reportId: string) {
@@ -182,6 +184,59 @@ export function deleteReportedPost(reportId: string, postId?: string) {
 
 export function removeReportedMessage(reportId: string) {
   return request<{ success: boolean }>(`/admin/reports/${reportId}/remove-message`, { method: 'POST' });
+}
+
+
+export interface StaffModerator {
+  id: string;
+  full_name: string;
+  username: string;
+  avatar_url: string | null;
+  role: string;
+  email: string;
+}
+
+export function listModerators() {
+  return request<StaffModerator[]>('/admin/reports/moderators');
+}
+
+export function assignModerator(reportId: string, moderatorId: string) {
+  return request<AdminReportListItem>(`/admin/reports/${reportId}/assign`, {
+    method: 'POST',
+    body: { moderatorId },
+  });
+}
+
+export function verifyReport(reportId: string, payload: { findings: string; recommendedAction: string; attachmentUrl?: string | null }) {
+  return request<AdminReportListItem>(`/admin/reports/${reportId}/verify`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function uploadFindingAttachment(file: File, reportId?: string) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const path = reportId ? `/admin/reports/${reportId}/attachment` : '/admin/reports/upload-finding';
+  return request<{ url: string; originalName: string; mimetype: string }>(path, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export function executeReportAction(
+  reportId: string,
+  payload: {
+    actionType: string;
+    message?: string;
+    suspendDays?: string | number;
+    notes?: string;
+  }
+) {
+  return request<AdminReportListItem>(`/admin/reports/${reportId}/action`, {
+    method: 'POST',
+    body: payload,
+  });
 }
 
 export function removeReportedMedia(reportId: string) {

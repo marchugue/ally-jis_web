@@ -1,6 +1,7 @@
 export interface Student {
   id: string;
   name: string;
+  anonymous_handle?: string | null;
   username: string | null;
   email: string;
   course: string;
@@ -94,6 +95,11 @@ export interface Conversation {
   matchInfo: {
     matchId: string;
     stage: number;
+    stageName?: string;
+    effectiveMultiplier?: number;
+    profileUnlockTarget?: number;
+    progressPercent?: number;
+    isProfileUnlocked?: boolean;
     stagePoints?: number;
     matchPoints?: number;
     dayStreak: number;
@@ -182,6 +188,9 @@ export interface Notification {
   fromUserId?: string;
   fromUserName?: string;
   fromUserAvatar?: string;
+  anonymous_handle?: string;
+  anonymous_avatar?: string;
+  avatarKey?: string;
   postId?: string;
   commentId?: string;
   parentId?: string | null;

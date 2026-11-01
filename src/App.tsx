@@ -19,6 +19,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import BlockedUsersPage from "@/pages/BlockedUserPage";
 import RestrictedUsersPage from "@/pages/RestrictedUserPage";
 import SettingsPage from "@/pages/SettingsPage";
+import ReportPage from "@/pages/ReportPage";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
@@ -41,6 +42,7 @@ import { CookieConsentCard, useCookieConsent } from "@/components/CookieConsentC
 import { MainLayout } from "@/components/MainLayout";
 import { DashboardRoleGate } from "@/components/DashboardRoleGate";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
+import BannedUserPage from "@/pages/BannedUserPage";
 import MaintenancePage from "@/pages/MaintenancePage";
 import { MaintenanceGate } from "@/components/MaintenanceGate";
 import { BACKEND_SWITCHED_EVENT } from "@/api/http";
@@ -63,6 +65,16 @@ function WelcomeRoute() {
   // If cookies are allowed and user has an active session, automatically route into appropriate page
   if (cookiesAllowed && !loading && (user || session)) {
     const activeMeta = user?.user_metadata || session?.user?.user_metadata;
+    const isBanned = Boolean(
+      activeMeta?.is_banned === true ||
+      activeMeta?.status === 'banned' ||
+      (user as any)?.is_banned === true ||
+      (session?.user as any)?.is_banned === true
+    );
+    if (isBanned) {
+      return <Navigate to="/banned" replace />;
+    }
+
     const isExternal = activeMeta?.email_type === 'external';
     const hasStudentId = Boolean(activeMeta?.student_id_url);
     const isApproved = Boolean(activeMeta?.is_approved);
@@ -127,183 +139,206 @@ function App() {
       <MaintenanceGate>
         <AnimatePresence mode="wait" initial={false}>
           <Routes location={location}>
-          <Route path="/" element={<WelcomeRoute />} />
-          <Route path="/welcome" element={<Navigate to="/" replace />} />
-          <Route path="/login" element={
-            <PageTransition>
-              <LoginPage />
-            </PageTransition>
-          } />
-
-          <Route path="/forgot-password" element={
-            <PageTransition>
-              <ForgotPasswordPage />
-            </PageTransition>
-          } />
-          <Route path="/reset-password" element={
-            <PageTransition>
-              <ResetPasswordPage />
-            </PageTransition>
-          } />
-          <Route path="/password-reset-success" element={
-            <PageTransition>
-              <PasswordResetSuccessPage />
-            </PageTransition>
-          } />
-
-          <Route path="/register" element={
-            <PageTransition>
-              <RegisterPage />
-            </PageTransition>
-          } />
-          <Route path="/onboarding" element={
-            <PageTransition>
-              <OnboardingPage />
-            </PageTransition>
-          } />
-          <Route path="/confirmation-page" element={
-            <PageTransition>
-              {/* Legacy redirect: old magic-link URLs → new OTP page */}
-              <ConfirmPage />
-            </PageTransition>
-          } />
-          <Route path="/confirm" element={
-            <PageTransition>
-              <ConfirmPage />
-            </PageTransition>
-          } />
-          <Route path="/verify-email" element={
-            <PageTransition>
-              <OtpVerifyPage />
-            </PageTransition>
-          } />
-          <Route path="/privacy" element={
-            <PageTransition>
-              <PrivacyPage />
-            </PageTransition>
-          } />
-          <Route path="/terms" element={
-            <PageTransition>
-              <TermsPage />
-            </PageTransition>
-          } />
-          <Route path="/support" element={
-            <PageTransition>
-              <SupportPage />
-            </PageTransition>
-          } />
-          <Route path="/about" element={
-            <PageTransition>
-              <AboutPage />
-            </PageTransition>
-          } />
-          <Route path="/download" element={
-            <PageTransition>
-              <DownloadPage />
-            </PageTransition>
-          } />
-          <Route path="/maintenance" element={
-            <PageTransition>
-              <MaintenancePage />
-            </PageTransition>
-          } />
-          <Route path="/pending-approval" element={
-            <ProtectedRoute>
+            <Route path="/" element={<WelcomeRoute />} />
+            <Route path="/welcome" element={<Navigate to="/" replace />} />
+            <Route path="/login" element={
               <PageTransition>
-                <PendingApprovalPage />
-              </PageTransition>
-            </ProtectedRoute>
-          } />
-
-          <Route element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route path="/dashboard" element={
-              <PageTransition>
-                <DashboardRoleGate>
-                  <NewsfeedPage />
-                </DashboardRoleGate>
-              </PageTransition>
-            } />
-            <Route path="/discover" element={
-              <PageTransition>
-                <DiscoverPage />
-              </PageTransition>
-            } />
-            <Route path="/messages" element={
-              <PageTransition>
-                <MessagesPage />
-              </PageTransition>
-            } />
-            <Route path="/requests" element={
-              <PageTransition>
-                <RequestsPage />
-              </PageTransition>
-            } />
-            <Route path="/profile" element={
-              <PageTransition>
-                <ProfilePage />
-              </PageTransition>
-            } />
-            <Route path="/profile/:userId" element={
-              <PageTransition>
-                <ProfilePage />
-              </PageTransition>
-            } />
-            <Route path="/notifications" element={
-              <PageTransition>
-                <NotificationsPage />
-              </PageTransition>
-            } />
-            <Route path="/blocked-users" element={
-              <PageTransition>
-                <BlockedUsersPage />
-              </PageTransition>
-            } />
-            <Route path="/restricted-users" element={
-              <PageTransition>
-                <RestrictedUsersPage />
-              </PageTransition>
-            } />
-            <Route path="/restricted" element={
-              <PageTransition>
-                <RestrictedUsersPage />
-              </PageTransition>
-            } />
-            <Route path="/settings" element={
-              <PageTransition>
-                <SettingsPage />
-              </PageTransition>
-            } />
-            <Route path="/post/:postId" element={
-              <PageTransition>
-                <PostDetailPage />
+                <LoginPage />
               </PageTransition>
             } />
 
-          </Route>
+            <Route path="/forgot-password" element={
+              <PageTransition>
+                <ForgotPasswordPage />
+              </PageTransition>
+            } />
+            <Route path="/reset-password" element={
+              <PageTransition>
+                <ResetPasswordPage />
+              </PageTransition>
+            } />
+            <Route path="/password-reset-success" element={
+              <PageTransition>
+                <PasswordResetSuccessPage />
+              </PageTransition>
+            } />
 
-          <Route element={
-            <ProtectedRoute>
-              <AdminRoute />
-            </ProtectedRoute>
-          }>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/admin/users" element={<AdminUsersPage />} />
-              <Route path="/admin/reports" element={<AdminReportsPage />} />
-              <Route path="/admin/admins" element={<AdminManagementPage />} />
-              <Route path="/admin/activity" element={<AdminActivityLogPage />} />
-              <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              <Route path="/admin/avatars" element={<AdminAvatarsPage />} />
+            <Route path="/register" element={
+              <PageTransition>
+                <RegisterPage />
+              </PageTransition>
+            } />
+            <Route path="/onboarding" element={
+              <PageTransition>
+                <OnboardingPage />
+              </PageTransition>
+            } />
+            <Route path="/confirmation-page" element={
+              <PageTransition>
+                {/* Legacy redirect: old magic-link URLs → new OTP page */}
+                <ConfirmPage />
+              </PageTransition>
+            } />
+            <Route path="/confirm" element={
+              <PageTransition>
+                <ConfirmPage />
+              </PageTransition>
+            } />
+            <Route path="/verify-email" element={
+              <PageTransition>
+                <OtpVerifyPage />
+              </PageTransition>
+            } />
+            <Route path="/privacy" element={
+              <PageTransition>
+                <PrivacyPage />
+              </PageTransition>
+            } />
+            <Route path="/terms" element={
+              <PageTransition>
+                <TermsPage />
+              </PageTransition>
+            } />
+            <Route path="/safety-report" element={
+              <PageTransition>
+                <ReportPage />
+              </PageTransition>
+            } />
+            <Route path="/support" element={
+              <PageTransition>
+                <SupportPage />
+              </PageTransition>
+            } />
+            <Route path="/about" element={
+              <PageTransition>
+                <AboutPage />
+              </PageTransition>
+            } />
+            <Route path="/download" element={
+              <PageTransition>
+                <DownloadPage />
+              </PageTransition>
+            } />
+            <Route path="/maintenance" element={
+              <PageTransition>
+                <MaintenancePage />
+              </PageTransition>
+            } />
+            <Route path="/pending-approval" element={
+              <ProtectedRoute>
+                <PageTransition>
+                  <PendingApprovalPage />
+                </PageTransition>
+              </ProtectedRoute>
+            } />
+            <Route path="/banned" element={
+              <ProtectedRoute>
+                <PageTransition>
+                  <BannedUserPage />
+                </PageTransition>
+              </ProtectedRoute>
+            } />
+
+            <Route element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }>
+              <Route path="/dashboard" element={
+                <PageTransition>
+                  <DashboardRoleGate>
+                    <NewsfeedPage />
+                  </DashboardRoleGate>
+                </PageTransition>
+              } />
+              <Route path="/discover" element={
+                <PageTransition>
+                  <DiscoverPage />
+                </PageTransition>
+              } />
+              <Route path="/messages" element={
+                <PageTransition>
+                  <MessagesPage />
+                </PageTransition>
+              } />
+              <Route path="/requests" element={
+                <PageTransition>
+                  <RequestsPage />
+                </PageTransition>
+              } />
+              <Route path="/profile" element={
+                <PageTransition>
+                  <ProfilePage />
+                </PageTransition>
+              } />
+              <Route path="/profile/:userId" element={
+                <PageTransition>
+                  <ProfilePage />
+                </PageTransition>
+              } />
+              <Route path="/notifications" element={
+                <PageTransition>
+                  <NotificationsPage />
+                </PageTransition>
+              } />
+              <Route path="/blocked-users" element={
+                <PageTransition>
+                  <BlockedUsersPage />
+                </PageTransition>
+              } />
+              <Route path="/restricted-users" element={
+                <PageTransition>
+                  <RestrictedUsersPage />
+                </PageTransition>
+              } />
+              <Route path="/restricted" element={
+                <PageTransition>
+                  <RestrictedUsersPage />
+                </PageTransition>
+              } />
+              <Route path="/settings" element={
+                <PageTransition>
+                  <SettingsPage />
+                </PageTransition>
+              } />
+              <Route path="/report" element={
+                <PageTransition>
+                  <ReportPage />
+                </PageTransition>
+              } />
+              <Route path="/reports" element={
+                <Navigate to="/report?tab=history" replace />
+              } />
+              <Route path="/report-center" element={
+                <Navigate to="/report" replace />
+              } />
+              <Route path="/post/:postId" element={
+                <PageTransition>
+                  <PostDetailPage />
+                </PageTransition>
+              } />
+
             </Route>
-          </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
+            <Route element={
+              <ProtectedRoute>
+                <AdminRoute />
+              </ProtectedRoute>
+            }>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboardPage />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
+                <Route path="/admin/admins" element={<AdminManagementPage />} />
+                <Route path="/admin/activity" element={<AdminActivityLogPage />} />
+                <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                <Route path="/admin/avatars" element={<AdminAvatarsPage />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
       </MaintenanceGate>
     </Suspense>
   );

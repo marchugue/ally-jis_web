@@ -13,6 +13,7 @@ import {
   switchToProductionFallback,
   BACKEND_SWITCHED_EVENT,
   AUTH_UNAUTHORIZED_EVENT,
+  AUTH_BANNED_EVENT,
 } from '@/api/http';
 
 let socket: Socket | null = null;
@@ -48,7 +49,25 @@ export function getSocket(): Socket | null {
   socket.on('auth:revoked', (payload: any) => {
     console.warn('[Socket] Session revoked by server:', payload);
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+      if (payload?.reason === 'banned' || payload?.is_banned || payload?.reason === 'suspended' || payload?.is_suspended) {
+        window.dispatchEvent(new CustomEvent(AUTH_BANNED_EVENT, { detail: payload }));
+      } else {
+        window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+      }
+    }
+  });
+
+  socket.on('user:banned', (payload: any) => {
+    console.warn('[Socket] user:banned received:', payload);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(AUTH_BANNED_EVENT, { detail: payload }));
+    }
+  });
+
+  socket.on('user:suspended', (payload: any) => {
+    console.warn('[Socket] user:suspended received:', payload);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(AUTH_BANNED_EVENT, { detail: payload }));
     }
   });
 

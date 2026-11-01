@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { notify } from '@/components/ui/sonner';
 
 export default function LoginPage() {
-  const { user, loading, setMockUser, completeLogin, needsOnboarding, isPendingApproval } = useAuth();
+  const { user, loading, setMockUser, completeLogin, needsOnboarding, isPendingApproval, isBanned } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -48,14 +48,16 @@ export default function LoginPage() {
       } catch { }
     }
 
-    if (needsOnboarding) {
+    if (isBanned) {
+      navigate('/banned', { replace: true });
+    } else if (needsOnboarding) {
       navigate('/onboarding', { replace: true });
     } else if (isPendingApproval) {
       navigate('/pending-approval', { replace: true });
     } else {
       navigate('/dashboard', { replace: true });
     }
-  }, [redirectTarget, needsOnboarding, isPendingApproval, navigate]);
+  }, [redirectTarget, needsOnboarding, isPendingApproval, isBanned, navigate]);
 
   // Login page is strictly light-mode only — ensure dark class is removed on mount
   useEffect(() => {
@@ -127,8 +129,20 @@ export default function LoginPage() {
       const isPending =
         session.user?.user_metadata?.pending_student_verification === true &&
         session.user?.user_metadata?.student_verification_status !== 'approved';
+      const isBanned = Boolean(
+        session.user?.user_metadata?.is_banned === true ||
+        session.user?.user_metadata?.status === 'banned' ||
+        session.user?.user_metadata?.is_suspended === true ||
+        session.user?.user_metadata?.status === 'suspended' ||
+        (session.user as any)?.is_banned === true ||
+        (session.user as any)?.status === 'banned' ||
+        (session.user as any)?.is_suspended === true ||
+        (session.user as any)?.status === 'suspended'
+      );
 
-      if (userNeedsOnboarding) {
+      if (isBanned) {
+        navigate('/banned', { replace: true });
+      } else if (userNeedsOnboarding) {
         notify.info('Profile Setup Required', 'Please complete your student profile to proceed.');
         navigate('/onboarding', { replace: true });
       } else if (isPending) {
@@ -143,6 +157,8 @@ export default function LoginPage() {
       if (err.status === 403 && err.body?.requiresOtp) {
         const { userId, email } = err.body;
         navigate(`/verify-email?userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(email ?? form.email)}`);
+      } else if (err.status === 403 && (err.body?.is_banned || err.body?.status === 'banned' || err.body?.is_suspended || err.body?.status === 'suspended')) {
+        navigate('/banned', { replace: true });
       } else if (err.status === 403) {
         notify.warning('Email not verified', 'Please verify your email to continue.');
       } else if (err.status === 0) {

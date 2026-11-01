@@ -50,7 +50,7 @@ function mergeConversations(prev: Conversation[], next: Conversation[]): Convers
   return anyChanged ? merged : prev;
 }
 
-const CACHE_KEY_PREFIX = 'ally_conversations_cache_';
+const CACHE_KEY_PREFIX = 'ally_conversations_cache_v3_';
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedConversationsData {

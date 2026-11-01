@@ -60,6 +60,7 @@ export interface ProfileRow {
   id: string;
   email?: string;
   full_name?: string | null;
+  anonymous_handle?: string | null;
   username?: string | null;
   avatar_url?: string | null;
   avatarKey?: string | null;
@@ -83,6 +84,7 @@ export interface ProfileRow {
 
 export interface UpdateProfilePayload {
   full_name?: string;
+  anonymous_handle?: string | null;
   username?: string;
   bio?: string | null;
   avatar_url?: string | null;
@@ -228,6 +230,11 @@ export type ConversationVariant = 'regular' | 'anonymous' | 'anonymous_ended';
 export interface ConversationMatchInfo {
   matchId: string;
   stage: number;
+  stageName?: string;
+  effectiveMultiplier?: number;
+  profileUnlockTarget?: number;
+  progressPercent?: number;
+  isProfileUnlocked?: boolean;
   stagePoints?: number;
   matchPoints?: number;
   dayStreak: number;
@@ -315,11 +322,13 @@ export interface NotificationRow {
     id?: string;
     username?: string | null;
     full_name?: string | null;
+    anonymous_handle?: string | null;
     avatar_url?: string | null;
   } | {
     id?: string;
     username?: string | null;
     full_name?: string | null;
+    anonymous_handle?: string | null;
     avatar_url?: string | null;
   }[] | null;
 }
@@ -358,6 +367,7 @@ export interface FeedAuthorRow {
   id: string;
   username: string | null;
   full_name: string | null;
+  anonymous_handle?: string | null;
   avatar_url: string | null;
   is_following?: boolean;
   is_ally?: boolean;
@@ -464,6 +474,7 @@ export interface ReportUserResponse {
 export interface BlockedUserRow {
   id: string;
   fullName: string | null;
+  anonymousHandle?: string | null;
   username: string | null;
   avatarUrl: string | null;
   blockedAt: string;
@@ -489,6 +500,7 @@ export interface UnrestrictUserResponse {
 export interface RestrictedUserRow {
   id: string;
   fullName: string | null;
+  anonymousHandle?: string | null;
   username: string | null;
   avatarUrl: string | null;
   restrictedAt: string;
@@ -510,6 +522,7 @@ export interface UnmuteUserResponse {
 export interface MutedUserRow {
   id: string;
   fullName: string | null;
+  anonymousHandle?: string | null;
   username: string | null;
   avatarUrl: string | null;
   mutedAt: string;
@@ -550,6 +563,7 @@ export interface FollowListItem {
   id: string;
   username: string | null;
   fullName: string | null;
+  anonymousHandle?: string | null;
   avatarUrl: string | null;
   course: string | null;
   followedAt: string;
@@ -584,6 +598,7 @@ export interface AllyListItem {
   id: string;
   username: string | null;
   fullName: string | null;
+  anonymousHandle?: string | null;
   avatarUrl: string | null;
   course: string | null;
   alliedAt: string;
@@ -667,6 +682,7 @@ export interface AdminListItem {
   id: string;
   username: string | null;
   full_name: string | null;
+  anonymous_handle?: string | null;
   avatar_url: string | null;
   email: string;
   role: AdminRole;
@@ -706,6 +722,7 @@ export interface AdminUserListItem {
   id: string;
   username: string | null;
   full_name: string | null;
+  anonymous_handle?: string | null;
   email: string;
   avatar_url: string | null;
   department: string | null;
@@ -753,6 +770,7 @@ export interface PendingVerificationItem {
   id: string;
   username: string | null;
   full_name: string | null;
+  anonymous_handle?: string | null;
   email: string;
   avatar_url: string | null;
   department: string | null;
@@ -837,6 +855,12 @@ export interface AdminReportListItem {
   internal_notes: string | null;
   created_at: string;
   reviewed_at: string | null;
+  reviewed_by?: string | null;
+  reviewed_by_name?: string | null;
+  moderator_findings?: string | null;
+  moderator_recommended_action?: string | null;
+  moderator_attachment_url?: string | null;
+  admin_verdict?: string | null;
 }
 
 export interface ListReportsParams {
@@ -973,6 +997,7 @@ export interface RevealPartnerView {
   // Profile unlocked (250 pts / revealed_at)
   userId?: string | null;
   fullName?: string | null;
+  anonymousHandle?: string | null;
   username?: string | null;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -1003,9 +1028,21 @@ export interface DailyTaskStatus {
   label: string;
   description: string;
   basePoints: number;
+  points: number;
   myCompleted: boolean;
   partnerCompleted: boolean;
+  isCompleted: boolean;
   myPointsAwarded: number;
+}
+
+export interface StreakMilestoneInfo {
+  stage: number;
+  stageName: string;
+  thresholdDays: number;
+  multiplier: number;
+  unlocked: boolean;
+  isCurrent: boolean;
+  description: string;
 }
 
 export interface StageTask {
@@ -1020,6 +1057,11 @@ export interface RevealData {
   stage: number;
   stageName: string;
   dayStreak: number;
+  targetStreak?: number;
+  daysToNextStage?: number;
+  isMaxStage?: boolean;
+  streakProgressPercent?: number;
+  streakMilestones?: StreakMilestoneInfo[];
   // Points progression
   matchPoints: number;
   stagePoints: number;
@@ -1038,6 +1080,7 @@ export interface RevealData {
   isProfileUnlocked?: boolean;
   profileUnlockTarget?: number;
   pointsToProfileUnlock?: number;
+  progressPercent?: number;
   avatarReveal?: AvatarRevealView;
 }
 

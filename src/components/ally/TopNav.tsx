@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, LogOut, Settings, Sun, Moon, User } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, Sun, Moon, User, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationsContext';
@@ -39,13 +39,14 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
   const isRestrictedUsersPage = location.pathname === '/restricted-users' || location.pathname === '/restricted';
   const isPostDetailPage = location.pathname.startsWith('/post/');
   const isRequestsPage = location.pathname === '/requests';
-  const isSubPage = isSettingsPage || isBlockedUsersPage || isRestrictedUsersPage || isPostDetailPage || isRequestsPage;
+  const isReportPage = location.pathname === '/report' || location.pathname.startsWith('/report');
+  const isSubPage = isSettingsPage || isBlockedUsersPage || isRestrictedUsersPage || isPostDetailPage || isRequestsPage || isReportPage;
 
   // Existing behavior: hide bottom bar while typing (keyboard open).
   // New behavior: an open thread on mobile hides BOTH bars entirely, so the
   // conversation gets the full screen, like Messenger/Instagram DMs.
   // Also hide on subpages like Settings to match native mobile stack screens.
-  const shouldHideForChatFocus = isMessagesPage && isMobile && isChatFocused;
+  const shouldHideForChatFocus = (isMessagesPage || isReportPage) && isMobile && isChatFocused;
   const shouldHideBottomNav =
     hideBottomNav ||
     shouldHideForChatFocus ||
@@ -251,12 +252,12 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
               <div className="relative">
                 <button
                   onClick={() => setShowProfile(!showProfile)}
-                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl bg-transparent dark:bg-transparent hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-transparent dark:bg-transparent hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <AvatarDisplay
                     src={profile?.avatarUrl}
                     name={profile?.name}
-                    className="w-8 h-8 rounded-xl object-cover dark:bg-transparent"
+                    className="w-8 h-8 rounded-full object-cover dark:bg-transparent"
                   />
                   <span className="font-jakarta font-medium text-sm text-[#1A6B3C] dark:text-white hidden sm:block max-w-[120px] truncate">
                     {(profile?.name ?? 'Guest').split(' ')[0]}
@@ -285,6 +286,14 @@ export default function TopNav({ onNotificationClick, hideBottomNav = false }: T
                     >
                       <Settings size={16} className="text-gray-500 dark:text-gray-300" />
                       <span className="font-jakarta text-sm">Settings</span>
+                    </Link>
+                    <Link
+                      to="/report"
+                      onClick={() => setShowProfile(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 transition-colors"
+                    >
+                      <ShieldAlert size={16} className="text-[#E8A838]" />
+                      <span className="font-jakarta text-sm">Report Center</span>
                     </Link>
                     {/* In-menu quick theme toggle */}
                     <button

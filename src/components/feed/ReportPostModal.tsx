@@ -6,6 +6,7 @@ import { getCommunityStandards, ReportViolation } from '@/data/CommunityStandard
 import { apiClient } from '@/api/client';
 import type { FeedPost } from '@/types/feed';
 import { notify } from '@/components/ui/sonner';
+import { getAnonymousDisplayName } from '@/lib/anonymousHandle';
 
 interface ReportPostModalProps {
   post: FeedPost;
@@ -24,7 +25,10 @@ export default function ReportPostModal({ post, onClose, onReported }: ReportPos
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const authorName = post.author?.full_name || post.author?.username || 'Ally member';
+  const isRevealedAlly = Boolean(post.author?.is_ally && !post.author?.is_unrevealed_match && post.author?.username !== 'anonymous');
+  const authorName = isRevealedAlly
+    ? (post.author?.full_name || post.author?.username || 'Ally member')
+    : getAnonymousDisplayName(post.author);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategoryId((prev) => (prev === categoryId ? null : categoryId));

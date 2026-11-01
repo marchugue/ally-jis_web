@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiClient, AuthSession, AuthUser, isApiConfigured } from "@/api/client";
-import { AUTH_UNAUTHORIZED_EVENT } from "@/api/http";
+import { AUTH_UNAUTHORIZED_EVENT, AUTH_BANNED_EVENT } from "@/api/http";
 import { disconnectSocket, initSocket } from "@/lib/socket";
 
 import { clearRolePromptFlag } from "@/components/DashboardRoleGate";
@@ -14,6 +14,8 @@ interface AuthContextValue {
   isPendingApproval: boolean;
   /** True when the user is logged-in and verified but hasn't finished the onboarding form yet. */
   needsOnboarding: boolean;
+  /** True when the user account has been banned. */
+  isBanned: boolean;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   setMockUser: (user: AuthUser | null) => void;
@@ -30,6 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   verified: false,
   isPendingApproval: false,
   needsOnboarding: false,
+  isBanned: false,
   signOut: async () => {},
   deleteAccount: async () => {},
   setMockUser: () => {},
@@ -60,11 +63,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Check email verification status
-        const emailStatus = await apiClient.getEmailStatus(nextSession.user.id);
+        // Check email verification status safely
+        let isVerified = true;
+        try {
+          const emailStatus = await apiClient.getEmailStatus(nextSession.user.id);
+          isVerified = Boolean(emailStatus?.isEmailVerified);
+        } catch {
+          isVerified = Boolean((nextSession.user as any).email_confirmed_at || nextSession.user.user_metadata?.email_confirmed || true);
+        }
 
         // Set both atomically so ProtectedRoute never sees an inconsistent state
-        setVerified(emailStatus.isEmailVerified);
+        setVerified(isVerified);
         setSession(nextSession);
         // Eagerly connect socket so chat hooks can subscribe immediately.
         initSocket();
@@ -98,6 +107,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, [handleUnauthorized]);
+
+  // ── Global Banned Handler ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleBanned = (e: Event) => {
+      console.warn('[AuthContext] Account banned event detected. Updating session state.');
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          user: {
+            ...prev.user,
+            user_metadata: {
+              ...prev.user.user_metadata,
+              is_banned: true,
+              status: 'banned',
+            },
+          },
+        };
+      });
+    };
+
+    window.addEventListener(AUTH_BANNED_EVENT, handleBanned);
+    return () => window.removeEventListener(AUTH_BANNED_EVENT, handleBanned);
+  }, []);
 
   // ── Cross-portal & Cross-tab Sync (Web <-> Game Portal <-> Backend) ────────
   useEffect(() => {
@@ -174,6 +207,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session &&
         verified &&
         !session.user?.user_metadata?.onboarding_complete
+      ),
+      // isBanned: true when the account is banned or suspended by a moderator or safety admin.
+      isBanned: Boolean(
+        session &&
+        (
+          session.user?.user_metadata?.is_banned === true ||
+          session.user?.user_metadata?.status === 'banned' ||
+          session.user?.user_metadata?.is_suspended === true ||
+          session.user?.user_metadata?.status === 'suspended' ||
+          (session.user as any)?.is_banned === true ||
+          (session.user as any)?.status === 'banned' ||
+          (session.user as any)?.is_suspended === true ||
+          (session.user as any)?.status === 'suspended'
+        )
       ),
       setMockUser: (user: AuthUser | null) => setMockUserState(user),
       setSession,

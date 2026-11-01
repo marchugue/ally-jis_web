@@ -18,10 +18,7 @@ export function ChatViewProvider({ children }: { children: ReactNode }) {
   return <ChatViewContext.Provider value={value}>{children}</ChatViewContext.Provider>;
 }
 
-export function useChatView() {
+export function useChatView(): ChatViewContextValue {
   const ctx = useContext(ChatViewContext);
-  if (!ctx) {
-    throw new Error('useChatView must be used within a ChatViewProvider');
-  }
-  return ctx;
+  return ctx || { isChatFocused: false, setChatFocused: () => {} };
 }

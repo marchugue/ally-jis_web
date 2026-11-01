@@ -54,7 +54,7 @@ export function AnonymousAvatar({
     >
       <img
         src={avatarSrc}
-        alt={avatarKey || 'Anonymous Ally'}
+        alt={avatarKey || 'Anonymous avatar'}
         onError={() => setLoadError(true)}
         className="w-full h-full object-cover pointer-events-none select-none"
         draggable={false}

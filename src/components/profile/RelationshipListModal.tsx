@@ -1,3 +1,4 @@
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 // src/components/profile/RelationshipListModal.tsx
 
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, X } from 'lucide-react';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { AnonymousAvatar } from '@/components/match/AnonymousAvatar';
+import { getDeterministicAnonymousAvatar } from '@/lib/matchOptions';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/api/client';
 import type { AllyListItem, FollowListItem, FollowSortBy } from '@/api/client';
@@ -177,7 +179,11 @@ export function RelationshipListModal({ open, onOpenChange, userId, kind }: Rela
           ) : (
             <div className="space-y-1">
               {items.map((item) => {
-                const isAlly = kind === 'allies' || (item as any).isAlly || (item as any).is_ally;
+                const isMasked =
+                  item.username === 'anonymous' ||
+                  (item as any).is_ally === false ||
+                  (item as any).isAlly === false;
+                const isAlly = !isMasked && Boolean(kind === 'allies' || (item as any).isAlly || (item as any).is_ally);
                 return (
                   <button
                     key={item.id}
@@ -192,14 +198,14 @@ export function RelationshipListModal({ open, onOpenChange, userId, kind }: Rela
                       />
                     ) : (
                       <AnonymousAvatar
-                        avatarKey={(item as any).avatarKey || 'fox'}
+                        avatarKey={(item as any).avatarKey || getDeterministicAnonymousAvatar(item.id)}
                         size={44}
                         className="rounded-full flex-shrink-0"
                       />
                     )}
                     <div className="min-w-0">
                       <p className="font-jakarta font-semibold text-sm text-gray-900 dark:text-white truncate">
-                        {isAlly ? (item.username ? `@${item.username}` : item.fullName ?? 'Student') : 'Anonymous Peer'}
+                        {isAlly ? (item.username ? `@${item.username}` : item.fullName ?? 'Student') : getAnonymousDisplayName(item)}
                       </p>
                       <p className="font-jakarta text-xs text-gray-400 truncate">
                         {isAlly ? item.course : 'Protected · Campus Student'}

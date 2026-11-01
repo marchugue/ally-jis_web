@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Reply, UserCheck, Send, X, AlertCircle } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -62,10 +63,10 @@ function CommentItem({
 }) {
   const author = comment.author;
   const isOwn = comment.author_id === currentUserId;
-  const isAlly = Boolean(comment.author?.is_ally || isOwn);
+  const isAlly = Boolean((comment.author?.is_ally && !comment.author?.is_unrevealed_match && comment.author?.username !== 'anonymous') || isOwn);
   const displayName = isAlly
     ? author?.full_name || (author?.username ? `@${author.username}` : 'Ally member')
-    : 'Anonymous Peer';
+    : getAnonymousDisplayName(author);
   const displayHandle = isAlly && author?.username ? `@${author.username}` : '@anonymous';
   const [liking, setLiking] = useState(false);
 
@@ -551,6 +552,7 @@ export default function PostDetailPage() {
                 onToggleLike={handlePostLike}
                 onCommentClick={() => inputRef.current?.focus()}
                 onDelete={handleDeletePost}
+                onUpdate={(updated) => setPost(updated)}
                 showBorder={true}
                 className="rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#181818] p-4 sm:p-6 shadow-none sm:shadow-2xs"
               />

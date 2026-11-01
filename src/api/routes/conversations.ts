@@ -80,6 +80,9 @@ export function getIcebreakersEnabled(conversationId: string) {
 
 export interface ConversationStreakResponse {
   dayStreak: number;
+  stage?: number;
+  stageName?: string;
+  effectiveMultiplier?: number;
   streakActiveToday: boolean;
   streakStatus: 'active' | 'at_risk' | 'lapsed' | 'expired' | 'inactive';
   lastQualifyingDate: string | null;
@@ -109,7 +112,13 @@ export function getConversationStreakEvents(conversationId: string) {
 }
 
 export function restoreConversationStreak(conversationId: string) {
-  return request<{ restoresRemaining: number; newStreak: number }>(
+  return request<{
+    restoresRemaining: number;
+    newStreak: number;
+    stage?: number;
+    stageName?: string;
+    effectiveMultiplier?: number;
+  }>(
     `/conversations/${conversationId}/streak/restore`,
     { method: 'POST' }
   );

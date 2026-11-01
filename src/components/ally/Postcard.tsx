@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { MessageCircle, Maximize2, Globe2, Users } from 'lucide-react';
@@ -71,10 +72,10 @@ function MediaGrid({ media }: { media: FeedPost['media'] }) {
 export default function PostCard({ post, onToggleLike, onOpenComments, onExpand }: PostCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const author = post.author;
-  const isAlly = Boolean(author?.is_ally);
+  const isAlly = Boolean(author?.is_ally && !author?.is_unrevealed_match && author?.username !== 'anonymous');
   const displayName = isAlly
     ? (author?.full_name || author?.username || 'Ally member')
-    : 'Anonymous Peer';
+    : getAnonymousDisplayName(author);
 
   const handleLikeClick = async () => {
     if (isLiking) return;

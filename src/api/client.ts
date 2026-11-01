@@ -23,6 +23,8 @@ export {
   getMaintenanceStatus,
 } from './http';
 
+export type { BanStatusResponse } from './routes/moderation';
+
 export type {
   AuthUser,
   AuthSession,
@@ -144,6 +146,7 @@ import * as admin from './routes/admin';
 import * as games from './routes/games';
 import type { ListUsersQuery, ListReportsQuery } from './routes/admin';
 import { getMaintenanceStatus } from './http';
+
 export type { ListUsersQuery, ListReportsQuery };
 
 export const apiClient = {
@@ -249,6 +252,11 @@ export const apiClient = {
   adminDeleteReportedPost: admin.deleteReportedPost,
   adminRemoveReportedMessage: admin.removeReportedMessage,
   adminRemoveReportedMedia: admin.removeReportedMedia,
+  adminListModerators: admin.listModerators,
+  adminAssignReportModerator: admin.assignModerator,
+  adminVerifyReport: admin.verifyReport,
+  adminUploadFindingAttachment: admin.uploadFindingAttachment,
+  adminExecuteReportAction: admin.executeReportAction,
 
   // ─── Admin: Global Search ────────────────────────────────────────────────
   adminSearch: admin.search,
@@ -332,6 +340,10 @@ export const apiClient = {
   unmuteUser: moderation.unmuteUser,
   checkIsMuted: moderation.checkIsMuted,
   listMutedUsers: moderation.listMutedUsers,
+  getMyReports: moderation.getMyReports,
+  submitReportAppeal: moderation.submitReportAppeal,
+  getBanStatus: moderation.getBanStatus,
+  submitBanAppeal: moderation.submitBanAppeal,
 
   // ─── Matchmaking ─────────────────────────────────────────────────────────
   joinMatchQueue: match.joinQueue,

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { X, Send, MessageCircle, Reply, UserCheck } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
@@ -17,6 +18,7 @@ interface CommentsModalProps {
   onToggleCommentLike: (comment: FeedComment) => Promise<void>;
   onTogglePostLike?: (post: FeedPost) => void;
   onDeletePost?: (postId: string) => void;
+  onUpdatePost?: (post: FeedPost) => void;
   onAuthorClick?: (authorId: string) => void;
   onToggleFollow?: (authorId: string, isFollowing: boolean) => void;
   /** If provided, auto-selects this comment as the reply target after load (used for comment_reply deep-links). */
@@ -69,8 +71,8 @@ function CommentRow({
 }) {
   const author = comment.author;
   const isOwn = comment.author_id === currentUserId;
-  const isAlly = Boolean(comment.author?.is_ally || isOwn);
-  const displayName = isAlly ? (author?.full_name || (author?.username ? `@${author.username}` : 'Ally member')) : 'Anonymous Peer';
+  const isAlly = Boolean((comment.author?.is_ally && !comment.author?.is_unrevealed_match && comment.author?.username !== 'anonymous') || isOwn);
+  const displayName = isAlly ? (author?.full_name || (author?.username ? `@${author.username}` : 'Ally member')) : getAnonymousDisplayName(author);
   const displayHandle = isAlly && author?.username ? `@${author.username}` : '@anonymous';
   const [liking, setLiking] = useState(false);
 
@@ -164,6 +166,7 @@ export default function CommentsModal({
   onToggleCommentLike,
   onTogglePostLike,
   onDeletePost,
+  onUpdatePost,
   onAuthorClick,
   onToggleFollow,
   initialReplyCommentId,
@@ -400,6 +403,10 @@ export default function CommentsModal({
               onToggleLike={handlePostLike}
               onCommentClick={handleFocusInput}
               onDelete={onDeletePost}
+              onUpdate={(updated) => {
+                setLocalPost(updated);
+                onUpdatePost?.(updated);
+              }}
               onAuthorClick={onAuthorClick}
               onToggleFollow={handleToggleFollow}
               showBorder={false}

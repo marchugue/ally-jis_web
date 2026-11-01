@@ -336,6 +336,21 @@ export function useNewsfeed() {
     );
   }, []);
 
+  const updateFeedPost = useCallback(
+    (updatedPost: FeedPost) => {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== updatedPost.id) return p;
+          if (user?.id) {
+            newsfeedCache.updatePost(user.id, activeFilter, updatedPost);
+          }
+          return updatedPost;
+        })
+      );
+    },
+    [user?.id, activeFilter]
+  );
+
   return {
     currentUser,
     allies,
@@ -351,6 +366,7 @@ export function useNewsfeed() {
     loadMore,
     refreshFeed,
     createPost,
+    updateFeedPost,
     toggleLike,
     toggleFollow,
     bumpCommentCount,

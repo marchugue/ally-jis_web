@@ -10,7 +10,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  KeyRound, ShieldOff, ShieldAlert, LogOut, Trash2, ChevronRight, Eye, EyeOff,
+  KeyRound, ShieldOff, ShieldAlert, Flag, LogOut, Trash2, ChevronRight, Eye, EyeOff,
   UserCheck, Bell, Shield, Lock, Smartphone, Moon, Sliders,
   Search, ArrowLeft, ShieldCheck, Zap, Sun, Monitor, Palette,
   Flame, MessageSquare, Volume2, Clock, Check, History,
@@ -159,9 +159,8 @@ function ToggleItem({
         type="button"
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${
-          checked ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
-        }`}
+        className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${checked ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+          }`}
       >
         <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
       </button>
@@ -546,7 +545,7 @@ export default function SettingsPage() {
       if (useBackend) {
         apiClient.getMyPreferences().then((data) => {
           if (data) setPreferences(data);
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
   }, [useBackend]);
@@ -914,612 +913,630 @@ export default function SettingsPage() {
         <div
           className="w-full md:w-[320px] lg:w-[360px] bg-white dark:bg-[#0D131F] flex flex-col overflow-hidden min-h-0 flex-shrink-0 border-r border-gray-200/80 dark:border-white/10"
         >
-        {/* Sidebar Header */}
-        <div className="p-4 flex items-center justify-between flex-shrink-0 border-b border-gray-100 dark:border-white/10 gap-2">
-          <div>
-            <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-            <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 mt-0.5">Control your preferences & account</p>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="px-4 py-3 flex-shrink-0 border-b border-gray-100 dark:border-white/10">
-          <div className="relative">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search settings..."
-              className="w-full bg-gray-100 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2 text-xs font-jakarta text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 transition-all border border-transparent dark:border-white/10"
-            />
-          </div>
-        </div>
-
-        {/* Categories List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-white/5">
-          {filteredCategories.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 dark:text-gray-500 text-xs font-jakarta">
-              No matching settings found
+          {/* Sidebar Header */}
+          <div className="p-4 flex items-center justify-between flex-shrink-0 border-b border-gray-100 dark:border-white/10 gap-2">
+            <div>
+              <h1 className="font-fraunces text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+              <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 mt-0.5">Control your preferences & account</p>
             </div>
-          ) : (
-            filteredCategories.map((cat) => {
-              const Icon = cat.icon;
-              const isActive = activeTab === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleSelectTab(cat.id)}
-                  className={cn(
-                    'w-full text-left p-4 flex items-start gap-3.5 transition-colors relative cursor-pointer',
-                    isActive
-                      ? 'bg-[#1A6B3C]/8 dark:bg-emerald-500/10 border-l-4 border-[#1A6B3C] dark:border-emerald-400'
-                      : 'hover:bg-gray-50/80 dark:hover:bg-white/5 border-l-4 border-transparent'
-                  )}
-                >
-                  <div
+          </div>
+
+          {/* Search Bar */}
+          <div className="px-4 py-3 flex-shrink-0 border-b border-gray-100 dark:border-white/10">
+            <div className="relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search settings..."
+                className="w-full bg-gray-100 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2 text-xs font-jakarta text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#1A6B3C]/20 dark:focus:ring-emerald-500/20 transition-all border border-transparent dark:border-white/10"
+              />
+            </div>
+          </div>
+
+          {/* Categories List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-white/5">
+            {filteredCategories.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 dark:text-gray-500 text-xs font-jakarta">
+                No matching settings found
+              </div>
+            ) : (
+              filteredCategories.map((cat) => {
+                const Icon = cat.icon;
+                const isActive = activeTab === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleSelectTab(cat.id)}
                     className={cn(
-                      'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
+                      'w-full text-left p-4 flex items-start gap-3.5 transition-colors relative cursor-pointer',
                       isActive
-                        ? 'bg-[#1A6B3C] text-white shadow-xs dark:bg-emerald-600'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'
+                        ? 'bg-[#1A6B3C]/8 dark:bg-emerald-500/10 border-l-4 border-[#1A6B3C] dark:border-emerald-400'
+                        : 'hover:bg-gray-50/80 dark:hover:bg-white/5 border-l-4 border-transparent'
                     )}
                   >
-                    <Icon size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className={cn('font-jakarta text-sm font-bold truncate', isActive ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
-                        {cat.title}
-                      </span>
-                      <ChevronRight size={14} className={cn('flex-shrink-0', isActive ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-300 dark:text-gray-600')} />
+                    <div
+                      className={cn(
+                        'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
+                        isActive
+                          ? 'bg-[#1A6B3C] text-white shadow-xs dark:bg-emerald-600'
+                          : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'
+                      )}
+                    >
+                      <Icon size={18} />
                     </div>
-                    <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{cat.subtitle}</p>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* ── Right Content View Pane (Full-width space expansion) ── */}
-      <div
-        className={cn(
-          'flex-1 bg-[#F9F8F6] dark:bg-[#090D16] flex flex-col overflow-hidden min-h-0',
-          !isMobileDetailOpen && 'hidden md:flex'
-        )}
-      >
-        {/* Top Header Bar for Right Pane */}
-        <div className="px-6 py-4 bg-white dark:bg-[#0D131F] border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between flex-shrink-0 shadow-xs">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsMobileDetailOpen(false)}
-              className="md:hidden p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              aria-label="Back to settings list"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <h2 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                {activeCategoryInfo.title}
-              </h2>
-              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">{activeCategoryInfo.subtitle}</p>
-            </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className={cn('font-jakarta text-sm font-bold truncate', isActive ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
+                          {cat.title}
+                        </span>
+                        <ChevronRight size={14} className={cn('flex-shrink-0', isActive ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-300 dark:text-gray-600')} />
+                      </div>
+                      <p className="font-jakarta text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{cat.subtitle}</p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* Detail Content Body Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="w-full max-w-5xl mx-auto space-y-6">
+        {/* ── Right Content View Pane (Full-width space expansion) ── */}
+        <div
+          className={cn(
+            'flex-1 bg-[#F9F8F6] dark:bg-[#090D16] flex flex-col overflow-hidden min-h-0',
+            !isMobileDetailOpen && 'hidden md:flex'
+          )}
+        >
+          {/* Top Header Bar for Right Pane */}
+          <div className="px-6 py-4 bg-white dark:bg-[#0D131F] border-b border-gray-200/80 dark:border-white/10 flex items-center justify-between flex-shrink-0 shadow-xs">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsMobileDetailOpen(false)}
+                className="md:hidden p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                aria-label="Back to settings list"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <h2 className="font-fraunces text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  {activeCategoryInfo.title}
+                </h2>
+                <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">{activeCategoryInfo.subtitle}</p>
+              </div>
+            </div>
+          </div>
 
-            {/* TAB 1: ACCOUNT & SECURITY */}
-            {activeTab === 'account' && (
-              <div className="space-y-6">
-                {/* Account Credentials Summary Card */}
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Lock size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Account Identity
-                      </h3>
-                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Verified email and student credentials.</p>
-                    </div>
-                  </div>
+          {/* Detail Content Body Container */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div className="w-full max-w-5xl mx-auto space-y-6">
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5">
-                      <span className="text-xs font-jakarta font-medium text-gray-400 dark:text-gray-500 block mb-1">Email Address</span>
-                      <span className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white break-all">
-                        {user?.email || 'Not logged in'}
-                      </span>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 flex items-center justify-between">
+              {/* TAB 1: ACCOUNT & SECURITY */}
+              {activeTab === 'account' && (
+                <div className="space-y-6">
+                  {/* Account Credentials Summary Card */}
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4 flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-jakarta font-medium text-gray-400 dark:text-gray-500 block mb-1">Student Status</span>
-                        <span className="font-jakarta text-sm font-semibold text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5">
-                          <ShieldCheck size={16} /> Campus Ally Verified
+                        <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <Lock size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Account Identity
+                        </h3>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Verified email and student credentials.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5">
+                        <span className="text-xs font-jakarta font-medium text-gray-400 dark:text-gray-500 block mb-1">Email Address</span>
+                        <span className="font-jakarta text-sm font-semibold text-gray-900 dark:text-white break-all">
+                          {user?.email || 'Not logged in'}
                         </span>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-jakarta font-medium text-gray-400 dark:text-gray-500 block mb-1">Student Status</span>
+                          <span className="font-jakarta text-sm font-semibold text-[#1A6B3C] dark:text-emerald-400 flex items-center gap-1.5">
+                            <ShieldCheck size={16} /> Campus Ally Verified
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Password Change Card */}
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <KeyRound size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Change Password
-                    </h3>
-                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Ensure your account is using a strong, unique password.</p>
-                  </div>
+                  {/* Password Change Card */}
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4">
+                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <KeyRound size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Change Password
+                      </h3>
+                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Ensure your account is using a strong, unique password.</p>
+                    </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <PasswordField
+                          label="Current Password"
+                          value={currentPassword}
+                          onChange={setCurrentPassword}
+                          show={showPasswords}
+                          onToggleShow={() => setShowPasswords((v) => !v)}
+                        />
+                        <div>
+                          <PasswordField
+                            label="New Password"
+                            value={newPassword}
+                            onChange={setNewPassword}
+                            show={showPasswords}
+                            onToggleShow={() => setShowPasswords((v) => !v)}
+                            placeholder="Min. 8 characters"
+                          />
+                          {newPassword.length > 0 && (
+                            <PasswordStrengthIndicator password={newPassword} />
+                          )}
+                        </div>
+                      </div>
+
                       <PasswordField
-                        label="Current Password"
-                        value={currentPassword}
-                        onChange={setCurrentPassword}
+                        label="Confirm New Password"
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
                         show={showPasswords}
                         onToggleShow={() => setShowPasswords((v) => !v)}
                       />
-                      <div>
-                        <PasswordField
-                          label="New Password"
-                          value={newPassword}
-                          onChange={setNewPassword}
-                          show={showPasswords}
-                          onToggleShow={() => setShowPasswords((v) => !v)}
-                          placeholder="Min. 8 characters"
-                        />
-                        {newPassword.length > 0 && (
-                          <PasswordStrengthIndicator password={newPassword} />
-                        )}
-                      </div>
-                    </div>
 
-                    <PasswordField
-                      label="Confirm New Password"
-                      value={confirmPassword}
-                      onChange={setConfirmPassword}
-                      show={showPasswords}
-                      onToggleShow={() => setShowPasswords((v) => !v)}
-                    />
-
-                    <div className="pt-2 flex justify-end">
-                      <button
-                        onClick={handleChangePassword}
-                        disabled={changingPassword || !currentPassword || !newPassword}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white font-jakarta text-xs font-bold active:scale-[0.97] transition-all disabled:opacity-50 shadow-xs cursor-pointer"
-                      >
-                        <KeyRound size={16} /> {changingPassword ? 'Updating...' : 'Update Password'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Session Sign Out Card */}
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <LogOut size={16} className="text-gray-500" /> Current Session
-                      </h4>
-                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Log out of your active account session on this device.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowLogoutConfirm(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/15 transition-all shadow-xs cursor-pointer shrink-0"
-                    >
-                      <LogOut size={14} /> Log out
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: PRIVACY & SAFETY */}
-            {activeTab === 'privacy' && (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Shield size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Privacy & Safety Controls
-                    </h3>
-                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Manage presence visibility, read receipts, and safety blocks.</p>
-                  </div>
-
-                  {/* Blocked Users Link Card */}
-                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
-                        <ShieldOff size={18} />
-                      </div>
-                      <div>
-                        <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Blocked Users</h4>
-                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">View and manage users you have blocked from messaging and interactions</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => navigate('/blocked-users')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
-                    >
-                      <span>{blockedCount !== null ? `${blockedCount} blocked` : 'Manage'}</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-
-                  {/* Restricted Users Link Card */}
-                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                        <ShieldAlert size={18} />
-                      </div>
-                      <div>
-                        <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Restricted Users</h4>
-                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">View and manage users whose online presence is mutually hidden</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => navigate('/restricted-users')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
-                    >
-                      <span>{restrictedCount !== null ? `${restrictedCount} restricted` : 'Manage'}</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-
-                  {/* Presence Toggles Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <ToggleItem
-                      title="Private Account"
-                      description="Only allies can see your posts. Your profile page stays reachable and anonymous to everyone else."
-                      checked={preferences.account_privacy === 'private'}
-                      onChange={(val) => handleUpdatePref({ account_privacy: val ? 'private' : 'public' })}
-                      icon={Lock}
-                    />
-                    <ToggleItem
-                      title="Online Status"
-                      description="Display the green active indicator when you are using the app."
-                      checked={preferences.show_online_status}
-                      onChange={(val) => handleUpdatePref({ show_online_status: val })}
-                      icon={Smartphone}
-                    />
-                    <ToggleItem
-                      title="Last Active Timestamp"
-                      description="Show when you were last seen across chat headers."
-                      checked={preferences.show_last_active}
-                      onChange={(val) => handleUpdatePref({ show_last_active: val })}
-                      icon={Clock}
-                    />
-                    <ToggleItem
-                      title="Read Receipts"
-                      description="Allow chat partners to see when you've viewed their messages."
-                      checked={preferences.read_receipts_enabled}
-                      onChange={(val) => handleUpdatePref({ read_receipts_enabled: val })}
-                      icon={UserCheck}
-                    />
-                  </div>
-
-                  {/* Scope Selectors Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-2">
-                      <label className="font-jakarta text-xs font-bold text-gray-900 dark:text-white block">
-                        Profile Visibility Scope
-                      </label>
-                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-                        Who can view your full bio and profile details.
-                      </p>
-                      <select
-                        value={preferences.profile_visibility}
-                        onChange={(e) => handleUpdatePref({ profile_visibility: e.target.value as any })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 cursor-pointer"
-                      >
-                        <option value="campus">Campus Allies (All verified students)</option>
-                        <option value="matches_only">Connected Friends Only</option>
-                        <option value="hidden">Hidden / Incognito</option>
-                      </select>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-2">
-                      <label className="font-jakarta text-xs font-bold text-gray-900 dark:text-white block">
-                        Default Feed Post Audience
-                      </label>
-                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-                        Initial audience setting when drafting confessions and campus posts.
-                      </p>
-                      <select
-                        value={preferences.feed_post_audience}
-                        onChange={(e) => handleUpdatePref({ feed_post_audience: e.target.value as any })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 cursor-pointer"
-                      >
-                        <option value="campus">Campus Public (All students)</option>
-                        <option value="matches_only">Mutual Allies Only</option>
-                        <option value="anonymous_only">Always Post Anonymously</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: NOTIFICATIONS & ALERTS */}
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Bell size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Notifications & Alerts
-                    </h3>
-                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Configure push alerts, streak warnings, and notification quiet hours.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ToggleItem
-                      title="Streak Reminders (10:00 PM)"
-                      description="Receive a notification reminder before midnight if your daily streak hasn't been activated."
-                      checked={preferences.notify_streak_reminders}
-                      onChange={(val) => handleUpdatePref({ notify_streak_reminders: val })}
-                      icon={Flame}
-                    />
-                    <ToggleItem
-                      title="Direct Chat Messages"
-                      description="Receive instant alerts when someone sends you a message."
-                      checked={preferences.notify_chat_messages}
-                      onChange={(val) => handleUpdatePref({ notify_chat_messages: val })}
-                      icon={MessageSquare}
-                    />
-                    <ToggleItem
-                      title="Match & Ally Requests"
-                      description="Be alerted when an Ally connection is requested."
-                      checked={preferences.notify_match_requests}
-                      onChange={(val) => handleUpdatePref({ notify_match_requests: val })}
-                      icon={Bell}
-                    />
-                    <ToggleItem
-                      title="Feed & Confession Alerts"
-                      description="Notifications for likes, replies, and campus confessions."
-                      checked={preferences.notify_confessions}
-                      onChange={(val) => handleUpdatePref({ notify_confessions: val })}
-                      icon={Bell}
-                    />
-                    <ToggleItem
-                      title="In-App Sound Effects"
-                      description="Play audio chimes for incoming messages and match achievements."
-                      checked={preferences.notify_sound_enabled}
-                      onChange={(val) => handleUpdatePref({ notify_sound_enabled: val })}
-                      icon={Volume2}
-                    />
-                  </div>
-
-                  {/* Quiet Hours Section */}
-                  <div className="p-5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                          <Clock size={18} />
-                        </div>
-                        <div>
-                          <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Quiet Hours (Do Not Disturb)</h4>
-                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">Mute all notification push alerts during selected hours</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdatePref({ quiet_hours_enabled: !preferences.quiet_hours_enabled })}
-                        className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${
-                          preferences.quiet_hours_enabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                          preferences.quiet_hours_enabled ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
-                    </div>
-
-                    {preferences.quiet_hours_enabled && (
-                      <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                          <label className="font-jakarta text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1.5">
-                            Starts at
-                          </label>
-                          <input
-                            type="time"
-                            value={preferences.quiet_hours_start}
-                            onChange={(e) => handleUpdatePref({ quiet_hours_start: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-mono text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <label className="font-jakarta text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1.5">
-                            Ends at
-                          </label>
-                          <input
-                            type="time"
-                            value={preferences.quiet_hours_end}
-                            onChange={(e) => handleUpdatePref({ quiet_hours_end: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-mono text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 4: ACTIVITY LOG */}
-            {activeTab === 'activity' && (
-              <ActivityLogSection />
-            )}
-
-            {/* TAB 5: APPEARANCE & DANGER ZONE */}
-            {activeTab === 'appearance' && (
-              <div className="space-y-6">
-                {/* Admin Management Card (For authorized admins) */}
-                {adminRole && (
-                  <div className="bg-[#111827] rounded-2xl border border-emerald-500/30 p-6 text-white space-y-4 shadow-md bg-gradient-to-r from-[#111827] to-[#16221B]">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold border border-emerald-500/30 shrink-0">
-                          <Zap size={22} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-fraunces text-base font-bold">Administrative Console Active</h4>
-                            <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full">
-                              {adminRole}
-                            </span>
-                          </div>
-                          <p className="font-jakarta text-xs text-gray-300 mt-0.5">
-                            Manage student verifications, user roles, system logs & email studio.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => navigate('/admin')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white font-jakarta text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-xs shrink-0"
-                      >
-                        <ShieldCheck size={16} /> Open Admin Console &rarr;
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Appearance Card */}
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Palette size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Interface Appearance
-                      </h3>
-                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Choose daylight or nocturnal palette, or follow your operating system.
-                      </p>
-                    </div>
-                    <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-jakarta font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 capitalize">
-                      Active: {theme === 'system' ? `System (${resolvedTheme})` : theme}
-                    </span>
-                  </div>
-
-                  {/* 3 Interactive Theme Selector Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    {[
-                      {
-                        id: 'light' as const,
-                        label: 'Light Mode',
-                        desc: 'Daylight ivory background with forest emerald accents.',
-                        icon: Sun,
-                        previewBg: 'bg-[#F7F4EF] border-gray-300 text-gray-900',
-                        accent: 'bg-[#1A6B3C]',
-                      },
-                      {
-                        id: 'dark' as const,
-                        label: 'Dark Mode',
-                        desc: 'Nocturnal slate canvas with jade emerald accents.',
-                        icon: Moon,
-                        previewBg: 'bg-[#121212] border-white/20 text-gray-200',
-                        accent: 'bg-[#38C185]',
-                      },
-                      {
-                        id: 'system' as const,
-                        label: 'System Sync',
-                        desc: 'Matches your device operating system theme automatically.',
-                        icon: Monitor,
-                        previewBg: 'bg-gradient-to-br from-[#F7F4EF] to-[#121212] border-gray-400 text-gray-800',
-                        accent: 'bg-amber-500',
-                      },
-                    ].map((opt) => {
-                      const isSelected = theme === opt.id;
-                      const Icon = opt.icon;
-                      return (
+                      <div className="pt-2 flex justify-end">
                         <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setTheme(opt.id)}
-                          className={cn(
-                            'p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer group',
-                            isSelected
-                              ? 'border-[#1A6B3C] dark:border-emerald-500 ring-2 ring-[#1A6B3C]/20 dark:ring-emerald-500/20 bg-[#1A6B3C]/5 dark:bg-emerald-950/20 shadow-xs'
-                              : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 bg-gray-50/50 dark:bg-white/5'
-                          )}
+                          onClick={handleChangePassword}
+                          disabled={changingPassword || !currentPassword || !newPassword}
+                          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white font-jakarta text-xs font-bold active:scale-[0.97] transition-all disabled:opacity-50 shadow-xs cursor-pointer"
                         >
-                          <div>
-                            <div className={cn(
-                              'w-full h-16 rounded-xl border mb-3 p-2 flex flex-col justify-between overflow-hidden shadow-xs',
-                              opt.previewBg
-                            )}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-2 h-2 rounded-full bg-red-400" />
-                                  <div className="w-2 h-2 rounded-full bg-amber-400" />
-                                  <div className="w-2 h-2 rounded-full bg-green-400" />
-                                </div>
-                                <div className={cn('w-2 h-2 rounded-full', opt.accent)} />
-                              </div>
-                              <div className="space-y-1">
-                                <div className="w-1/2 h-2 rounded-full bg-current opacity-40" />
-                                <div className="w-3/4 h-1.5 rounded-full bg-current opacity-20" />
-                              </div>
-                            </div>
+                          <KeyRound size={16} /> {changingPassword ? 'Updating...' : 'Update Password'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <Icon size={16} className={cn(isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')} />
-                                <span className={cn('font-jakarta text-sm font-bold', isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
-                                  {opt.label}
-                                </span>
-                              </div>
-                              {isSelected && (
-                                <div className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 animate-pulse" />
-                              )}
+                  {/* Session Sign Out Card */}
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <LogOut size={16} className="text-gray-500" /> Current Session
+                        </h4>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Log out of your active account session on this device.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowLogoutConfirm(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/15 transition-all shadow-xs cursor-pointer shrink-0"
+                      >
+                        <LogOut size={14} /> Log out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: PRIVACY & SAFETY */}
+              {activeTab === 'privacy' && (
+                <div className="space-y-6">
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4">
+                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Shield size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Privacy & Safety Controls
+                      </h3>
+                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Manage presence visibility, read receipts, and safety blocks.</p>
+                    </div>
+
+                    {/* Blocked Users Link Card */}
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+                          <ShieldOff size={18} />
+                        </div>
+                        <div>
+                          <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Blocked Users</h4>
+                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">View and manage users you have blocked from messaging and interactions</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate('/blocked-users')}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
+                      >
+                        <span>{blockedCount !== null ? `${blockedCount} blocked` : 'Manage'}</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    {/* Restricted Users Link Card */}
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                          <ShieldAlert size={18} />
+                        </div>
+                        <div>
+                          <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Restricted Users</h4>
+                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">View and manage users whose online presence is mutually hidden</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate('/restricted-users')}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
+                      >
+                        <span>{restrictedCount !== null ? `${restrictedCount} restricted` : 'Manage'}</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    {/* Safety & Report Center Link Card */}
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-between hover:border-[#1A6B3C]/30 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 text-[#1A6B3C] dark:text-emerald-400 flex items-center justify-center font-bold">
+                          <Flag size={18} />
+                        </div>
+                        <div>
+                          <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Safety & Report Center</h4>
+                          <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">Submit confidential reports, track case status, and view campus guidelines</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate('/report')}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 font-jakarta text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#1A6B3C] hover:text-[#1A6B3C] dark:hover:text-emerald-400 transition-all shadow-xs cursor-pointer"
+                      >
+                        <span>Open Center</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    {/* Presence Toggles Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <ToggleItem
+                        title="Private Account"
+                        description="Only allies can see your posts. Your profile page stays reachable and anonymous to everyone else."
+                        checked={preferences.account_privacy === 'private'}
+                        onChange={(val) => handleUpdatePref({ account_privacy: val ? 'private' : 'public' })}
+                        icon={Lock}
+                      />
+                      <ToggleItem
+                        title="Online Status"
+                        description="Display the green active indicator when you are using the app."
+                        checked={preferences.show_online_status}
+                        onChange={(val) => handleUpdatePref({ show_online_status: val })}
+                        icon={Smartphone}
+                      />
+                      <ToggleItem
+                        title="Last Active Timestamp"
+                        description="Show when you were last seen across chat headers."
+                        checked={preferences.show_last_active}
+                        onChange={(val) => handleUpdatePref({ show_last_active: val })}
+                        icon={Clock}
+                      />
+                      <ToggleItem
+                        title="Read Receipts"
+                        description="Allow chat partners to see when you've viewed their messages."
+                        checked={preferences.read_receipts_enabled}
+                        onChange={(val) => handleUpdatePref({ read_receipts_enabled: val })}
+                        icon={UserCheck}
+                      />
+                    </div>
+
+                    {/* Scope Selectors Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-2">
+                        <label className="font-jakarta text-xs font-bold text-gray-900 dark:text-white block">
+                          Profile Visibility Scope
+                        </label>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                          Who can view your full bio and profile details.
+                        </p>
+                        <select
+                          value={preferences.profile_visibility}
+                          onChange={(e) => handleUpdatePref({ profile_visibility: e.target.value as any })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="campus">Campus Allies (All verified students)</option>
+                          <option value="matches_only">Connected Friends Only</option>
+                          <option value="hidden">Hidden / Incognito</option>
+                        </select>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-2">
+                        <label className="font-jakarta text-xs font-bold text-gray-900 dark:text-white block">
+                          Default Feed Post Audience
+                        </label>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                          Initial audience setting when drafting confessions and campus posts.
+                        </p>
+                        <select
+                          value={preferences.feed_post_audience}
+                          onChange={(e) => handleUpdatePref({ feed_post_audience: e.target.value as any })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-jakarta text-xs outline-none focus:border-[#1A6B3C] dark:focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="campus">Campus Public (All students)</option>
+                          <option value="matches_only">Mutual Allies Only</option>
+                          <option value="anonymous_only">Always Post Anonymously</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: NOTIFICATIONS & ALERTS */}
+              {activeTab === 'notifications' && (
+                <div className="space-y-6">
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4">
+                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Bell size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Notifications & Alerts
+                      </h3>
+                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Configure push alerts, streak warnings, and notification quiet hours.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <ToggleItem
+                        title="Streak Reminders (10:00 PM)"
+                        description="Receive a notification reminder before midnight if your daily streak hasn't been activated."
+                        checked={preferences.notify_streak_reminders}
+                        onChange={(val) => handleUpdatePref({ notify_streak_reminders: val })}
+                        icon={Flame}
+                      />
+                      <ToggleItem
+                        title="Direct Chat Messages"
+                        description="Receive instant alerts when someone sends you a message."
+                        checked={preferences.notify_chat_messages}
+                        onChange={(val) => handleUpdatePref({ notify_chat_messages: val })}
+                        icon={MessageSquare}
+                      />
+                      <ToggleItem
+                        title="Match & Ally Requests"
+                        description="Be alerted when an Ally connection is requested."
+                        checked={preferences.notify_match_requests}
+                        onChange={(val) => handleUpdatePref({ notify_match_requests: val })}
+                        icon={Bell}
+                      />
+                      <ToggleItem
+                        title="Feed & Confession Alerts"
+                        description="Notifications for likes, replies, and campus confessions."
+                        checked={preferences.notify_confessions}
+                        onChange={(val) => handleUpdatePref({ notify_confessions: val })}
+                        icon={Bell}
+                      />
+                      <ToggleItem
+                        title="In-App Sound Effects"
+                        description="Play audio chimes for incoming messages and match achievements."
+                        checked={preferences.notify_sound_enabled}
+                        onChange={(val) => handleUpdatePref({ notify_sound_enabled: val })}
+                        icon={Volume2}
+                      />
+                    </div>
+
+                    {/* Quiet Hours Section */}
+                    <div className="p-5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                            <Clock size={18} />
+                          </div>
+                          <div>
+                            <h4 className="font-jakarta text-sm font-bold text-gray-900 dark:text-white">Quiet Hours (Do Not Disturb)</h4>
+                            <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400">Mute all notification push alerts during selected hours</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePref({ quiet_hours_enabled: !preferences.quiet_hours_enabled })}
+                          className={`w-12 h-6 rounded-full transition-colors p-0.5 relative flex-shrink-0 cursor-pointer ${preferences.quiet_hours_enabled ? 'bg-[#1A6B3C] dark:bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+                            }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${preferences.quiet_hours_enabled ? 'translate-x-6' : 'translate-x-0'
+                            }`} />
+                        </button>
+                      </div>
+
+                      {preferences.quiet_hours_enabled && (
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div>
+                            <label className="font-jakarta text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1.5">
+                              Starts at
+                            </label>
+                            <input
+                              type="time"
+                              value={preferences.quiet_hours_start}
+                              onChange={(e) => handleUpdatePref({ quiet_hours_start: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-mono text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-jakarta text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1.5">
+                              Ends at
+                            </label>
+                            <input
+                              type="time"
+                              value={preferences.quiet_hours_end}
+                              onChange={(e) => handleUpdatePref({ quiet_hours_end: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] text-gray-900 dark:text-white font-mono text-xs outline-none focus:border-[#1A6B3C] cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: ACTIVITY LOG */}
+              {activeTab === 'activity' && (
+                <ActivityLogSection />
+              )}
+
+              {/* TAB 5: APPEARANCE & DANGER ZONE */}
+              {activeTab === 'appearance' && (
+                <div className="space-y-6">
+                  {/* Admin Management Card (For authorized admins) */}
+                  {adminRole && (
+                    <div className="bg-[#111827] rounded-2xl border border-emerald-500/30 p-6 text-white space-y-4 shadow-md bg-gradient-to-r from-[#111827] to-[#16221B]">
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold border border-emerald-500/30 shrink-0">
+                            <Zap size={22} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-fraunces text-base font-bold">Administrative Console Active</h4>
+                              <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full">
+                                {adminRole}
+                              </span>
                             </div>
-                            <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                              {opt.desc}
+                            <p className="font-jakarta text-xs text-gray-300 mt-0.5">
+                              Manage student verifications, user roles, system logs & email studio.
                             </p>
                           </div>
+                        </div>
+                        <button
+                          onClick={() => navigate('/admin')}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1A6B3C] hover:bg-[#14542F] text-white font-jakarta text-xs font-bold transition-all active:scale-[0.97] cursor-pointer shadow-xs shrink-0"
+                        >
+                          <ShieldCheck size={16} /> Open Admin Console &rarr;
                         </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Account Actions & Danger Zone */}
-                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
-                  <div className="border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Sliders size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Danger Zone
-                    </h3>
-                    <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Permanent and irreversible data erasure actions.</p>
-                  </div>
-
-                  <div className="p-5 rounded-xl bg-red-50/70 dark:bg-red-950/30 border border-red-200/80 dark:border-red-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-jakarta font-bold text-sm">
-                        <Trash2 size={16} /> Delete Account Permanently
                       </div>
-                      <p className="font-jakarta text-xs text-red-600/90 dark:text-red-300/80 mt-1 leading-relaxed">
-                        Permanently purge your profile, posts, connections, and message history. This cannot be undone.
-                      </p>
+                    </div>
+                  )}
+
+                  {/* Appearance Card */}
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <Palette size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Interface Appearance
+                        </h3>
+                        <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Choose daylight or nocturnal palette, or follow your operating system.
+                        </p>
+                      </div>
+                      <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-jakarta font-bold bg-[#1A6B3C]/10 dark:bg-emerald-500/15 text-[#1A6B3C] dark:text-emerald-400 capitalize">
+                        Active: {theme === 'system' ? `System (${resolvedTheme})` : theme}
+                      </span>
                     </div>
 
-                    <button
-                      onClick={() => setIsDeletionModalOpen(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-jakarta text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-[0.97] shrink-0"
-                    >
-                      <Trash2 size={14} /> Delete Account
-                    </button>
+                    {/* 3 Interactive Theme Selector Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      {[
+                        {
+                          id: 'light' as const,
+                          label: 'Light Mode',
+                          desc: 'Daylight ivory background with forest emerald accents.',
+                          icon: Sun,
+                          previewBg: 'bg-[#F7F4EF] border-gray-300 text-gray-900',
+                          accent: 'bg-[#1A6B3C]',
+                        },
+                        {
+                          id: 'dark' as const,
+                          label: 'Dark Mode',
+                          desc: 'Nocturnal slate canvas with jade emerald accents.',
+                          icon: Moon,
+                          previewBg: 'bg-[#121212] border-white/20 text-gray-200',
+                          accent: 'bg-[#38C185]',
+                        },
+                        {
+                          id: 'system' as const,
+                          label: 'System Sync',
+                          desc: 'Matches your device operating system theme automatically.',
+                          icon: Monitor,
+                          previewBg: 'bg-gradient-to-br from-[#F7F4EF] to-[#121212] border-gray-400 text-gray-800',
+                          accent: 'bg-amber-500',
+                        },
+                      ].map((opt) => {
+                        const isSelected = theme === opt.id;
+                        const Icon = opt.icon;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setTheme(opt.id)}
+                            className={cn(
+                              'p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer group',
+                              isSelected
+                                ? 'border-[#1A6B3C] dark:border-emerald-500 ring-2 ring-[#1A6B3C]/20 dark:ring-emerald-500/20 bg-[#1A6B3C]/5 dark:bg-emerald-950/20 shadow-xs'
+                                : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 bg-gray-50/50 dark:bg-white/5'
+                            )}
+                          >
+                            <div>
+                              <div className={cn(
+                                'w-full h-16 rounded-xl border mb-3 p-2 flex flex-col justify-between overflow-hidden shadow-xs',
+                                opt.previewBg
+                              )}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                                    <div className="w-2 h-2 rounded-full bg-green-400" />
+                                  </div>
+                                  <div className={cn('w-2 h-2 rounded-full', opt.accent)} />
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="w-1/2 h-2 rounded-full bg-current opacity-40" />
+                                  <div className="w-3/4 h-1.5 rounded-full bg-current opacity-20" />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <Icon size={16} className={cn(isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')} />
+                                  <span className={cn('font-jakarta text-sm font-bold', isSelected ? 'text-[#1A6B3C] dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
+                                    {opt.label}
+                                  </span>
+                                </div>
+                                {isSelected && (
+                                  <div className="w-2 h-2 rounded-full bg-[#1A6B3C] dark:bg-emerald-400 animate-pulse" />
+                                )}
+                              </div>
+                              <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                {opt.desc}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Account Actions & Danger Zone */}
+                  <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xs">
+                    <div className="border-b border-gray-100 dark:border-white/10 pb-4">
+                      <h3 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Sliders size={20} className="text-[#1A6B3C] dark:text-emerald-400" /> Danger Zone
+                      </h3>
+                      <p className="font-jakarta text-xs text-gray-500 dark:text-gray-400 mt-1">Permanent and irreversible data erasure actions.</p>
+                    </div>
+
+                    <div className="p-5 rounded-xl bg-red-50/70 dark:bg-red-950/30 border border-red-200/80 dark:border-red-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-jakarta font-bold text-sm">
+                          <Trash2 size={16} /> Delete Account Permanently
+                        </div>
+                        <p className="font-jakarta text-xs text-red-600/90 dark:text-red-300/80 mt-1 leading-relaxed">
+                          Permanently purge your profile, posts, connections, and message history. This cannot be undone.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setIsDeletionModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-jakarta text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-[0.97] shrink-0"
+                      >
+                        <Trash2 size={14} /> Delete Account
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* ── Mobile Change Password Modal ── */}

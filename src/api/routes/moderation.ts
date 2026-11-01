@@ -98,3 +98,40 @@ export async function checkIsMuted(userId: string): Promise<{ muted: boolean }> 
 export async function listMutedUsers(): Promise<MutedUserRow[]> {
   return request<MutedUserRow[]>('/moderation/muted');
 }
+export async function getMyReports(): Promise<any[]> {
+  return request<any[]>('/moderation/my-reports');
+}
+
+export async function submitReportAppeal(reportId: string, statement: string): Promise<{ success: boolean; appealDocketId: string }> {
+  return request<{ success: boolean; appealDocketId: string }>(`/moderation/reports/${reportId}/appeal`, {
+    method: 'POST',
+    body: { statement },
+  });
+}
+
+export interface BanStatusResponse {
+  isBanned: boolean;
+  isSuspended?: boolean;
+  status?: 'banned' | 'suspended' | 'active';
+  bannedAt: string | null;
+  suspendedUntil?: string | null;
+  reportId: string | null;
+  docketId: string;
+  violationLabel: string;
+  reason: string;
+  appealSubmitted: boolean;
+  appealDocketId?: string;
+  appealStatement?: string;
+  appealSubmittedAt?: string;
+}
+
+export async function getBanStatus(): Promise<BanStatusResponse> {
+  return request<BanStatusResponse>('/moderation/ban-status');
+}
+
+export async function submitBanAppeal(statement: string, reportId?: string): Promise<{ success: boolean; appealDocketId: string }> {
+  return request<{ success: boolean; appealDocketId: string }>('/moderation/ban-appeal', {
+    method: 'POST',
+    body: { statement, reportId },
+  });
+}

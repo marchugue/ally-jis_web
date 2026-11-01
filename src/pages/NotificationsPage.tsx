@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { getAnonymousDisplayName, getAnonymousAvatarKey, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -170,7 +171,7 @@ export function getAnonymousInfo(notif: Notification) {
     notif.type === 'connection_request';
 
   const nameContainsAnon = Boolean(
-    notif.fromUserName && /anonymous/i.test(notif.fromUserName)
+    notif.fromUserName && (/anonymous/i.test(notif.fromUserName) || isAnonymousHandle(notif.fromUserName))
   );
   const titleContainsAnon = Boolean(
     notif.title && (/anonymous/i.test(notif.title) || /messaged you/i.test(notif.title))
@@ -197,7 +198,10 @@ export function getAnonymousInfo(notif: Notification) {
   }
 
   // Try to determine animal avatar key
-  let avatarKey: string | null = null;
+  let avatarKey: string | null =
+    (notif as any).avatarKey || (notif as any).anonymous_avatar
+      ? getAnonymousAvatarKey(notif, undefined, notif.fromUserId)
+      : null;
   if (avatarIsAnimal && notif.fromUserAvatar) {
     avatarKey = notif.fromUserAvatar.toLowerCase().trim();
   } else if (notif.fromUserName) {
@@ -220,21 +224,27 @@ export function getAnonymousInfo(notif: Notification) {
     for (let i = 0; i < seed.length; i++) {
       hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
     }
-    avatarKey = ANIMAL_KEYS[hash % ANIMAL_KEYS.length];
+    avatarKey = getAnonymousAvatarKey(notif, undefined, notif.fromUserId);
   }
 
-  // Determine anonymous name
-  let anonName = 'Anonymous Ally';
-  if (nameContainsAnon && notif.fromUserName) {
-    anonName = notif.fromUserName;
-  } else if (titleContainsAnon && notif.title && notif.title.includes('messaged you')) {
-    anonName = notif.title.replace(/\s*messaged you.*$/i, '').trim();
-  } else if (titleContainsAnon && notif.title && notif.title.includes('sent an anonymous')) {
-    anonName = notif.title.replace(/\s*sent an anonymous.*$/i, '').trim();
-  } else if (avatarKey) {
-    const capitalized = avatarKey.charAt(0).toUpperCase() + avatarKey.slice(1);
-    anonName = `Anonymous ${capitalized}`;
-  }
+  // Determine anonymous name (consistent CHMSUAN #<digits> per user)
+  const titleSender =
+    titleContainsAnon && notif.title && notif.title.includes('messaged you')
+      ? notif.title.replace(/\s*messaged you.*$/i, '').trim()
+      : titleContainsAnon && notif.title && notif.title.includes('sent an anonymous')
+      ? notif.title.replace(/\s*sent an anonymous.*$/i, '').trim()
+      : undefined;
+
+  const senderId = notif.fromUserId || (notif as any).from_user_id || notif.id;
+  const anonName = getAnonymousDisplayName(
+    {
+      ...notif,
+      id: senderId,
+      anonymous_handle: (notif as any).anonymous_handle || (notif as any).anonymousHandle,
+      name: notif.fromUserName,
+    },
+    titleSender
+  );
 
   return {
     isAnon: true,

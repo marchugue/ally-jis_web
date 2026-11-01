@@ -12,8 +12,11 @@ export interface FeedAuthor {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  anonymous_handle?: string | null;
+  anonymousHandle?: string | null;
   is_following?: boolean;
   is_ally?: boolean;
+  is_unrevealed_match?: boolean;
   avatarKey?: string | null;
 }
 

@@ -18,7 +18,7 @@ import { useAuth } from "@/context/AuthContext";
  * While the auth state is loading we show a spinner.
  */
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading, verified, isPendingApproval, needsOnboarding } = useAuth();
+  const { session, loading, verified, isPendingApproval, needsOnboarding, isBanned } = useAuth();
   const location = useLocation();
 
   // ── Still loading session — show spinner ──────────────────────────────
@@ -44,6 +44,19 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         replace
       />
     );
+  }
+
+  // ── Account is banned — lock user strictly to /banned ─────────────────
+  if (isBanned) {
+    if (location.pathname !== '/banned') {
+      return <Navigate to="/banned" replace />;
+    }
+    return <>{children}</>;
+  }
+
+  // If active user navigates to /banned directly, return them to dashboard
+  if (!isBanned && location.pathname === '/banned') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // ── Verified but onboarding not complete ──────────────────────────────

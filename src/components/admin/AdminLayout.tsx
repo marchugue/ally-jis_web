@@ -242,8 +242,8 @@ export function AdminLayout() {
             {/* Admin User Quick Profile Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-[0.97]">
-                  <div className="w-7 h-7 rounded-lg bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                <button className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-[0.97]">
+                  <div className="w-7 h-7 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                     {user?.email?.charAt(0).toUpperCase() ?? 'A'}
                   </div>
                   <span className="hidden md:block text-xs font-semibold text-gray-700 dark:text-white/80 max-w-[100px] truncate">

@@ -1,14 +1,20 @@
 import { apiClient, ProfileRow } from '@/api/client';
+import { getAnonymousDisplayName } from '@/lib/anonymousHandle';
 import { Student } from '../../types/ally';
 import { CURRENT_USER } from '../../data/mockData';
 
 export const profileMapper = (row: ProfileRow): Student => {
   const email = row.email || '';
-  const isVerified = email.toLowerCase().endsWith('@chmsu.edu.ph');
+  const isVerified = Boolean((row as any).is_verified || email.toLowerCase().endsWith('@chmsu.edu.ph'));
+  const anonymousHandle = (row as any).anonymous_handle ?? (row as any).anonymousHandle ?? null;
+  const isAlly = Boolean((row as any).is_ally);
 
   return {
     id: row.id,
-    name: row.full_name || (row.username ? `@${row.username}` : 'Student'),
+    name: isAlly
+      ? (row.full_name || (row.username ? `@${row.username}` : 'Student'))
+      : getAnonymousDisplayName(row, undefined, row.id),
+    anonymous_handle: anonymousHandle,
     username: row.username ?? null,
     email,
     course: row.course ?? 'Unknown Course',
@@ -18,7 +24,7 @@ export const profileMapper = (row: ProfileRow): Student => {
     avatar: row.avatar_url || '',
     avatarKey: (row as any).avatarKey || (row as any).avatar_preset_id || null,
     avatarPresetId: (row as any).avatar_preset_id || (row as any).avatarKey || null,
-    isAlly: Boolean((row as any).is_ally),
+    isAlly,
     isUnrevealedMatch: Boolean((row as any).is_unrevealed_match),
     interests: row.interests ?? [],
     organizations: row.organizations ?? [],

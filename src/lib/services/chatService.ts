@@ -1,5 +1,6 @@
 // src/lib/services/chatService.ts
 import { apiClient, ConversationRow, MessageRow } from '@/api/client';
+import { getAnonymousDisplayName, getAnonymousAvatarKey, isAnonymousHandle } from '@/lib/anonymousHandle';
 import { Message, Conversation, MessageReplyPreview } from '../../types/ally';
 import { CURRENT_USER } from '../../data/mockData';
 
@@ -86,9 +87,19 @@ export const mapConversationRow = (
     // #attachVariant) — participant identity comes from matchInfo instead.
     participantId: isAnonymous ? row.matchInfo?.matchId ?? 'anonymous' : otherProfile?.id ?? 'Unknown',
     participantName: isAnonymous
-      ? row.matchInfo?.partnerAlias ?? 'Anonymous'
-      : otherProfile?.username ?? otherProfile?.full_name ?? 'Student',
-    participantAvatar: isAnonymous ? '' : otherProfile?.avatar_url ?? CURRENT_USER.avatar,
+      ? getAnonymousDisplayName({ anonymous_handle: row.matchInfo?.partnerAlias })
+      : (otherProfile?.username &&
+         otherProfile.username !== 'anonymous' &&
+         !isAnonymousHandle(otherProfile?.full_name)
+          ? (otherProfile.full_name || otherProfile.username)
+          : getAnonymousDisplayName(otherProfile, otherProfile?.full_name)),
+    participantAvatar: isAnonymous
+      ? getAnonymousAvatarKey(row.matchInfo)
+      : (otherProfile?.username &&
+         otherProfile.username !== 'anonymous' &&
+         !isAnonymousHandle(otherProfile?.full_name)
+          ? (otherProfile?.avatar_url ?? CURRENT_USER.avatar)
+          : getAnonymousAvatarKey(otherProfile, undefined, otherProfile?.id)),
     participantCourse: isAnonymous ? null : otherProfile?.course ?? null,
     participantDepartment: isAnonymous ? null : otherProfile?.department ?? null,
     lastMessage: lastMsg?.content ?? (lastMsg?.image_url ? 'Photo' : 'New match!'),
@@ -112,6 +123,11 @@ export const mapConversationRow = (
       ? {
           matchId: row.matchInfo.matchId,
           stage: row.matchInfo.stage,
+          stageName: row.matchInfo.stageName,
+          effectiveMultiplier: row.matchInfo.effectiveMultiplier,
+          profileUnlockTarget: row.matchInfo.profileUnlockTarget,
+          progressPercent: row.matchInfo.progressPercent,
+          isProfileUnlocked: row.matchInfo.isProfileUnlocked,
           stagePoints: row.matchInfo.stagePoints ?? 0,
           matchPoints: row.matchInfo.matchPoints ?? 0,
           dayStreak: row.matchInfo.dayStreak,
