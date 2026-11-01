@@ -45,6 +45,7 @@ export default function NewsfeedPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [activePost, setActivePost] = useState<FeedPost | null>(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [pendingReplyCommentId, setPendingReplyCommentId] = useState<string | null>(null);
   const handledDeepLinkRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -381,7 +382,10 @@ export default function NewsfeedPage() {
                   post={post}
                   currentUser={currentUser}
                   onToggleLike={handleToggleLike}
-                  onCommentClick={setActivePost}
+                  onCommentClick={(p, mediaIndex) => {
+                  setActiveMediaIndex(mediaIndex ?? 0);
+                  setActivePost(p);
+                }}
                   onDelete={handleDelete}
                   onUpdate={updateFeedPost}
                   onToggleFollow={toggleFollow}
@@ -429,6 +433,7 @@ export default function NewsfeedPage() {
 
       <CommentsModal
         post={activePost}
+        initialMediaIndex={activeMediaIndex}
         currentUser={currentUser}
         onClose={() => {
           setActivePost(null);

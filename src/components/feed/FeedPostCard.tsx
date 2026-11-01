@@ -19,7 +19,8 @@ interface FeedPostCardProps {
   post: FeedPost;
   currentUser: Student;
   onToggleLike: (post: FeedPost) => void;
-  onCommentClick: (post: FeedPost) => void;
+  /** Called when the comment button or a photo is clicked. `mediaIndex` is the clicked photo. */
+  onCommentClick: (post: FeedPost, mediaIndex?: number) => void;
   onDelete?: (postId: string) => void;
   onUpdate?: (updatedPost: FeedPost) => void;
   /** Optional — when provided, the author name/avatar becomes clickable
@@ -29,9 +30,11 @@ interface FeedPostCardProps {
   onToggleFollow?: (authorId: string, isFollowing: boolean) => void;
   showBorder?: boolean;
   className?: string;
+  /** Hide the media grid (used by the full-screen post viewer, which renders media itself). */
+  hideMedia?: boolean;
 }
 
-function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaClick?: () => void }) {
+function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaClick?: (index: number) => void }) {
   if (!media || media.length === 0) return null;
 
   const sorted = [...media].sort((a, b) => a.position - b.position);
@@ -50,7 +53,7 @@ function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaC
   if (sorted.length === 1) {
     return (
       <div
-        onClick={onMediaClick}
+        onClick={() => onMediaClick?.(0)}
         className={cn(
           "mt-3 rounded-xl overflow-hidden border border-gray-100/80 dark:border-white/10 w-full bg-black/5 flex items-center justify-center",
           onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
@@ -64,14 +67,13 @@ function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaC
   if (sorted.length === 2) {
     return (
       <div
-        onClick={onMediaClick}
         className={cn(
           "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
           onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
         )}
       >
-        {sorted.map((m) => (
-          <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
+        {sorted.map((m, i) => (
+          <img key={m.id} src={m.url} alt="" onClick={() => onMediaClick?.(i)} className="w-full object-cover aspect-square" />
         ))}
       </div>
     );
@@ -80,15 +82,14 @@ function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaC
   if (sorted.length === 3) {
     return (
       <div
-        onClick={onMediaClick}
         className={cn(
           "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
           onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
         )}
       >
-        <img src={sorted[0].url} alt="" className="w-full object-cover row-span-2 h-full aspect-square" />
-        <img src={sorted[1].url} alt="" className="w-full object-cover aspect-square" />
-        <img src={sorted[2].url} alt="" className="w-full object-cover aspect-square" />
+        <img src={sorted[0].url} alt="" onClick={() => onMediaClick?.(0)} className="w-full object-cover row-span-2 h-full aspect-square" />
+        <img src={sorted[1].url} alt="" onClick={() => onMediaClick?.(1)} className="w-full object-cover aspect-square" />
+        <img src={sorted[2].url} alt="" onClick={() => onMediaClick?.(2)} className="w-full object-cover aspect-square" />
       </div>
     );
   }
@@ -96,14 +97,13 @@ function MediaGrid({ media, onMediaClick }: { media: FeedPost['media']; onMediaC
   // 4 images
   return (
     <div
-      onClick={onMediaClick}
       className={cn(
         "mt-3 grid grid-cols-2 gap-1 rounded-xl overflow-hidden w-full border border-gray-100/80 dark:border-white/10",
         onMediaClick && "cursor-pointer hover:opacity-95 transition-opacity"
       )}
     >
-      {sorted.slice(0, 4).map((m) => (
-        <img key={m.id} src={m.url} alt="" className="w-full object-cover aspect-square" />
+      {sorted.slice(0, 4).map((m, i) => (
+        <img key={m.id} src={m.url} alt="" onClick={() => onMediaClick?.(i)} className="w-full object-cover aspect-square" />
       ))}
     </div>
   );
@@ -120,6 +120,7 @@ export default function FeedPostCard({
   onToggleFollow,
   showBorder = true,
   className,
+  hideMedia = false,
 }: FeedPostCardProps) {
   const navigate = useNavigate();
   const [currentPost, setCurrentPost] = useState(post);
@@ -401,7 +402,9 @@ export default function FeedPostCard({
       )}
 
       {/* Media */}
-      <MediaGrid media={currentPost.media} onMediaClick={() => onCommentClick(currentPost)} />
+      {!hideMedia && (
+        <MediaGrid media={currentPost.media} onMediaClick={(index) => onCommentClick(currentPost, index)} />
+      )}
 
       {/* Actions (Left-aligned, icon-only with count matching mobile) */}
       <div className="mt-3 pt-2.5 border-t border-gray-100/80 dark:border-white/10 flex items-center gap-5 sm:gap-6">

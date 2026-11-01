@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { getAnonymousDisplayName, isAnonymousHandle } from '@/lib/anonymousHandle';
-import { X, Send, MessageCircle, Reply, UserCheck } from 'lucide-react';
+import { X, Send, MessageCircle, Reply, UserCheck, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { AvatarDisplay } from '@/components/ally/AvatarDisplay';
 import { ClickableAvatar } from '@/components/ally/ClickableAvatar';
@@ -23,6 +23,8 @@ interface CommentsModalProps {
   onToggleFollow?: (authorId: string, isFollowing: boolean) => void;
   /** If provided, auto-selects this comment as the reply target after load (used for comment_reply deep-links). */
   initialReplyCommentId?: string | null;
+  /** Index of the photo to open first (the one that was clicked in the feed). */
+  initialMediaIndex?: number;
 }
 
 function formatTime(value: string) {
@@ -170,6 +172,7 @@ export default function CommentsModal({
   onAuthorClick,
   onToggleFollow,
   initialReplyCommentId,
+  initialMediaIndex = 0,
 }: CommentsModalProps) {
   const [comments, setComments] = useState<FeedCommentWithReplies[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -177,12 +180,43 @@ export default function CommentsModal({
   const [replyTarget, setReplyTarget] = useState<{ id: string; name: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localPost, setLocalPost] = useState<FeedPost | null>(post);
+  const [mediaIndex, setMediaIndex] = useState(initialMediaIndex);
   const inputRef = useRef<HTMLInputElement>(null);
   const commentRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const autoRepliedRef = useRef<string | null>(null);
 
   useEffect(() => {
     setLocalPost(post);
+  }, [post]);
+
+  // Reset to the clicked photo whenever a different post is opened
+  useEffect(() => {
+    setMediaIndex(initialMediaIndex);
+  }, [post?.id, initialMediaIndex]);
+
+  const sortedMedia = useMemo(
+    () => [...(localPost?.media ?? [])].sort((a, b) => a.position - b.position),
+    [localPost?.media]
+  );
+  const hasMedia = sortedMedia.length > 0;
+  const hasRemovedMedia = sortedMedia.some((m) => m.url === '[removed]');
+  const safeIndex = Math.min(Math.max(mediaIndex, 0), Math.max(sortedMedia.length - 1, 0));
+  const currentMedia = hasMedia && !hasRemovedMedia ? sortedMedia[safeIndex] : null;
+
+  const goPrev = useCallback(() => setMediaIndex((i) => Math.max(i - 1, 0)), []);
+  const goNext = useCallback(
+    () => setMediaIndex((i) => Math.min(i + 1, Math.max(sortedMedia.length - 1, 0))),
+    [sortedMedia.length]
+  );
+
+  // Lock page scroll while the full-screen viewer is open
+  useEffect(() => {
+    if (!post) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [post]);
 
   useEffect(() => {
@@ -205,11 +239,17 @@ export default function CommentsModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
       }
+      // Arrow keys switch photos, unless the user is typing a comment
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (e.key === 'ArrowLeft') goPrev();
+      if (e.key === 'ArrowRight') goNext();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, goPrev, goNext]);
 
   // Set of known ally usernames for mention security
   const allyUsernames = useMemo(() => {
@@ -370,39 +410,22 @@ export default function CommentsModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 transition-all"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full sm:max-w-2xl md:max-w-3xl bg-white dark:bg-[#111827] rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-gray-100 dark:border-white/10 animate-in fade-in zoom-in-95 duration-150">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/10 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <h2 className="font-fraunces text-lg font-bold text-gray-900 dark:text-white">Post & Comments</h2>
-            <span className="px-2 py-0.5 rounded-full bg-[#1A6B3C]/10 dark:bg-emerald-500/20 text-[#1A6B3C] dark:text-emerald-400 font-jakarta font-semibold text-xs">
-              {localPost.comments_count}
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Scrollable Container (FeedPostCard + Comments) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-white/10">
-          {/* Top Section: FeedPostCard */}
-          <div className="bg-white dark:bg-[#111827] p-2 sm:p-3">
+    <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-white dark:bg-[#0B1220] animate-in fade-in duration-150">
+      {/* ── Right Panel: Post details, actions & comments ──────────────────── */}
+      <aside className="order-2 flex flex-col flex-1 min-h-0 lg:flex-none lg:w-[400px] xl:w-[440px] lg:h-full bg-white dark:bg-[#111827] border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/10">
+        {/* Scrollable: post header + caption + like/comment bar + comments */}
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          {/* Post header, caption and the Like / Comment actions (above the comments) */}
+          <div className="p-2 sm:p-3 border-b border-gray-100 dark:border-white/10">
             <FeedPostCard
               post={localPost}
               currentUser={currentUser}
               onToggleLike={handlePostLike}
               onCommentClick={handleFocusInput}
-              onDelete={onDeletePost}
+              onDelete={(id) => {
+                onDeletePost?.(id);
+                onClose();
+              }}
               onUpdate={(updated) => {
                 setLocalPost(updated);
                 onUpdatePost?.(updated);
@@ -410,6 +433,7 @@ export default function CommentsModal({
               onAuthorClick={onAuthorClick}
               onToggleFollow={handleToggleFollow}
               showBorder={false}
+              hideMedia={hasMedia}
             />
           </div>
 
@@ -524,7 +548,90 @@ export default function CommentsModal({
             </button>
           </div>
         </div>
-      </div>
+      </aside>
+
+      {/* ── Left Stage: Full-size media viewer ──────────────────────────────── */}
+      <section className="order-1 relative flex-shrink-0 lg:flex-1 h-[48vh] sm:h-[55vh] lg:h-full bg-black flex items-center justify-center overflow-hidden select-none">
+        {/* Upper Left: Back */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Back"
+          className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
+        {/* Slide counter */}
+        {sortedMedia.length > 1 && (
+          <div className="absolute top-4 sm:top-5 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white font-jakarta text-xs font-semibold">
+            {safeIndex + 1} / {sortedMedia.length}
+          </div>
+        )}
+
+        {hasRemovedMedia ? (
+          <p className="px-6 text-center font-jakarta text-sm italic text-gray-400">
+            This photo was removed for violating community standards.
+          </p>
+        ) : currentMedia ? (
+          // Shown at its natural size, scaled down only to fit — never cropped.
+          <img
+            key={currentMedia.id}
+            src={currentMedia.url}
+            alt=""
+            draggable={false}
+            className="max-w-full max-h-full w-auto h-auto object-contain animate-in fade-in duration-150"
+          />
+        ) : (
+          // Text-only post: show the caption as a slide (same as mobile)
+          <div className="max-w-2xl w-full px-8 py-10 text-center overflow-y-auto max-h-full custom-scrollbar">
+            <p className="font-fraunces text-2xl sm:text-3xl text-white leading-snug whitespace-pre-wrap break-words">
+              {localPost.content}
+            </p>
+          </div>
+        )}
+
+        {/* Previous / Next */}
+        {sortedMedia.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={safeIndex === 0}
+              aria-label="Previous photo"
+              className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white flex items-center justify-center transition-all disabled:opacity-0 disabled:pointer-events-none cursor-pointer"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={safeIndex === sortedMedia.length - 1}
+              aria-label="Next photo"
+              className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white flex items-center justify-center transition-all disabled:opacity-0 disabled:pointer-events-none cursor-pointer"
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            {/* Thumbnail strip */}
+            <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 p-1.5 rounded-xl bg-black/40 backdrop-blur-sm max-w-[90%] overflow-x-auto">
+              {sortedMedia.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setMediaIndex(i)}
+                  aria-label={`Show photo ${i + 1}`}
+                  className={`w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${
+                    i === safeIndex ? 'border-white opacity-100' : 'border-transparent opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  <img src={m.url} alt="" className="w-full h-full object-cover" draggable={false} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }

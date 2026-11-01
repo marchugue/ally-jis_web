@@ -197,6 +197,7 @@ export default function ProfilePage() {
   const [hasMore, setHasMore] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [activePost, setActivePost] = useState<FeedPost | null>(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const cursorRef = useRef<string | undefined>(undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -1148,7 +1149,10 @@ export default function ProfilePage() {
                         post={post}
                         currentUser={currentUser}
                         onToggleLike={toggleLike}
-                        onCommentClick={setActivePost}
+                        onCommentClick={(p, mediaIndex) => {
+                  setActiveMediaIndex(mediaIndex ?? 0);
+                  setActivePost(p);
+                }}
                         onDelete={handleDelete}
                         onUpdate={handleUpdatePost}
                         showBorder={false}
@@ -1203,7 +1207,10 @@ export default function ProfilePage() {
                       return (
                         <div
                           key={post.id}
-                          onClick={() => setActivePost(post)}
+                          onClick={() => {
+                      setActiveMediaIndex(0);
+                      setActivePost(post);
+                    }}
                           className="aspect-square relative bg-gray-100 dark:bg-white/5 rounded-xl overflow-hidden cursor-pointer group border border-gray-200/60 dark:border-white/10"
                         >
                           <img
@@ -1271,6 +1278,7 @@ export default function ProfilePage() {
 
       <CommentsModal
         post={activePost}
+        initialMediaIndex={activeMediaIndex}
         currentUser={currentUser}
         onClose={() => setActivePost(null)}
         loadComments={loadComments}
